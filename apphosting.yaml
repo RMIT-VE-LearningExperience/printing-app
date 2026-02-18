@@ -1,0 +1,5 @@
+# Firebase App Hosting configuration.
+# Node version is controlled by package.json -> engines.node.
+scripts:
+  buildCommand: npm run build
+  runCommand: npm run start
