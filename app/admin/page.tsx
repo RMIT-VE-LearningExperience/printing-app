@@ -2,7 +2,20 @@
 
 import Image from "next/image";
 import {
-  type CSSProperties,
+  Alert,
+  Box,
+  Breadcrumbs,
+  Button,
+  Container,
+  Link,
+  List,
+  ListItem,
+  Paper,
+  Stack,
+  TextField,
+  Typography,
+} from "@mui/material";
+import {
   type ChangeEvent,
   type FormEvent,
   useEffect,
@@ -55,22 +68,6 @@ type Selection = {
 };
 
 const emptyState: TutorialState = { printers: [] };
-
-const baseCardStyle: CSSProperties = {
-  border: "1px solid #d0d7de",
-  borderRadius: 8,
-  padding: 16,
-  marginBottom: 20,
-  background: "#fff",
-};
-
-const editorStyle: CSSProperties = {
-  minHeight: 140,
-  border: "1px solid #d0d7de",
-  borderRadius: 6,
-  padding: 10,
-  marginBottom: 12,
-};
 
 export default function AdminPage() {
   const [tutorialState, setTutorialState] = useState<TutorialState>(emptyState);
@@ -395,215 +392,276 @@ export default function AdminPage() {
           : selectedStep.items;
 
   return (
-    <main style={{ maxWidth: 1000, margin: "40px auto", padding: "0 16px" }}>
-      <h1>Tutorial Printer Admin</h1>
-      <p>Create tutorials by drilling down through Printer, Paper, Colour, Step, and Item.</p>
+    <Box sx={{ minHeight: "100vh", py: 5 }}>
+      <Container maxWidth="lg">
+        <Stack spacing={2.5}>
+          <Box>
+            <Typography variant="h4" component="h1" gutterBottom>
+              Tutorial Printer Admin
+            </Typography>
+            <Typography color="text.secondary">
+              Create tutorials by drilling down through Printer, Paper, Colour, Step, and Item.
+            </Typography>
+          </Box>
 
-      <nav aria-label="Breadcrumb" style={{ marginBottom: 12 }}>
-        {breadcrumb.map((item, index) => (
-          <span key={item.label + String(index)}>
-            {index > 0 ? <span style={{ color: "#666" }}> / </span> : null}
-            <button
-              type="button"
-              onClick={item.onClick}
-              style={{
-                border: "none",
-                background: "none",
-                color: "#0958d9",
-                cursor: "pointer",
-                padding: 0,
+          <Breadcrumbs aria-label="breadcrumb">
+            {breadcrumb.map((item, index) => (
+              <Link
+                key={item.label + String(index)}
+                component="button"
+                type="button"
+                underline="hover"
+                color={index === breadcrumb.length - 1 ? "text.primary" : "primary"}
+                onClick={item.onClick}
+              >
+                {item.label}
+              </Link>
+            ))}
+          </Breadcrumbs>
+
+          {selection.printerId !== null ? (
+            <Box>
+              <Button variant="outlined" onClick={goBackOneLevel}>
+                Back One Level
+              </Button>
+            </Box>
+          ) : null}
+
+          {error ? <Alert severity="error">{error}</Alert> : null}
+          {success ? <Alert severity="success">{success}</Alert> : null}
+          {loadingState ? <Alert severity="info">Loading...</Alert> : null}
+
+          {!loadingState ? (
+            <Box
+              sx={{
+                display: "grid",
+                gap: 2.5,
+                gridTemplateColumns: { xs: "1fr", md: "1fr 1fr" },
               }}
             >
-              {item.label}
-            </button>
-          </span>
-        ))}
-      </nav>
+              <Paper elevation={2} sx={{ p: 2.5 }}>
+                <Typography variant="h6" gutterBottom>
+                  {formLabel}
+                </Typography>
 
-      {selection.printerId !== null ? (
-        <button type="button" onClick={goBackOneLevel} style={{ marginBottom: 20 }}>
-          Back one level
-        </button>
-      ) : null}
-
-      {error ? <p style={{ color: "#b00020" }}>{error}</p> : null}
-      {success ? <p style={{ color: "#0f7a2f" }}>{success}</p> : null}
-
-      {loadingState ? <p>Loading...</p> : null}
-
-      {!loadingState ? (
-        <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 20 }}>
-          <section style={baseCardStyle}>
-            <h2>{formLabel}</h2>
-
-            {selectedStep ? (
-              <form onSubmit={(event) => void handleAddStepItem(event)}>
-                <label htmlFor="item-title">Item title</label>
-                <input
-                  id="item-title"
-                  value={itemTitle}
-                  onChange={(event) => setItemTitle(event.target.value)}
-                  required
-                  maxLength={100}
-                  style={{ width: "100%", marginTop: 8, marginBottom: 12, padding: "8px 10px" }}
-                />
-
-                <label>WYSIWYG content</label>
-                <div style={{ marginTop: 8, marginBottom: 8, display: "flex", gap: 8 }}>
-                  <button type="button" onClick={() => formatEditor("bold")}>
-                    Bold
-                  </button>
-                  <button type="button" onClick={() => formatEditor("italic")}>
-                    Italic
-                  </button>
-                  <button type="button" onClick={() => formatEditor("insertUnorderedList")}>
-                    List
-                  </button>
-                </div>
-
-                <div
-                  ref={editorRef}
-                  contentEditable
-                  suppressContentEditableWarning
-                  onInput={(event) =>
-                    setItemContentHtml((event.currentTarget as HTMLDivElement).innerHTML)
-                  }
-                  style={editorStyle}
-                />
-
-                <label htmlFor="item-image">Image upload</label>
-                <input
-                  id="item-image"
-                  type="file"
-                  accept="image/*"
-                  onChange={(event) => {
-                    void handleImageUpload(event);
-                  }}
-                  required
-                  style={{ display: "block", marginTop: 8, marginBottom: 10 }}
-                />
-
-                {itemImageName ? <p style={{ color: "#666" }}>Selected: {itemImageName}</p> : null}
-
-                <div style={{ display: "flex", gap: 8 }}>
-                  <button type="submit" disabled={loading}>
-                    {loading ? "Saving..." : "Add Item"}
-                  </button>
-                  <button type="button" onClick={resetItemFields}>
-                    Reset fields
-                  </button>
-                </div>
-              </form>
-            ) : (
-              <form onSubmit={(event) => void handleAddEntity(event)}>
-                <label htmlFor="entity-name">Name</label>
-                <input
-                  id="entity-name"
-                  value={nameInput}
-                  onChange={(event) => setNameInput(event.target.value)}
-                  required
-                  maxLength={100}
-                  style={{ width: "100%", marginTop: 8, marginBottom: 12, padding: "8px 10px" }}
-                />
-                <button type="submit" disabled={loading}>
-                  {loading ? "Saving..." : "Save"}
-                </button>
-              </form>
-            )}
-          </section>
-
-          <section style={baseCardStyle}>
-            <h2>{listTitle}</h2>
-            {currentList.length === 0 ? <p>No entries yet.</p> : null}
-
-            <ul style={{ listStyle: "none", padding: 0, margin: 0 }}>
-              {currentList.map((entry) => {
-                if (selectedStep) {
-                  const item = entry as StepItem;
-
-                  return (
-                    <li key={item.id} style={{ borderBottom: "1px solid #eee", padding: "10px 0" }}>
-                      <strong>{item.title}</strong>
-                      <p style={{ color: "#666", margin: "4px 0" }}>
-                        Created: {new Date(item.createdAt).toLocaleString()}
-                      </p>
-                      <div
-                        style={{ color: "#222", marginBottom: 8 }}
-                        dangerouslySetInnerHTML={{ __html: item.contentHtml }}
+                {selectedStep ? (
+                  <Box component="form" onSubmit={(event) => void handleAddStepItem(event)}>
+                    <Stack spacing={2}>
+                      <TextField
+                        label="Item title"
+                        value={itemTitle}
+                        onChange={(event) => setItemTitle(event.target.value)}
+                        required
+                        inputProps={{ maxLength: 100 }}
+                        fullWidth
                       />
-                      <Image
-                        src={item.imageDataUrl}
-                        alt={item.title}
-                        width={120}
-                        height={120}
-                        unoptimized
-                        style={{ objectFit: "cover", borderRadius: 6 }}
+
+                      <Box>
+                        <Typography variant="body2" fontWeight={500} sx={{ mb: 1 }}>
+                          WYSIWYG content
+                        </Typography>
+                        <Stack direction="row" spacing={1} sx={{ mb: 1 }}>
+                          <Button variant="outlined" onClick={() => formatEditor("bold")}>
+                            Bold
+                          </Button>
+                          <Button variant="outlined" onClick={() => formatEditor("italic")}>
+                            Italic
+                          </Button>
+                          <Button
+                            variant="outlined"
+                            onClick={() => formatEditor("insertUnorderedList")}
+                          >
+                            List
+                          </Button>
+                        </Stack>
+                        <Box
+                          ref={editorRef}
+                          contentEditable
+                          suppressContentEditableWarning
+                          onInput={(event) =>
+                            setItemContentHtml((event.currentTarget as HTMLDivElement).innerHTML)
+                          }
+                          sx={{
+                            border: "1px solid",
+                            borderColor: "divider",
+                            borderRadius: 2,
+                            p: 1.25,
+                            minHeight: 140,
+                            backgroundColor: "background.paper",
+                          }}
+                        />
+                      </Box>
+
+                      <Box>
+                        <Typography variant="body2" fontWeight={500} sx={{ mb: 1 }}>
+                          Image upload
+                        </Typography>
+                        <Box
+                          component="input"
+                          type="file"
+                          accept="image/*"
+                          required
+                          onChange={(event: ChangeEvent<HTMLInputElement>) => {
+                            void handleImageUpload(event);
+                          }}
+                        />
+                        {itemImageName ? (
+                          <Typography variant="caption" color="text.secondary" display="block" sx={{ mt: 1 }}>
+                            Selected: {itemImageName}
+                          </Typography>
+                        ) : null}
+                      </Box>
+
+                      <Stack direction="row" spacing={1.5}>
+                        <Button type="submit" variant="contained" disabled={loading}>
+                          {loading ? "Saving..." : "Add Item"}
+                        </Button>
+                        <Button type="button" variant="outlined" onClick={resetItemFields}>
+                          Reset fields
+                        </Button>
+                      </Stack>
+                    </Stack>
+                  </Box>
+                ) : (
+                  <Box component="form" onSubmit={(event) => void handleAddEntity(event)}>
+                    <Stack spacing={2}>
+                      <TextField
+                        label="Name"
+                        value={nameInput}
+                        onChange={(event) => setNameInput(event.target.value)}
+                        required
+                        inputProps={{ maxLength: 100 }}
+                        fullWidth
                       />
-                    </li>
-                  );
-                }
+                      <Box>
+                        <Button type="submit" variant="contained" disabled={loading}>
+                          {loading ? "Saving..." : "Save"}
+                        </Button>
+                      </Box>
+                    </Stack>
+                  </Box>
+                )}
+              </Paper>
 
-                const node = entry as Printer | Paper | Colour | Step;
+              <Paper elevation={2} sx={{ p: 2.5 }}>
+                <Typography variant="h6" gutterBottom>
+                  {listTitle}
+                </Typography>
 
-                return (
-                  <li
-                    key={node.id}
-                    style={{
-                      borderBottom: "1px solid #eee",
-                      padding: "10px 0",
-                      display: "flex",
-                      justifyContent: "space-between",
-                      alignItems: "center",
-                      gap: 10,
-                    }}
-                  >
-                    <span>{node.name}</span>
-                    <button
-                      type="button"
-                      onClick={() => {
-                        if (!selectedPrinter) {
-                          setSelection({
-                            printerId: node.id,
-                            paperId: null,
-                            colourId: null,
-                            stepId: null,
-                          });
-                          return;
-                        }
+                {currentList.length === 0 ? (
+                  <Typography color="text.secondary">No entries yet.</Typography>
+                ) : null}
 
-                        if (!selectedPaper) {
-                          setSelection((current) => ({
-                            ...current,
-                            paperId: node.id,
-                            colourId: null,
-                            stepId: null,
-                          }));
-                          return;
-                        }
+                <List sx={{ p: 0 }}>
+                  {currentList.map((entry) => {
+                    if (selectedStep) {
+                      const item = entry as StepItem;
 
-                        if (!selectedColour) {
-                          setSelection((current) => ({
-                            ...current,
-                            colourId: node.id,
-                            stepId: null,
-                          }));
-                          return;
-                        }
+                      return (
+                        <ListItem
+                          key={item.id}
+                          sx={{
+                            display: "block",
+                            border: "1px solid",
+                            borderColor: "divider",
+                            borderRadius: 2,
+                            mb: 1.25,
+                            p: 1.5,
+                          }}
+                        >
+                          <Typography fontWeight={600}>{item.title}</Typography>
+                          <Typography variant="caption" color="text.secondary" display="block" sx={{ mb: 1 }}>
+                            Created: {new Date(item.createdAt).toLocaleString()}
+                          </Typography>
+                          <Box
+                            sx={{ mb: 1.25 }}
+                            dangerouslySetInnerHTML={{ __html: item.contentHtml }}
+                          />
+                          <Image
+                            src={item.imageDataUrl}
+                            alt={item.title}
+                            width={140}
+                            height={140}
+                            unoptimized
+                            style={{ borderRadius: 8, objectFit: "cover" }}
+                          />
+                        </ListItem>
+                      );
+                    }
 
-                        if (!selectedStep) {
-                          setSelection((current) => ({ ...current, stepId: node.id }));
-                        }
-                      }}
-                    >
-                      Open
-                    </button>
-                  </li>
-                );
-              })}
-            </ul>
-          </section>
-        </div>
-      ) : null}
-    </main>
+                    const node = entry as Printer | Paper | Colour | Step;
+
+                    return (
+                      <ListItem
+                        key={node.id}
+                        sx={{
+                          border: "1px solid",
+                          borderColor: "divider",
+                          borderRadius: 2,
+                          mb: 1.25,
+                          p: 1.25,
+                        }}
+                      >
+                        <Box
+                          sx={{
+                            width: "100%",
+                            display: "flex",
+                            justifyContent: "space-between",
+                            alignItems: "center",
+                            gap: 1,
+                          }}
+                        >
+                          <Typography>{node.name}</Typography>
+                          <Button
+                            variant="outlined"
+                            size="small"
+                            onClick={() => {
+                              if (!selectedPrinter) {
+                                setSelection({
+                                  printerId: node.id,
+                                  paperId: null,
+                                  colourId: null,
+                                  stepId: null,
+                                });
+                                return;
+                              }
+
+                              if (!selectedPaper) {
+                                setSelection((current) => ({
+                                  ...current,
+                                  paperId: node.id,
+                                  colourId: null,
+                                  stepId: null,
+                                }));
+                                return;
+                              }
+
+                              if (!selectedColour) {
+                                setSelection((current) => ({
+                                  ...current,
+                                  colourId: node.id,
+                                  stepId: null,
+                                }));
+                                return;
+                              }
+
+                              if (!selectedStep) {
+                                setSelection((current) => ({ ...current, stepId: node.id }));
+                              }
+                            }}
+                          >
+                            Open
+                          </Button>
+                        </Box>
+                      </ListItem>
+                    );
+                  })}
+                </List>
+              </Paper>
+            </Box>
+          ) : null}
+        </Stack>
+      </Container>
+    </Box>
   );
 }
