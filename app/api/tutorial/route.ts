@@ -14,6 +14,11 @@ import {
   movePaper,
   movePrinter,
   moveStep,
+  reorderColour,
+  reorderPaper,
+  reorderPrinter,
+  reorderStep,
+  undoStep,
   updateColour,
   updatePaper,
   updatePrinter,
@@ -67,6 +72,13 @@ type ActionPayload =
       contentHtml: string;
       imageDataUrl: string;
     }
+  | {
+      action: "undoStep";
+      printerId: string;
+      paperId: string;
+      colourId: string;
+      stepId: string;
+    }
   | { action: "deletePrinter"; printerId: string }
   | { action: "deletePaper"; printerId: string; paperId: string }
   | { action: "deleteColour"; printerId: string; paperId: string; colourId: string }
@@ -93,6 +105,23 @@ type ActionPayload =
       colourId: string;
       stepId: string;
       direction: Direction;
+    }
+  | { action: "reorderPrinter"; sourceId: string; targetId: string }
+  | { action: "reorderPaper"; printerId: string; sourceId: string; targetId: string }
+  | {
+      action: "reorderColour";
+      printerId: string;
+      paperId: string;
+      sourceId: string;
+      targetId: string;
+    }
+  | {
+      action: "reorderStep";
+      printerId: string;
+      paperId: string;
+      colourId: string;
+      sourceId: string;
+      targetId: string;
     };
 
 export async function GET() {
@@ -142,16 +171,11 @@ export async function POST(request: Request) {
         );
       case "addStep":
         return NextResponse.json(
-          await addStep(
-            actionPayload.printerId,
-            actionPayload.paperId,
-            actionPayload.colourId,
-            {
-              title: actionPayload.title,
-              contentHtml: actionPayload.contentHtml,
-              imageDataUrl: actionPayload.imageDataUrl,
-            },
-          ),
+          await addStep(actionPayload.printerId, actionPayload.paperId, actionPayload.colourId, {
+            title: actionPayload.title,
+            contentHtml: actionPayload.contentHtml,
+            imageDataUrl: actionPayload.imageDataUrl,
+          }),
           { status: 201 },
         );
       case "updatePrinter":
@@ -196,6 +220,16 @@ export async function POST(request: Request) {
               contentHtml: actionPayload.contentHtml,
               imageDataUrl: actionPayload.imageDataUrl,
             },
+          ),
+          { status: 200 },
+        );
+      case "undoStep":
+        return NextResponse.json(
+          await undoStep(
+            actionPayload.printerId,
+            actionPayload.paperId,
+            actionPayload.colourId,
+            actionPayload.stepId,
           ),
           { status: 200 },
         );
@@ -257,6 +291,41 @@ export async function POST(request: Request) {
             actionPayload.colourId,
             actionPayload.stepId,
             actionPayload.direction,
+          ),
+          { status: 200 },
+        );
+      case "reorderPrinter":
+        return NextResponse.json(
+          await reorderPrinter(actionPayload.sourceId, actionPayload.targetId),
+          { status: 200 },
+        );
+      case "reorderPaper":
+        return NextResponse.json(
+          await reorderPaper(
+            actionPayload.printerId,
+            actionPayload.sourceId,
+            actionPayload.targetId,
+          ),
+          { status: 200 },
+        );
+      case "reorderColour":
+        return NextResponse.json(
+          await reorderColour(
+            actionPayload.printerId,
+            actionPayload.paperId,
+            actionPayload.sourceId,
+            actionPayload.targetId,
+          ),
+          { status: 200 },
+        );
+      case "reorderStep":
+        return NextResponse.json(
+          await reorderStep(
+            actionPayload.printerId,
+            actionPayload.paperId,
+            actionPayload.colourId,
+            actionPayload.sourceId,
+            actionPayload.targetId,
           ),
           { status: 200 },
         );

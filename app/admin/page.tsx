@@ -8,10 +8,6 @@ import {
   Breadcrumbs,
   Button,
   Container,
-  Dialog,
-  DialogActions,
-  DialogContent,
-  DialogTitle,
   Divider,
   Link,
   List,
@@ -24,7 +20,7 @@ import {
   TextField,
   Typography,
 } from "@mui/material";
-import { type ChangeEvent, type FormEvent, useEffect, useMemo, useState } from "react";
+import { type ChangeEvent, type FormEvent, useEffect, useMemo, useRef, useState } from "react";
 
 type Step = {
   id: string;
@@ -69,18 +65,116 @@ type Selection = {
 type Level = "printer" | "paper" | "colour" | "step";
 type Direction = "up" | "down";
 
-type EditState = {
-  open: boolean;
-  level: Level | null;
-  id: string;
-  name: string;
-  thumbnailDataUrl: string;
-  title: string;
-  contentHtml: string;
-  imageDataUrl: string;
+const emptyState: TutorialState = { printers: [] };
+
+const THUMBNAIL_MIN_WIDTH = 800;
+const THUMBNAIL_MIN_HEIGHT = 600;
+const THUMBNAIL_ASPECT = 4 / 3;
+const THUMBNAIL_ASPECT_TOLERANCE = 0.08;
+
+function getAspectError(width: number, height: number) {
+  const ratio = width / height;
+  if (Math.abs(ratio - THUMBNAIL_ASPECT) > THUMBNAIL_ASPECT_TOLERANCE) {
+    return `Thumbnail should be close to 4:3 ratio. Current ratio is ${ratio.toFixed(2)}:1.`;
+  }
+  return null;
+}
+
+async function getImageSizeFromDataUrl(dataUrl: string): Promise<{ width: number; height: number }> {
+  return new Promise((resolve, reject) => {
+    const image = new window.Image();
+    image.onload = () => resolve({ width: image.width, height: image.height });
+    image.onerror = () => reject(new Error("Could not read image metadata."));
+    image.src = dataUrl;
+  });
+}
+
+type RichHtmlEditorProps = {
+  label: string;
+  value: string;
+  onChange: (value: string) => void;
 };
 
-const emptyState: TutorialState = { printers: [] };
+function RichHtmlEditor({ label, value, onChange }: RichHtmlEditorProps) {
+  const editorRef = useRef<HTMLDivElement | null>(null);
+
+  useEffect(() => {
+    if (!editorRef.current) {
+      return;
+    }
+
+    if (editorRef.current.innerHTML !== value) {
+      editorRef.current.innerHTML = value;
+    }
+  }, [value]);
+
+  function runCommand(command: string, commandValue?: string) {
+    editorRef.current?.focus();
+    document.execCommand(command, false, commandValue);
+    onChange(editorRef.current?.innerHTML ?? "");
+  }
+
+  function insertLink() {
+    const urlInput = window.prompt("Enter URL (https://...)");
+    if (!urlInput) {
+      return;
+    }
+    const url = /^(https?:)?\/\//i.test(urlInput) ? urlInput : `https://${urlInput}`;
+    runCommand("createLink", url);
+  }
+
+  return (
+    <Box>
+      <Typography variant="body2" fontWeight={500} sx={{ mb: 1 }}>
+        {label}
+      </Typography>
+      <Stack direction="row" spacing={1} sx={{ mb: 1, flexWrap: "wrap" }}>
+        <Button size="small" variant="outlined" onMouseDown={(e) => { e.preventDefault(); runCommand("formatBlock", "h3"); }}>
+          Heading
+        </Button>
+        <Button size="small" variant="outlined" onMouseDown={(e) => { e.preventDefault(); runCommand("bold"); }}>
+          Bold
+        </Button>
+        <Button size="small" variant="outlined" onMouseDown={(e) => { e.preventDefault(); runCommand("italic"); }}>
+          Italic
+        </Button>
+        <Button size="small" variant="outlined" onMouseDown={(e) => { e.preventDefault(); runCommand("insertUnorderedList"); }}>
+          Bullets
+        </Button>
+        <Button size="small" variant="outlined" onMouseDown={(e) => { e.preventDefault(); insertLink(); }}>
+          Insert link
+        </Button>
+        <Button size="small" variant="outlined" onMouseDown={(e) => { e.preventDefault(); runCommand("unlink"); }}>
+          Remove link
+        </Button>
+      </Stack>
+      <Box
+        ref={editorRef}
+        contentEditable
+        suppressContentEditableWarning
+        onInput={(event) => onChange((event.target as HTMLDivElement).innerHTML)}
+        sx={{
+          border: "1px solid",
+          borderColor: "divider",
+          borderRadius: 1,
+          px: 1.5,
+          py: 1.25,
+          minHeight: 170,
+          outline: "none",
+          "&:focus": {
+            borderColor: "primary.main",
+            boxShadow: (theme) => `0 0 0 1px ${theme.palette.primary.main}`,
+          },
+        }}
+      />
+    </Box>
+  );
+}
+
+function hasMeaningfulContent(html: string) {
+  const plain = html.replace(/<[^>]+>/g, "").replace(/&nbsp;/g, " ").trim();
+  return plain.length > 0;
+}
 
 export default function AdminPage() {
   const [tutorialState, setTutorialState] = useState<TutorialState>(emptyState);
@@ -104,17 +198,17 @@ export default function AdminPage() {
   const [loadingState, setLoadingState] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [success, setSuccess] = useState<string | null>(null);
+  const [draggedNodeId, setDraggedNodeId] = useState<string | null>(null);
+  const [dragTargetNodeId, setDragTargetNodeId] = useState<string | null>(null);
+  const [adminViewMode, setAdminViewMode] = useState<"cards" | "list">("cards");
 
-  const [editState, setEditState] = useState<EditState>({
-    open: false,
-    level: null,
-    id: "",
-    name: "",
-    thumbnailDataUrl: "",
-    title: "",
-    contentHtml: "",
-    imageDataUrl: "",
-  });
+  const [editNameInput, setEditNameInput] = useState("");
+  const [editThumbnailDataUrl, setEditThumbnailDataUrl] = useState("");
+  const [editThumbnailName, setEditThumbnailName] = useState("");
+  const [editStepTitleInput, setEditStepTitleInput] = useState("");
+  const [editStepContentInput, setEditStepContentInput] = useState("");
+  const [editStepImageDataUrl, setEditStepImageDataUrl] = useState("");
+  const [editStepImageName, setEditStepImageName] = useState("");
 
   useEffect(() => {
     async function loadState() {
@@ -219,6 +313,16 @@ export default function AdminPage() {
     });
   }
 
+  async function validateThumbnailDataUrl(dataUrl: string): Promise<string | null> {
+    const { width, height } = await getImageSizeFromDataUrl(dataUrl);
+
+    if (width < THUMBNAIL_MIN_WIDTH || height < THUMBNAIL_MIN_HEIGHT) {
+      return `Thumbnail must be at least ${THUMBNAIL_MIN_WIDTH}x${THUMBNAIL_MIN_HEIGHT}px. Uploaded image is ${width}x${height}px.`;
+    }
+
+    return getAspectError(width, height);
+  }
+
   async function handleEntityThumbnailUpload(event: ChangeEvent<HTMLInputElement>) {
     const file = event.target.files?.[0];
 
@@ -230,6 +334,11 @@ export default function AdminPage() {
 
     try {
       const dataUrl = await toDataUrl(file);
+      const imageError = await validateThumbnailDataUrl(dataUrl);
+      if (imageError) {
+        setError(imageError);
+        return;
+      }
       setEntityThumbnailDataUrl(dataUrl);
       setEntityThumbnailName(file.name);
     } catch {
@@ -257,11 +366,19 @@ export default function AdminPage() {
 
   async function handleEditThumbnailUpload(event: ChangeEvent<HTMLInputElement>) {
     const file = event.target.files?.[0];
-    if (!file) return;
+    if (!file) {
+      return;
+    }
 
     try {
       const dataUrl = await toDataUrl(file);
-      setEditState((current) => ({ ...current, thumbnailDataUrl: dataUrl }));
+      const imageError = await validateThumbnailDataUrl(dataUrl);
+      if (imageError) {
+        setError(imageError);
+        return;
+      }
+      setEditThumbnailDataUrl(dataUrl);
+      setEditThumbnailName(file.name);
     } catch {
       setError("Could not read image.");
     }
@@ -269,11 +386,14 @@ export default function AdminPage() {
 
   async function handleEditStepImageUpload(event: ChangeEvent<HTMLInputElement>) {
     const file = event.target.files?.[0];
-    if (!file) return;
+    if (!file) {
+      return;
+    }
 
     try {
       const dataUrl = await toDataUrl(file);
-      setEditState((current) => ({ ...current, imageDataUrl: dataUrl }));
+      setEditStepImageDataUrl(dataUrl);
+      setEditStepImageName(file.name);
     } catch {
       setError("Could not read image.");
     }
@@ -325,6 +445,11 @@ export default function AdminPage() {
 
     if (!stepImageDataUrl) {
       setError("Step image is required.");
+      return;
+    }
+
+    if (!hasMeaningfulContent(stepContentInput)) {
+      setError("Step content is required.");
       return;
     }
 
@@ -425,96 +550,114 @@ export default function AdminPage() {
     }
   }
 
-  function openEdit(
-    level: Level,
-    node: {
-      id: string;
-      name: string;
-      thumbnailDataUrl?: string;
-      title?: string;
-      contentHtml?: string;
-      imageDataUrl?: string;
-    },
-  ) {
-    setEditState({
-      open: true,
-      level,
-      id: node.id,
-      name: node.name,
-      thumbnailDataUrl: node.thumbnailDataUrl ?? "",
-      title: node.title ?? "",
-      contentHtml: node.contentHtml ?? "",
-      imageDataUrl: node.imageDataUrl ?? "",
-    });
-  }
-
-  function closeEdit() {
-    setEditState({
-      open: false,
-      level: null,
-      id: "",
-      name: "",
-      thumbnailDataUrl: "",
-      title: "",
-      contentHtml: "",
-      imageDataUrl: "",
-    });
-  }
-
-  async function saveEdit() {
-    if (!editState.level) {
+  async function handleReorder(level: Level, sourceId: string, targetId: string) {
+    if (sourceId === targetId) {
       return;
     }
 
-    if (editState.level === "printer") {
-      await runAction({
-        action: "updatePrinter",
-        printerId: editState.id,
-        name: editState.name,
-        thumbnailDataUrl: editState.thumbnailDataUrl,
-      });
-      closeEdit();
+    if (level === "printer") {
+      await runAction({ action: "reorderPrinter", sourceId, targetId });
       return;
     }
 
-    if (editState.level === "paper" && selectedPrinter) {
+    if (level === "paper" && selectedPrinter) {
       await runAction({
-        action: "updatePaper",
+        action: "reorderPaper",
         printerId: selectedPrinter.id,
-        paperId: editState.id,
-        name: editState.name,
-        thumbnailDataUrl: editState.thumbnailDataUrl,
+        sourceId,
+        targetId,
       });
-      closeEdit();
       return;
     }
 
-    if (editState.level === "colour" && selectedPrinter && selectedPaper) {
+    if (level === "colour" && selectedPrinter && selectedPaper) {
       await runAction({
-        action: "updateColour",
+        action: "reorderColour",
         printerId: selectedPrinter.id,
         paperId: selectedPaper.id,
-        colourId: editState.id,
-        name: editState.name,
-        thumbnailDataUrl: editState.thumbnailDataUrl,
+        sourceId,
+        targetId,
       });
-      closeEdit();
       return;
     }
 
-    if (editState.level === "step" && selectedPrinter && selectedPaper && selectedColour) {
+    if (level === "step" && selectedPrinter && selectedPaper && selectedColour) {
+      await runAction({
+        action: "reorderStep",
+        printerId: selectedPrinter.id,
+        paperId: selectedPaper.id,
+        colourId: selectedColour.id,
+        sourceId,
+        targetId,
+      });
+    }
+  }
+
+  async function saveInlineEdit() {
+    if (selectedStep && selectedPrinter && selectedPaper && selectedColour) {
+      if (!hasMeaningfulContent(editStepContentInput)) {
+        setError("Step content is required.");
+        return;
+      }
+
       await runAction({
         action: "updateStep",
         printerId: selectedPrinter.id,
         paperId: selectedPaper.id,
         colourId: selectedColour.id,
-        stepId: editState.id,
-        title: editState.title,
-        contentHtml: editState.contentHtml,
-        imageDataUrl: editState.imageDataUrl,
+        stepId: selectedStep.id,
+        title: editStepTitleInput,
+        contentHtml: editStepContentInput,
+        imageDataUrl: editStepImageDataUrl,
       });
-      closeEdit();
+      return;
     }
+
+    if (selectedColour && selectedPrinter && selectedPaper) {
+      await runAction({
+        action: "updateColour",
+        printerId: selectedPrinter.id,
+        paperId: selectedPaper.id,
+        colourId: selectedColour.id,
+        name: editNameInput,
+        thumbnailDataUrl: editThumbnailDataUrl,
+      });
+      return;
+    }
+
+    if (selectedPaper && selectedPrinter) {
+      await runAction({
+        action: "updatePaper",
+        printerId: selectedPrinter.id,
+        paperId: selectedPaper.id,
+        name: editNameInput,
+        thumbnailDataUrl: editThumbnailDataUrl,
+      });
+      return;
+    }
+
+    if (selectedPrinter) {
+      await runAction({
+        action: "updatePrinter",
+        printerId: selectedPrinter.id,
+        name: editNameInput,
+        thumbnailDataUrl: editThumbnailDataUrl,
+      });
+    }
+  }
+
+  async function handleUndoStep() {
+    if (!selectedStep || !selectedPrinter || !selectedPaper || !selectedColour) {
+      return;
+    }
+
+    await runAction({
+      action: "undoStep",
+      printerId: selectedPrinter.id,
+      paperId: selectedPaper.id,
+      colourId: selectedColour.id,
+      stepId: selectedStep.id,
+    });
   }
 
   const breadcrumb = [
@@ -556,6 +699,56 @@ export default function AdminPage() {
       : !selectedColour
         ? selectedPaper.colours
         : selectedColour.steps;
+
+  const editingLevel: Level | null = selectedStep
+    ? "step"
+    : selectedColour
+      ? "colour"
+      : selectedPaper
+        ? "paper"
+        : selectedPrinter
+          ? "printer"
+          : null;
+
+  const editingLabel = selectedStep
+    ? selectedStep.name
+    : selectedColour
+      ? selectedColour.name
+      : selectedPaper
+        ? selectedPaper.name
+        : selectedPrinter
+          ? selectedPrinter.name
+          : "";
+
+  useEffect(() => {
+    if (selectedStep) {
+      setEditStepTitleInput(selectedStep.title ?? "");
+      setEditStepContentInput(selectedStep.contentHtml ?? "");
+      setEditStepImageDataUrl(selectedStep.imageDataUrl ?? "");
+      setEditStepImageName("");
+      return;
+    }
+
+    const selectedNode = selectedColour ?? selectedPaper ?? selectedPrinter;
+    if (!selectedNode) {
+      setEditNameInput("");
+      setEditThumbnailDataUrl("");
+      setEditThumbnailName("");
+      return;
+    }
+
+    setEditNameInput(selectedNode.name ?? "");
+    setEditThumbnailDataUrl(selectedNode.thumbnailDataUrl ?? "");
+    setEditThumbnailName("");
+  }, [selectedPrinter, selectedPaper, selectedColour, selectedStep]);
+
+  const emptyGuidance = !selectedPrinter
+    ? "No printers yet. Add your first printer below."
+    : !selectedPaper
+      ? "No papers yet. Add first paper for this printer below."
+      : !selectedColour
+        ? "No colours yet. Add first colour for this paper below."
+        : "No steps yet. Add Step 1 below.";
 
   return (
     <Box sx={{ minHeight: "100vh", py: 4 }}>
@@ -616,12 +809,186 @@ export default function AdminPage() {
 
             {!loadingState ? (
               <Paper elevation={2} sx={{ p: 2.5, transition: "box-shadow 220ms ease, transform 220ms ease", "&:hover": { transform: "translateY(-1px)", boxShadow: 6 } }}>
-                <Typography variant="h6" gutterBottom>{listTitle}</Typography>
+                {editingLevel ? (
+                  <>
+                    <Typography variant="h6" gutterBottom>
+                      Edit {editingLevel}: {editingLabel}
+                    </Typography>
+                    <Stack spacing={2}>
+                      {editingLevel !== "step" ? (
+                        <>
+                          <TextField
+                            label="Title"
+                            value={editNameInput}
+                            onChange={(e) => setEditNameInput(e.target.value)}
+                            fullWidth
+                          />
+                          <Box>
+                            <Typography variant="body2" fontWeight={500} sx={{ mb: 1 }}>Thumbnail image</Typography>
+                            <Box component="input" type="file" accept="image/*" onChange={(e: ChangeEvent<HTMLInputElement>) => { void handleEditThumbnailUpload(e); }} />
+                            {editThumbnailName ? (
+                              <Typography variant="caption" color="text.secondary" display="block" sx={{ mt: 1 }}>
+                                Selected: {editThumbnailName}
+                              </Typography>
+                            ) : null}
+                            {editThumbnailDataUrl ? (
+                              <Box
+                                component="img"
+                                src={editThumbnailDataUrl}
+                                alt="Thumbnail preview"
+                                sx={{
+                                  mt: 1,
+                                  width: 220,
+                                  maxWidth: "100%",
+                                  aspectRatio: "4 / 3",
+                                  objectFit: "cover",
+                                  borderRadius: 1,
+                                  border: "1px solid",
+                                  borderColor: "divider",
+                                }}
+                              />
+                            ) : null}
+                          </Box>
+                        </>
+                      ) : (
+                        <>
+                          <TextField
+                            label="Step title"
+                            value={editStepTitleInput}
+                            onChange={(e) => setEditStepTitleInput(e.target.value)}
+                            fullWidth
+                          />
+                          <RichHtmlEditor
+                            label="Step content"
+                            value={editStepContentInput}
+                            onChange={setEditStepContentInput}
+                          />
+                          <Box>
+                            <Typography variant="body2" fontWeight={500} sx={{ mb: 1 }}>Step image</Typography>
+                            <Box component="input" type="file" accept="image/*" onChange={(e: ChangeEvent<HTMLInputElement>) => { void handleEditStepImageUpload(e); }} />
+                            {editStepImageName ? (
+                              <Typography variant="caption" color="text.secondary" display="block" sx={{ mt: 1 }}>
+                                Selected: {editStepImageName}
+                              </Typography>
+                            ) : null}
+                          </Box>
+                        </>
+                      )}
+                      <Stack direction="row" spacing={1.5}>
+                        <Button type="button" variant="contained" onClick={() => void saveInlineEdit()} disabled={loading}>
+                          {loading ? "Saving..." : "Save changes"}
+                        </Button>
+                        {editingLevel === "step" ? (
+                          <Button type="button" variant="outlined" onClick={() => void handleUndoStep()} disabled={loading}>
+                            Undo last change
+                          </Button>
+                        ) : null}
+                      </Stack>
+                    </Stack>
+                    <Divider sx={{ my: 2.5 }} />
+                  </>
+                ) : null}
 
-                <List sx={{ p: 0 }}>
+                <Stack
+                  direction={{ xs: "column", sm: "row" }}
+                  spacing={1}
+                  alignItems={{ xs: "flex-start", sm: "center" }}
+                  justifyContent="space-between"
+                  sx={{ mb: 1 }}
+                >
+                  <Typography variant="h6">{listTitle}</Typography>
+                  <Stack
+                    direction="row"
+                    spacing={0.5}
+                    sx={{
+                      p: 0.5,
+                      border: "1px solid",
+                      borderColor: "divider",
+                      borderRadius: 999,
+                      bgcolor: "action.hover",
+                    }}
+                  >
+                    <Button
+                      size="small"
+                      variant={adminViewMode === "cards" ? "contained" : "text"}
+                      onClick={() => setAdminViewMode("cards")}
+                    >
+                      Cards
+                    </Button>
+                    <Button
+                      size="small"
+                      variant={adminViewMode === "list" ? "contained" : "text"}
+                      onClick={() => setAdminViewMode("list")}
+                    >
+                      List
+                    </Button>
+                  </Stack>
+                </Stack>
+                {currentList.length === 0 ? (
+                  <Box sx={{ border: "1px dashed", borderColor: "divider", borderRadius: 2, p: 2, mb: 2 }}>
+                    <Typography variant="body2" color="text.secondary">
+                      {emptyGuidance}
+                    </Typography>
+                  </Box>
+                ) : null}
+
+                <List
+                  sx={{
+                    p: 0,
+                    display: adminViewMode === "cards" ? "grid" : "block",
+                    gridTemplateColumns:
+                      adminViewMode === "cards"
+                        ? { xs: "1fr", sm: "repeat(2, minmax(0, 1fr))", md: "repeat(3, minmax(0, 1fr))" }
+                        : undefined,
+                    gap: adminViewMode === "cards" ? 1.25 : 0,
+                  }}
+                >
                     {(currentList as Array<Step | Paper | Colour | Printer>).map((node, index, list) => (
-                      <ListItem key={node.id} sx={{ border: "1px solid", borderColor: "divider", borderRadius: 2, mb: 1.25, p: 1.25, alignItems: "stretch", transition: "transform 180ms ease, box-shadow 180ms ease", "&:hover": { transform: "translateY(-2px)", boxShadow: 3 } }}>
-                      <Stack spacing={1.25} sx={{ width: "100%" }}>
+                      <ListItem
+                        key={node.id}
+                        draggable
+                        onDragStart={() => {
+                          setDraggedNodeId(node.id);
+                          setDragTargetNodeId(null);
+                        }}
+                        onDragOver={(event) => {
+                          event.preventDefault();
+                          if (draggedNodeId && draggedNodeId !== node.id) {
+                            setDragTargetNodeId(node.id);
+                          }
+                        }}
+                        onDragLeave={() => {
+                          if (dragTargetNodeId === node.id) {
+                            setDragTargetNodeId(null);
+                          }
+                        }}
+                        onDrop={(event) => {
+                          event.preventDefault();
+                          if (draggedNodeId && draggedNodeId !== node.id) {
+                            void handleReorder(currentLevel, draggedNodeId, node.id);
+                          }
+                          setDraggedNodeId(null);
+                          setDragTargetNodeId(null);
+                        }}
+                        onDragEnd={() => {
+                          setDraggedNodeId(null);
+                          setDragTargetNodeId(null);
+                        }}
+                        sx={{
+                          border: "1px solid",
+                          borderColor: dragTargetNodeId === node.id ? "primary.main" : "divider",
+                          borderRadius: adminViewMode === "cards" ? 2 : 1.5,
+                          mb: adminViewMode === "cards" ? 0 : 0.75,
+                          p: adminViewMode === "cards" ? 1.25 : 1,
+                          alignItems: "stretch",
+                          transition: "transform 180ms ease, box-shadow 180ms ease, background-color 180ms ease",
+                          "&:hover":
+                            adminViewMode === "cards"
+                              ? { transform: "translateY(-2px)", boxShadow: 3 }
+                              : { bgcolor: "action.hover" },
+                        }}
+                      >
+                      <Stack spacing={adminViewMode === "cards" ? 1.25 : 0.75} sx={{ width: "100%" }}>
                         <Stack direction="row" spacing={1.25} alignItems="center">
                           <Avatar src={"thumbnailDataUrl" in node ? node.thumbnailDataUrl || undefined : undefined} alt={node.name}>{node.name.charAt(0).toUpperCase()}</Avatar>
                           <Typography sx={{ flex: 1 }}>{node.name}</Typography>
@@ -649,19 +1016,21 @@ export default function AdminPage() {
                         </Stack>
 
                         <Stack direction="row" spacing={1} flexWrap="wrap">
-                          <Button size="small" variant="outlined" onClick={() => openEdit(currentLevel, node)}>Edit</Button>
                           <Button size="small" variant="outlined" color="error" onClick={() => void handleDelete(currentLevel, node.id)}>Delete</Button>
                           <Button size="small" variant="outlined" disabled={index === 0} onClick={() => void handleMove(currentLevel, node.id, "up")}>↑</Button>
                           <Button size="small" variant="outlined" disabled={index === list.length - 1} onClick={() => void handleMove(currentLevel, node.id, "down")}>↓</Button>
                         </Stack>
 
-                        {selectedColour ? (
+                        {selectedColour && adminViewMode === "cards" ? (
                           <Box sx={{ border: "1px solid", borderColor: "divider", borderRadius: 2, p: 1.25 }}>
                             <Typography variant="subtitle2" fontWeight={700}>{(node as Step).title || "Untitled"}</Typography>
-                            <Box sx={{ mt: 1, mb: 1 }} dangerouslySetInnerHTML={{ __html: (node as Step).contentHtml || "" }} />
+                            <Box
+                              sx={{ mt: 1, mb: 1 }}
+                              dangerouslySetInnerHTML={{ __html: (node as Step).contentHtml || "" }}
+                            />
                             {(node as Step).imageDataUrl ? (
-                              <Image src={(node as Step).imageDataUrl} alt={(node as Step).title || (node as Step).name} width={220} height={140} unoptimized style={{ borderRadius: 6, objectFit: "cover" }} />
-                            ) : null}
+                                <Image src={(node as Step).imageDataUrl} alt={(node as Step).title || (node as Step).name} width={220} height={140} loading="lazy" sizes="220px" style={{ borderRadius: 6, objectFit: "cover" }} />
+                              ) : null}
                           </Box>
                         ) : null}
                       </Stack>
@@ -687,20 +1056,33 @@ export default function AdminPage() {
                         <Typography variant="body2" fontWeight={500} sx={{ mb: 1 }}>Thumbnail image</Typography>
                         <Box component="input" type="file" accept="image/*" required onChange={(e: ChangeEvent<HTMLInputElement>) => { void handleEntityThumbnailUpload(e); }} />
                         {entityThumbnailName ? <Typography variant="caption" color="text.secondary" display="block" sx={{ mt: 1 }}>Selected: {entityThumbnailName}</Typography> : null}
+                        {entityThumbnailDataUrl ? (
+                          <Box
+                            component="img"
+                            src={entityThumbnailDataUrl}
+                            alt="Thumbnail preview"
+                            sx={{
+                              mt: 1,
+                              width: 220,
+                              maxWidth: "100%",
+                              aspectRatio: "4 / 3",
+                              objectFit: "cover",
+                              borderRadius: 1,
+                              border: "1px solid",
+                              borderColor: "divider",
+                            }}
+                          />
+                        ) : null}
                       </Box>
                     ) : null}
 
                     {selectedColour ? (
                       <>
                         <TextField label="Step title" value={stepTitleInput} onChange={(e) => setStepTitleInput(e.target.value)} required fullWidth />
-                        <TextField
-                          label="Step content (HTML allowed)"
+                        <RichHtmlEditor
+                          label="Step content"
                           value={stepContentInput}
-                          onChange={(e) => setStepContentInput(e.target.value)}
-                          required
-                          multiline
-                          minRows={5}
-                          fullWidth
+                          onChange={setStepContentInput}
                         />
                         <Box>
                           <Typography variant="body2" fontWeight={500} sx={{ mb: 1 }}>Step image</Typography>
@@ -721,48 +1103,6 @@ export default function AdminPage() {
           </Stack>
         </Box>
       </Container>
-
-      <Dialog open={editState.open} onClose={closeEdit} fullWidth maxWidth="sm">
-        <DialogTitle>Edit {editState.level ?? "entry"}</DialogTitle>
-        <DialogContent>
-          <Stack spacing={2} sx={{ pt: 1 }}>
-            {editState.level !== "step" ? (
-              <TextField label="Name" value={editState.name} onChange={(e) => setEditState((c) => ({ ...c, name: e.target.value }))} fullWidth />
-            ) : (
-              <Typography variant="body2" color="text.secondary">
-                Step name is automatic and cannot be edited.
-              </Typography>
-            )}
-            {editState.level !== "step" ? (
-              <Box>
-                <Typography variant="body2" fontWeight={500} sx={{ mb: 1 }}>Thumbnail image</Typography>
-                <Box component="input" type="file" accept="image/*" onChange={(e: ChangeEvent<HTMLInputElement>) => { void handleEditThumbnailUpload(e); }} />
-              </Box>
-            ) : null}
-            {editState.level === "step" ? (
-              <>
-                <TextField label="Step title" value={editState.title} onChange={(e) => setEditState((c) => ({ ...c, title: e.target.value }))} fullWidth />
-                <TextField
-                  label="Step content (HTML allowed)"
-                  value={editState.contentHtml}
-                  onChange={(e) => setEditState((c) => ({ ...c, contentHtml: e.target.value }))}
-                  multiline
-                  minRows={5}
-                  fullWidth
-                />
-                <Box>
-                  <Typography variant="body2" fontWeight={500} sx={{ mb: 1 }}>Step image</Typography>
-                  <Box component="input" type="file" accept="image/*" onChange={(e: ChangeEvent<HTMLInputElement>) => { void handleEditStepImageUpload(e); }} />
-                </Box>
-              </>
-            ) : null}
-          </Stack>
-        </DialogContent>
-        <DialogActions>
-          <Button onClick={closeEdit}>Cancel</Button>
-          <Button variant="contained" onClick={() => void saveEdit()}>Save</Button>
-        </DialogActions>
-      </Dialog>
     </Box>
   );
 }

@@ -1,5 +1,6 @@
 import { applicationDefault, cert, getApps, initializeApp } from "firebase-admin/app";
 import { getFirestore } from "firebase-admin/firestore";
+import { getStorage } from "firebase-admin/storage";
 
 function getPrivateKey() {
   const value = process.env.FIREBASE_PRIVATE_KEY;
@@ -40,3 +41,4 @@ function initAdminApp() {
 const app = initAdminApp();
 
 export const db = getFirestore(app);
+export const bucket = getStorage(app).bucket();

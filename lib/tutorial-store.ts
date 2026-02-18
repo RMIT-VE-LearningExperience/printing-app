@@ -5,6 +5,7 @@ import {
 } from "firebase-admin/firestore";
 
 import { db } from "./firebase-admin";
+import { resolveImageUrl } from "./media-storage";
 
 export type Step = {
   id: string;
@@ -61,16 +62,6 @@ function normalizeName(value: string, label: string): string {
   return result;
 }
 
-function normalizeThumbnailDataUrl(value: string): string {
-  const trimmed = value.trim();
-
-  if (!trimmed.startsWith("data:image/")) {
-    throw new Error("A valid thumbnail image is required.");
-  }
-
-  return trimmed;
-}
-
 function normalizeStepContent(input: StepContentInput): StepContentInput {
   const title = normalizeName(input.title, "Step title");
   const contentHtml = input.contentHtml.trim();
@@ -80,7 +71,7 @@ function normalizeStepContent(input: StepContentInput): StepContentInput {
     throw new Error("Step content is required.");
   }
 
-  if (!imageDataUrl.startsWith("data:image/")) {
+  if (!imageDataUrl) {
     throw new Error("A valid step image is required.");
   }
 
@@ -138,13 +129,41 @@ async function moveInCollection(
 
   const currentDoc = docs[currentIndex];
   const targetDoc = docs[targetIndex];
-
   const currentOrder = Number(currentDoc.data().order ?? currentIndex + 1);
   const targetOrder = Number(targetDoc.data().order ?? targetIndex + 1);
 
   const batch = db.batch();
   batch.update(currentDoc.ref, { order: targetOrder });
   batch.update(targetDoc.ref, { order: currentOrder });
+  await batch.commit();
+}
+
+async function reorderInCollection(
+  collection: CollectionReference,
+  sourceId: string,
+  targetId: string,
+  label: string,
+): Promise<void> {
+  if (sourceId === targetId) {
+    return;
+  }
+
+  const docs = (await collection.orderBy("order", "asc").get()).docs;
+  const sourceIndex = docs.findIndex((doc) => doc.id === sourceId);
+  const targetIndex = docs.findIndex((doc) => doc.id === targetId);
+
+  if (sourceIndex < 0 || targetIndex < 0) {
+    throw new Error(`${label} not found.`);
+  }
+
+  const ordered = [...docs];
+  const [moved] = ordered.splice(sourceIndex, 1);
+  ordered.splice(targetIndex, 0, moved);
+
+  const batch = db.batch();
+  ordered.forEach((doc, index) => {
+    batch.update(doc.ref, { order: index + 1 });
+  });
   await batch.commit();
 }
 
@@ -165,6 +184,22 @@ async function getLegacyStepFallback(stepRef: DocumentReference): Promise<StepCo
     contentHtml: String(data.contentHtml ?? ""),
     imageDataUrl: String(data.imageDataUrl ?? ""),
   };
+}
+
+async function saveStepHistory(stepRef: DocumentReference) {
+  const existingStep = await stepRef.get();
+  if (!existingStep.exists) {
+    return;
+  }
+
+  const data = existingStep.data() ?? {};
+  const historyRef = stepRef.collection("history").doc();
+  await historyRef.set({
+    title: String(data.title ?? ""),
+    contentHtml: String(data.contentHtml ?? ""),
+    imageDataUrl: String(data.imageDataUrl ?? ""),
+    createdAt: FieldValue.serverTimestamp(),
+  });
 }
 
 export async function getTutorialState(): Promise<State> {
@@ -229,9 +264,15 @@ export async function getTutorialState(): Promise<State> {
 }
 
 export async function addPrinter(name: string, thumbnailDataUrl: string): Promise<State> {
-  await printersCollection().add({
+  const ref = printersCollection().doc();
+  const thumbnailUrl = await resolveImageUrl(
+    thumbnailDataUrl,
+    `tutorial/printers/${ref.id}/thumbnail`,
+  );
+
+  await ref.set({
     name: normalizeName(name, "Printer name"),
-    thumbnailDataUrl: normalizeThumbnailDataUrl(thumbnailDataUrl),
+    thumbnailDataUrl: thumbnailUrl,
     order: await getNextOrder(printersCollection()),
     createdAt: FieldValue.serverTimestamp(),
   });
@@ -246,10 +287,15 @@ export async function addPaper(
 ): Promise<State> {
   const printerRef = await assertDocExists(printersCollection(), printerId, "Printer");
   const papers = printerRef.collection("papers");
+  const ref = papers.doc();
+  const thumbnailUrl = await resolveImageUrl(
+    thumbnailDataUrl,
+    `tutorial/printers/${printerId}/papers/${ref.id}/thumbnail`,
+  );
 
-  await papers.add({
+  await ref.set({
     name: normalizeName(name, "Paper name"),
-    thumbnailDataUrl: normalizeThumbnailDataUrl(thumbnailDataUrl),
+    thumbnailDataUrl: thumbnailUrl,
     order: await getNextOrder(papers),
     createdAt: FieldValue.serverTimestamp(),
   });
@@ -266,10 +312,15 @@ export async function addColour(
   const printerRef = await assertDocExists(printersCollection(), printerId, "Printer");
   const paperRef = await assertDocExists(printerRef.collection("papers"), paperId, "Paper");
   const colours = paperRef.collection("colours");
+  const ref = colours.doc();
+  const thumbnailUrl = await resolveImageUrl(
+    thumbnailDataUrl,
+    `tutorial/printers/${printerId}/papers/${paperId}/colours/${ref.id}/thumbnail`,
+  );
 
-  await colours.add({
+  await ref.set({
     name: normalizeName(name, "Colour name"),
-    thumbnailDataUrl: normalizeThumbnailDataUrl(thumbnailDataUrl),
+    thumbnailDataUrl: thumbnailUrl,
     order: await getNextOrder(colours),
     createdAt: FieldValue.serverTimestamp(),
   });
@@ -289,13 +340,18 @@ export async function addStep(
   const paperRef = await assertDocExists(printerRef.collection("papers"), paperId, "Paper");
   const colourRef = await assertDocExists(paperRef.collection("colours"), colourId, "Colour");
   const steps = colourRef.collection("steps");
+  const ref = steps.doc();
   const nextOrder = await getNextOrder(steps);
+  const imageUrl = await resolveImageUrl(
+    normalizedContent.imageDataUrl,
+    `tutorial/printers/${printerId}/papers/${paperId}/colours/${colourId}/steps/${ref.id}/image`,
+  );
 
-  await steps.add({
+  await ref.set({
     name: `Step ${nextOrder}`,
     title: normalizedContent.title,
     contentHtml: normalizedContent.contentHtml,
-    imageDataUrl: normalizedContent.imageDataUrl,
+    imageDataUrl: imageUrl,
     order: nextOrder,
     createdAt: FieldValue.serverTimestamp(),
   });
@@ -309,9 +365,14 @@ export async function updatePrinter(
   thumbnailDataUrl: string,
 ): Promise<State> {
   const printerRef = await assertDocExists(printersCollection(), printerId, "Printer");
+  const thumbnailUrl = await resolveImageUrl(
+    thumbnailDataUrl,
+    `tutorial/printers/${printerId}/thumbnail`,
+  );
+
   await printerRef.update({
     name: normalizeName(name, "Printer name"),
-    thumbnailDataUrl: normalizeThumbnailDataUrl(thumbnailDataUrl),
+    thumbnailDataUrl: thumbnailUrl,
   });
 
   return getTutorialState();
@@ -325,9 +386,14 @@ export async function updatePaper(
 ): Promise<State> {
   const printerRef = await assertDocExists(printersCollection(), printerId, "Printer");
   const paperRef = await assertDocExists(printerRef.collection("papers"), paperId, "Paper");
+  const thumbnailUrl = await resolveImageUrl(
+    thumbnailDataUrl,
+    `tutorial/printers/${printerId}/papers/${paperId}/thumbnail`,
+  );
+
   await paperRef.update({
     name: normalizeName(name, "Paper name"),
-    thumbnailDataUrl: normalizeThumbnailDataUrl(thumbnailDataUrl),
+    thumbnailDataUrl: thumbnailUrl,
   });
 
   return getTutorialState();
@@ -343,9 +409,14 @@ export async function updateColour(
   const printerRef = await assertDocExists(printersCollection(), printerId, "Printer");
   const paperRef = await assertDocExists(printerRef.collection("papers"), paperId, "Paper");
   const colourRef = await assertDocExists(paperRef.collection("colours"), colourId, "Colour");
+  const thumbnailUrl = await resolveImageUrl(
+    thumbnailDataUrl,
+    `tutorial/printers/${printerId}/papers/${paperId}/colours/${colourId}/thumbnail`,
+  );
+
   await colourRef.update({
     name: normalizeName(name, "Colour name"),
-    thumbnailDataUrl: normalizeThumbnailDataUrl(thumbnailDataUrl),
+    thumbnailDataUrl: thumbnailUrl,
   });
 
   return getTutorialState();
@@ -364,12 +435,52 @@ export async function updateStep(
   const paperRef = await assertDocExists(printerRef.collection("papers"), paperId, "Paper");
   const colourRef = await assertDocExists(paperRef.collection("colours"), colourId, "Colour");
   const stepRef = await assertDocExists(colourRef.collection("steps"), stepId, "Step");
+  await saveStepHistory(stepRef);
+  const imageUrl = await resolveImageUrl(
+    normalizedContent.imageDataUrl,
+    `tutorial/printers/${printerId}/papers/${paperId}/colours/${colourId}/steps/${stepId}/image`,
+  );
 
   await stepRef.update({
     title: normalizedContent.title,
     contentHtml: normalizedContent.contentHtml,
-    imageDataUrl: normalizedContent.imageDataUrl,
+    imageDataUrl: imageUrl,
   });
+
+  return getTutorialState();
+}
+
+export async function undoStep(
+  printerId: string,
+  paperId: string,
+  colourId: string,
+  stepId: string,
+): Promise<State> {
+  const printerRef = await assertDocExists(printersCollection(), printerId, "Printer");
+  const paperRef = await assertDocExists(printerRef.collection("papers"), paperId, "Paper");
+  const colourRef = await assertDocExists(paperRef.collection("colours"), colourId, "Colour");
+  const stepRef = await assertDocExists(colourRef.collection("steps"), stepId, "Step");
+
+  const historyQuery = await stepRef
+    .collection("history")
+    .orderBy("createdAt", "desc")
+    .limit(1)
+    .get();
+
+  if (historyQuery.empty) {
+    throw new Error("No previous version available for this step.");
+  }
+
+  const historyDoc = historyQuery.docs[0];
+  const historyData = historyDoc.data();
+
+  await stepRef.update({
+    title: String(historyData.title ?? ""),
+    contentHtml: String(historyData.contentHtml ?? ""),
+    imageDataUrl: String(historyData.imageDataUrl ?? ""),
+  });
+
+  await historyDoc.ref.delete();
 
   return getTutorialState();
 }
@@ -451,5 +562,46 @@ export async function moveStep(
   const paperRef = await assertDocExists(printerRef.collection("papers"), paperId, "Paper");
   const colourRef = await assertDocExists(paperRef.collection("colours"), colourId, "Colour");
   await moveInCollection(colourRef.collection("steps"), stepId, direction, "Step");
+  return getTutorialState();
+}
+
+export async function reorderPrinter(sourceId: string, targetId: string): Promise<State> {
+  await reorderInCollection(printersCollection(), sourceId, targetId, "Printer");
+  return getTutorialState();
+}
+
+export async function reorderPaper(
+  printerId: string,
+  sourceId: string,
+  targetId: string,
+): Promise<State> {
+  const printerRef = await assertDocExists(printersCollection(), printerId, "Printer");
+  await reorderInCollection(printerRef.collection("papers"), sourceId, targetId, "Paper");
+  return getTutorialState();
+}
+
+export async function reorderColour(
+  printerId: string,
+  paperId: string,
+  sourceId: string,
+  targetId: string,
+): Promise<State> {
+  const printerRef = await assertDocExists(printersCollection(), printerId, "Printer");
+  const paperRef = await assertDocExists(printerRef.collection("papers"), paperId, "Paper");
+  await reorderInCollection(paperRef.collection("colours"), sourceId, targetId, "Colour");
+  return getTutorialState();
+}
+
+export async function reorderStep(
+  printerId: string,
+  paperId: string,
+  colourId: string,
+  sourceId: string,
+  targetId: string,
+): Promise<State> {
+  const printerRef = await assertDocExists(printersCollection(), printerId, "Printer");
+  const paperRef = await assertDocExists(printerRef.collection("papers"), paperId, "Paper");
+  const colourRef = await assertDocExists(paperRef.collection("colours"), colourId, "Colour");
+  await reorderInCollection(colourRef.collection("steps"), sourceId, targetId, "Step");
   return getTutorialState();
 }

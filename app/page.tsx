@@ -1,7 +1,7 @@
 "use client";
 
 import Image from "next/image";
-import { useEffect, useMemo, useState } from "react";
+import { type TouchEvent, useEffect, useMemo, useRef, useState } from "react";
 
 import styles from "./page.module.css";
 
@@ -39,9 +39,19 @@ type TutorialState = {
 };
 
 const emptyState: TutorialState = { printers: [] };
+const PROGRESS_KEY = "printing_guide_progress_v1";
 
 function stripHtml(content: string): string {
   return content.replace(/<[^>]+>/g, " ").replace(/\s+/g, " ").trim();
+}
+
+function sanitizeStepHtml(content: string): string {
+  return content
+    .replace(/<(?!\/?(p|br|ul|ol|li|b|strong|i|em|h3|a)(\s+[^>]*)?>)[^>]*>/gi, "")
+    .replace(/<a\s+[^>]*href=(\"|')(.*?)\1[^>]*>/gi, (_match, _quote, href: string) => {
+      const safeHref = /^(https?:\/\/|mailto:)/i.test(href) ? href : "#";
+      return `<a href="${safeHref}" target="_blank" rel="noreferrer">`;
+    });
 }
 
 export default function HomePage() {
@@ -53,6 +63,31 @@ export default function HomePage() {
   const [selectedPaperId, setSelectedPaperId] = useState<string | null>(null);
   const [selectedColourId, setSelectedColourId] = useState<string | null>(null);
   const [activeStepIndex, setActiveStepIndex] = useState(0);
+  const [selectionView, setSelectionView] = useState<"cards" | "list">("cards");
+  const touchStartXRef = useRef<number | null>(null);
+
+  useEffect(() => {
+    const stored = window.localStorage.getItem(PROGRESS_KEY);
+    if (!stored) {
+      return;
+    }
+
+    try {
+      const parsed = JSON.parse(stored) as {
+        printerId?: string;
+        paperId?: string;
+        colourId?: string;
+        stepIndex?: number;
+      };
+
+      setSelectedPrinterId(parsed.printerId ?? null);
+      setSelectedPaperId(parsed.paperId ?? null);
+      setSelectedColourId(parsed.colourId ?? null);
+      setActiveStepIndex(Number.isFinite(parsed.stepIndex) ? Math.max(0, parsed.stepIndex ?? 0) : 0);
+    } catch {
+      window.localStorage.removeItem(PROGRESS_KEY);
+    }
+  }, []);
 
   useEffect(() => {
     async function loadData() {
@@ -97,6 +132,54 @@ export default function HomePage() {
   const steps = selectedColour?.steps ?? [];
   const activeStep = steps[activeStepIndex] ?? null;
 
+  useEffect(() => {
+    if (selectedPrinterId && !selectedPrinter) {
+      setSelectedPrinterId(null);
+      setSelectedPaperId(null);
+      setSelectedColourId(null);
+      setActiveStepIndex(0);
+      return;
+    }
+
+    if (selectedPaperId && !selectedPaper) {
+      setSelectedPaperId(null);
+      setSelectedColourId(null);
+      setActiveStepIndex(0);
+      return;
+    }
+
+    if (selectedColourId && !selectedColour) {
+      setSelectedColourId(null);
+      setActiveStepIndex(0);
+      return;
+    }
+
+    if (activeStepIndex >= steps.length && steps.length > 0) {
+      setActiveStepIndex(steps.length - 1);
+    }
+  }, [
+    activeStepIndex,
+    selectedColour,
+    selectedColourId,
+    selectedPaper,
+    selectedPaperId,
+    selectedPrinter,
+    selectedPrinterId,
+    steps.length,
+  ]);
+
+  useEffect(() => {
+    window.localStorage.setItem(
+      PROGRESS_KEY,
+      JSON.stringify({
+        printerId: selectedPrinterId,
+        paperId: selectedPaperId,
+        colourId: selectedColourId,
+        stepIndex: activeStepIndex,
+      }),
+    );
+  }, [activeStepIndex, selectedColourId, selectedPaperId, selectedPrinterId]);
+
   function resetToHome() {
     setSelectedPrinterId(null);
     setSelectedPaperId(null);
@@ -139,10 +222,71 @@ export default function HomePage() {
     setActiveStepIndex(0);
   }
 
+  function goPrevStep() {
+    setActiveStepIndex((value) => Math.max(0, value - 1));
+  }
+
+  function goNextStep() {
+    setActiveStepIndex((value) => Math.min(steps.length - 1, value + 1));
+  }
+
+  function handleStepTouchStart(event: TouchEvent<HTMLElement>) {
+    touchStartXRef.current = event.touches[0]?.clientX ?? null;
+  }
+
+  function handleStepTouchEnd(event: TouchEvent<HTMLElement>) {
+    const startX = touchStartXRef.current;
+    const endX = event.changedTouches[0]?.clientX ?? null;
+    touchStartXRef.current = null;
+
+    if (startX === null || endX === null) {
+      return;
+    }
+
+    const deltaX = startX - endX;
+    if (Math.abs(deltaX) < 50) {
+      return;
+    }
+
+    if (deltaX > 0) {
+      goNextStep();
+      return;
+    }
+
+    goPrevStep();
+  }
+
   const showingPrinterSelection = !selectedPrinter;
   const showingPaperSelection = !!selectedPrinter && !selectedPaper;
   const showingColourSelection = !!selectedPaper && !selectedColour;
   const showingSteps = !!selectedColour;
+  const showingSelectionLists =
+    showingPrinterSelection || showingPaperSelection || showingColourSelection;
+
+  const hasPrinters = data.printers.length > 0;
+  const hasPapers = (selectedPrinter?.papers.length ?? 0) > 0;
+  const hasColours = (selectedPaper?.colours.length ?? 0) > 0;
+  const hasSteps = steps.length > 0;
+
+  useEffect(() => {
+    if (!showingSteps || !hasSteps) {
+      return;
+    }
+
+    function onKeyDown(event: KeyboardEvent) {
+      if (event.key === "ArrowLeft") {
+        event.preventDefault();
+        setActiveStepIndex((value) => Math.max(0, value - 1));
+      }
+      if (event.key === "ArrowRight") {
+        event.preventDefault();
+        setActiveStepIndex((value) => Math.min(steps.length - 1, value + 1));
+      }
+    }
+
+    window.addEventListener("keydown", onKeyDown);
+    return () => window.removeEventListener("keydown", onKeyDown);
+  }, [showingSteps, hasSteps, steps.length]);
 
   return (
     <main className={styles.page}>
@@ -206,13 +350,35 @@ export default function HomePage() {
 
         {!loading && !error ? (
           <section className={styles.content}>
+            {showingSelectionLists ? (
+              <div className={styles.viewToggleBar}>
+                <span className={styles.viewToggleLabel}>View</span>
+                <div className={styles.viewToggleWrap}>
+                <button
+                  type="button"
+                  className={`${styles.viewToggleButton} ${selectionView === "cards" ? styles.viewToggleButtonActive : ""}`}
+                  onClick={() => setSelectionView("cards")}
+                >
+                  Cards
+                </button>
+                <button
+                  type="button"
+                  className={`${styles.viewToggleButton} ${selectionView === "list" ? styles.viewToggleButtonActive : ""}`}
+                  onClick={() => setSelectionView("list")}
+                >
+                  List
+                </button>
+                </div>
+              </div>
+            ) : null}
+
             {showingPrinterSelection ? (
-              <div className={styles.cardList}>
+              <div className={`${styles.cardList} ${selectionView === "list" ? styles.listView : ""}`}>
                 {data.printers.map((printer, index) => (
                   <button
                     key={printer.id}
                     type="button"
-                    className={`${styles.selectCard} ${index === 0 ? styles.activeCard : ""}`}
+                    className={`${styles.selectCard} ${index === 0 ? styles.activeCard : ""} ${selectionView === "list" ? styles.selectListItem : ""}`}
                     onClick={() => selectPrinter(printer.id)}
                   >
                     <Image
@@ -221,7 +387,8 @@ export default function HomePage() {
                       width={280}
                       height={190}
                       className={styles.cardImage}
-                      unoptimized
+                      sizes="(max-width: 700px) 100vw, (max-width: 980px) 50vw, 33vw"
+                      loading="lazy"
                     />
                     <div className={styles.cardContent}>
                       <h3 className={styles.cardTitle}>{printer.name}</h3>
@@ -230,14 +397,17 @@ export default function HomePage() {
                 ))}
               </div>
             ) : null}
+            {showingPrinterSelection && !hasPrinters ? (
+              <div className={styles.statusBox}>No printers available yet. Add your first printer in Admin.</div>
+            ) : null}
 
             {showingPaperSelection ? (
-              <div className={styles.cardList}>
+              <div className={`${styles.cardList} ${selectionView === "list" ? styles.listView : ""}`}>
                 {selectedPrinter?.papers.map((paper, index) => (
                   <button
                     key={paper.id}
                     type="button"
-                    className={`${styles.selectCard} ${index === 0 ? styles.activeCard : ""}`}
+                    className={`${styles.selectCard} ${index === 0 ? styles.activeCard : ""} ${selectionView === "list" ? styles.selectListItem : ""}`}
                     onClick={() => selectPaper(paper.id)}
                   >
                     <Image
@@ -246,7 +416,8 @@ export default function HomePage() {
                       width={280}
                       height={220}
                       className={styles.cardImage}
-                      unoptimized
+                      sizes="(max-width: 700px) 100vw, (max-width: 980px) 50vw, 33vw"
+                      loading="lazy"
                     />
                     <div className={styles.cardContent}>
                       <h3 className={styles.cardTitle}>{paper.name}</h3>
@@ -255,16 +426,20 @@ export default function HomePage() {
                 ))}
               </div>
             ) : null}
+            {showingPaperSelection && !hasPapers ? (
+              <div className={styles.statusBox}>No papers yet for this printer. Add first paper in Admin.</div>
+            ) : null}
 
             {showingColourSelection ? (
-              <div className={styles.cardList}>
+              <div className={`${styles.cardList} ${selectionView === "list" ? styles.listView : ""}`}>
                 {selectedPaper?.colours.map((colour, index) => {
                   const firstStep = colour.steps[0];
+                  const firstStepSummary = stripHtml(firstStep?.contentHtml ?? "");
                   return (
                     <button
                       key={colour.id}
                       type="button"
-                      className={`${styles.selectCard} ${index === 0 ? styles.activeCard : ""}`}
+                      className={`${styles.selectCard} ${index === 0 ? styles.activeCard : ""} ${selectionView === "list" ? styles.selectListItem : ""}`}
                       onClick={() => selectColour(colour.id)}
                     >
                       <Image
@@ -273,12 +448,13 @@ export default function HomePage() {
                         width={280}
                         height={220}
                         className={styles.cardImage}
-                        unoptimized
+                        sizes="(max-width: 700px) 100vw, (max-width: 980px) 50vw, 33vw"
+                        loading="lazy"
                       />
                       <div className={styles.cardContent}>
                         <h3 className={styles.cardTitle}>{colour.name}</h3>
-                        {firstStep?.contentHtml ? (
-                          <p className={styles.cardText}>{stripHtml(firstStep.contentHtml).slice(0, 120)}</p>
+                        {firstStepSummary.length > 0 ? (
+                          <p className={styles.cardText}>{firstStepSummary.slice(0, 120)}</p>
                         ) : null}
                       </div>
                     </button>
@@ -286,23 +462,35 @@ export default function HomePage() {
                 })}
               </div>
             ) : null}
+            {showingColourSelection && !hasColours ? (
+              <div className={styles.statusBox}>No colours yet for this paper. Add first colour in Admin.</div>
+            ) : null}
 
             {showingSteps && activeStep ? (
               <div className={styles.stepDesktop}>
-                <article key={activeStep.id} className={styles.stepCard}>
+                <article
+                  key={activeStep.id}
+                  className={styles.stepCard}
+                  onTouchStart={handleStepTouchStart}
+                  onTouchEnd={handleStepTouchEnd}
+                >
                   <div className={styles.stepIndex}>{activeStepIndex + 1}</div>
                   <h3 className={styles.stepName}>{activeStep.name}</h3>
 
                   <div className={styles.itemBlock}>
                     <p className={styles.itemTitle}>{activeStep.title}</p>
-                    <div className={styles.itemHtml} dangerouslySetInnerHTML={{ __html: activeStep.contentHtml }} />
+                    <div
+                      className={styles.itemRich}
+                      dangerouslySetInnerHTML={{ __html: sanitizeStepHtml(activeStep.contentHtml ?? "") }}
+                    />
                     <Image
                       src={activeStep.imageDataUrl || "/vercel.svg"}
                       alt={activeStep.title || activeStep.name}
                       width={900}
                       height={520}
                       className={styles.itemImage}
-                      unoptimized
+                      sizes="(max-width: 980px) 100vw, 860px"
+                      loading="lazy"
                     />
                   </div>
 
@@ -310,7 +498,7 @@ export default function HomePage() {
                     <button
                       type="button"
                       className={styles.navButton}
-                      onClick={() => setActiveStepIndex((value) => Math.max(0, value - 1))}
+                      onClick={goPrevStep}
                       disabled={activeStepIndex === 0}
                     >
                       Previous
@@ -318,7 +506,7 @@ export default function HomePage() {
                     <button
                       type="button"
                       className={styles.navButton}
-                      onClick={() => setActiveStepIndex((value) => Math.min(steps.length - 1, value + 1))}
+                      onClick={goNextStep}
                       disabled={activeStepIndex >= steps.length - 1}
                     >
                       Next
@@ -327,9 +515,36 @@ export default function HomePage() {
                 </article>
               </div>
             ) : null}
+            {showingSteps && !hasSteps ? (
+              <div className={styles.statusBox}>No steps yet for this colour. Add Step 1 in Admin.</div>
+            ) : null}
           </section>
         ) : null}
       </div>
+
+      {showingSteps && hasSteps ? (
+        <div className={styles.stickyStepNav}>
+          <button
+            type="button"
+            className={styles.navButton}
+            onClick={goPrevStep}
+            disabled={activeStepIndex === 0}
+          >
+            Previous
+          </button>
+          <span className={styles.stickyStepMeta}>
+            Step {activeStepIndex + 1} / {steps.length}
+          </span>
+          <button
+            type="button"
+            className={styles.navButton}
+            onClick={goNextStep}
+            disabled={activeStepIndex >= steps.length - 1}
+          >
+            Next
+          </button>
+        </div>
+      ) : null}
 
       {!showingPrinterSelection ? (
         <button type="button" onClick={resetToHome} className={styles.footerHome}>
