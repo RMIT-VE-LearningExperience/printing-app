@@ -569,7 +569,13 @@ export default function AdminPage() {
                   <ListItemButton
                     selected={selection.printerId === printer.id}
                     onClick={() => setSelection({ printerId: printer.id, paperId: null, colourId: null, stepId: null })}
-                    sx={{ borderRadius: 2 }}
+                    sx={{
+                      borderRadius: 2,
+                      transition: "transform 180ms ease, background-color 180ms ease",
+                      "&:hover": {
+                        transform: "translateY(-1px)",
+                      },
+                    }}
                   >
                     <ListItemAvatar sx={{ minWidth: 40 }}>
                       <Avatar src={printer.thumbnailDataUrl || undefined} alt={printer.name}>
@@ -609,12 +615,12 @@ export default function AdminPage() {
             {loadingState ? <Alert severity="info">Loading...</Alert> : null}
 
             {!loadingState ? (
-              <Paper elevation={2} sx={{ p: 2.5 }}>
+              <Paper elevation={2} sx={{ p: 2.5, transition: "box-shadow 220ms ease, transform 220ms ease", "&:hover": { transform: "translateY(-1px)", boxShadow: 6 } }}>
                 <Typography variant="h6" gutterBottom>{listTitle}</Typography>
 
                 <List sx={{ p: 0 }}>
-                  {(currentList as Array<Step | Paper | Colour | Printer>).map((node, index, list) => (
-                    <ListItem key={node.id} sx={{ border: "1px solid", borderColor: "divider", borderRadius: 2, mb: 1.25, p: 1.25, alignItems: "stretch" }}>
+                    {(currentList as Array<Step | Paper | Colour | Printer>).map((node, index, list) => (
+                      <ListItem key={node.id} sx={{ border: "1px solid", borderColor: "divider", borderRadius: 2, mb: 1.25, p: 1.25, alignItems: "stretch", transition: "transform 180ms ease, box-shadow 180ms ease", "&:hover": { transform: "translateY(-2px)", boxShadow: 3 } }}>
                       <Stack spacing={1.25} sx={{ width: "100%" }}>
                         <Stack direction="row" spacing={1.25} alignItems="center">
                           <Avatar src={"thumbnailDataUrl" in node ? node.thumbnailDataUrl || undefined : undefined} alt={node.name}>{node.name.charAt(0).toUpperCase()}</Avatar>

@@ -289,7 +289,7 @@ export default function HomePage() {
 
             {showingSteps && activeStep ? (
               <div className={styles.stepDesktop}>
-                <article className={styles.stepCard}>
+                <article key={activeStep.id} className={styles.stepCard}>
                   <div className={styles.stepIndex}>{activeStepIndex + 1}</div>
                   <h3 className={styles.stepName}>{activeStep.name}</h3>
 

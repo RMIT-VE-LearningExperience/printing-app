@@ -2,6 +2,7 @@
   min-height: 100vh;
   background: #dfe3ea;
   color: #1a2238;
+  animation: fadeIn 420ms ease-out;
 }
 
 .shell {
@@ -15,6 +16,7 @@
   padding: 32px 20px 28px;
   border-bottom: 1px solid #94a2bf;
   background: #f6f7f9;
+  animation: riseIn 500ms ease-out;
 }
 
 .title {
@@ -50,6 +52,13 @@
   align-items: center;
   gap: 14px;
   padding: 8px 16px;
+  animation: riseIn 420ms ease-out;
+  transition: box-shadow 220ms ease, transform 220ms ease;
+}
+
+.contextPill:hover {
+  transform: translateY(-1px);
+  box-shadow: 0 8px 18px rgba(21, 28, 45, 0.1);
 }
 
 .backButton {
@@ -64,6 +73,15 @@
   justify-content: center;
   font-size: 1.3rem;
   cursor: pointer;
+  transition: background-color 180ms ease, transform 180ms ease;
+}
+
+.backButton:hover {
+  background: #e7ebf2;
+}
+
+.backButton:active {
+  transform: scale(0.96);
 }
 
 .pillText {
@@ -124,10 +142,13 @@
 
 .dot {
   background: #8b98b3;
+  transition: background-color 220ms ease, transform 220ms ease;
 }
 
 .dotActive {
   background: #1b243d;
+  transform: scaleX(1.15);
+  transition: background-color 220ms ease, transform 220ms ease;
 }
 
 .content {
@@ -156,11 +177,24 @@
   text-align: left;
   cursor: pointer;
   padding: 0;
+  animation: cardIn 440ms ease-out both;
+  transition: transform 220ms ease, box-shadow 220ms ease, border-color 220ms ease;
 }
 
 .activeCard {
   background: #5b667d;
   color: #fff;
+  box-shadow: 0 14px 28px rgba(29, 37, 58, 0.28);
+}
+
+.selectCard:hover {
+  transform: translateY(-3px);
+  box-shadow: 0 16px 30px rgba(33, 41, 67, 0.18);
+  border-color: #6a7aa0;
+}
+
+.selectCard:active {
+  transform: translateY(-1px) scale(0.992);
 }
 
 .cardImage {
@@ -169,6 +203,12 @@
   min-height: 168px;
   object-fit: cover;
   display: block;
+  transition: transform 280ms ease, filter 280ms ease;
+}
+
+.selectCard:hover .cardImage {
+  transform: scale(1.03);
+  filter: saturate(1.05);
 }
 
 .cardContent {
@@ -198,6 +238,13 @@
 
 .stepCard {
   padding: 16px;
+  animation: contentSwap 300ms ease-out;
+  transition: box-shadow 220ms ease, transform 220ms ease;
+}
+
+.stepCard:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 14px 26px rgba(33, 41, 67, 0.18);
 }
 
 .stepIndex {
@@ -243,6 +290,12 @@
   background: #dbdde2;
   border-radius: 2px;
   object-fit: cover;
+  transition: transform 260ms ease, box-shadow 260ms ease;
+}
+
+.itemImage:hover {
+  transform: scale(1.01);
+  box-shadow: 0 10px 18px rgba(25, 33, 52, 0.2);
 }
 
 .stepControls {
@@ -259,6 +312,17 @@
   padding: 8px 14px;
   font-weight: 700;
   cursor: pointer;
+  transition: transform 180ms ease, background-color 180ms ease, box-shadow 180ms ease;
+}
+
+.navButton:hover:not(:disabled) {
+  background: #e8edf8;
+  transform: translateY(-1px);
+  box-shadow: 0 8px 14px rgba(35, 49, 80, 0.12);
+}
+
+.navButton:active:not(:disabled) {
+  transform: translateY(0) scale(0.98);
 }
 
 .navButton:disabled {
@@ -284,6 +348,17 @@
   font-weight: 800;
   letter-spacing: 0.08em;
   font-size: 0.76rem;
+  transition: transform 220ms ease, box-shadow 220ms ease, background-color 220ms ease;
+}
+
+.footerHome:hover {
+  transform: translateY(-2px);
+  background: #f5f7fb;
+  box-shadow: 0 12px 20px rgba(36, 44, 66, 0.18);
+}
+
+.footerHome:active {
+  transform: translateY(0) scale(0.98);
 }
 
 .footerHomeIcon {
@@ -299,6 +374,82 @@
   border: 1px solid #9aa7c0;
   background: #f8f9fb;
   text-align: center;
+  animation: riseIn 320ms ease-out;
+}
+
+.cardList > *:nth-child(1) {
+  animation-delay: 40ms;
+}
+
+.cardList > *:nth-child(2) {
+  animation-delay: 90ms;
+}
+
+.cardList > *:nth-child(3) {
+  animation-delay: 140ms;
+}
+
+.cardList > *:nth-child(4) {
+  animation-delay: 190ms;
+}
+
+.cardList > *:nth-child(5) {
+  animation-delay: 240ms;
+}
+
+.cardList > *:nth-child(6) {
+  animation-delay: 290ms;
+}
+
+@keyframes fadeIn {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
+}
+
+@keyframes riseIn {
+  from {
+    opacity: 0;
+    transform: translateY(12px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@keyframes cardIn {
+  from {
+    opacity: 0;
+    transform: translateY(16px) scale(0.985);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+  }
+}
+
+@keyframes contentSwap {
+  from {
+    opacity: 0;
+    transform: translateY(8px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .page *,
+  .page *::before,
+  .page *::after {
+    animation: none !important;
+    transition: none !important;
+  }
 }
 
 @media (min-width: 700px) {
