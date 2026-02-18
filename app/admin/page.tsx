@@ -3,56 +3,55 @@
 import Image from "next/image";
 import {
   Alert,
+  Avatar,
   Box,
   Breadcrumbs,
   Button,
   Container,
+  Dialog,
+  DialogActions,
+  DialogContent,
+  DialogTitle,
+  Divider,
   Link,
   List,
   ListItem,
+  ListItemAvatar,
+  ListItemButton,
+  ListItemText,
   Paper,
   Stack,
   TextField,
   Typography,
 } from "@mui/material";
-import {
-  type ChangeEvent,
-  type FormEvent,
-  useEffect,
-  useMemo,
-  useRef,
-  useState,
-} from "react";
+import { type ChangeEvent, type FormEvent, useEffect, useMemo, useState } from "react";
 
-type StepItem = {
-  id: number;
+type Step = {
+  id: string;
+  name: string;
   title: string;
   contentHtml: string;
   imageDataUrl: string;
-  createdAt: string;
-};
-
-type Step = {
-  id: number;
-  name: string;
-  items: StepItem[];
 };
 
 type Colour = {
-  id: number;
+  id: string;
   name: string;
+  thumbnailDataUrl: string;
   steps: Step[];
 };
 
 type Paper = {
-  id: number;
+  id: string;
   name: string;
+  thumbnailDataUrl: string;
   colours: Colour[];
 };
 
 type Printer = {
-  id: number;
+  id: string;
   name: string;
+  thumbnailDataUrl: string;
   papers: Paper[];
 };
 
@@ -61,10 +60,24 @@ type TutorialState = {
 };
 
 type Selection = {
-  printerId: number | null;
-  paperId: number | null;
-  colourId: number | null;
-  stepId: number | null;
+  printerId: string | null;
+  paperId: string | null;
+  colourId: string | null;
+  stepId: string | null;
+};
+
+type Level = "printer" | "paper" | "colour" | "step";
+type Direction = "up" | "down";
+
+type EditState = {
+  open: boolean;
+  level: Level | null;
+  id: string;
+  name: string;
+  thumbnailDataUrl: string;
+  title: string;
+  contentHtml: string;
+  imageDataUrl: string;
 };
 
 const emptyState: TutorialState = { printers: [] };
@@ -77,16 +90,31 @@ export default function AdminPage() {
     colourId: null,
     stepId: null,
   });
+
   const [nameInput, setNameInput] = useState("");
-  const [itemTitle, setItemTitle] = useState("");
-  const [itemContentHtml, setItemContentHtml] = useState("");
-  const [itemImageDataUrl, setItemImageDataUrl] = useState("");
-  const [itemImageName, setItemImageName] = useState("");
+  const [entityThumbnailDataUrl, setEntityThumbnailDataUrl] = useState("");
+  const [entityThumbnailName, setEntityThumbnailName] = useState("");
+
+  const [stepTitleInput, setStepTitleInput] = useState("");
+  const [stepContentInput, setStepContentInput] = useState("");
+  const [stepImageDataUrl, setStepImageDataUrl] = useState("");
+  const [stepImageName, setStepImageName] = useState("");
+
   const [loading, setLoading] = useState(false);
   const [loadingState, setLoadingState] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [success, setSuccess] = useState<string | null>(null);
-  const editorRef = useRef<HTMLDivElement | null>(null);
+
+  const [editState, setEditState] = useState<EditState>({
+    open: false,
+    level: null,
+    id: "",
+    name: "",
+    thumbnailDataUrl: "",
+    title: "",
+    contentHtml: "",
+    imageDataUrl: "",
+  });
 
   useEffect(() => {
     async function loadState() {
@@ -155,7 +183,6 @@ export default function AdminPage() {
       }
 
       setTutorialState(responsePayload);
-      setNameInput("");
       setSuccess("Saved.");
       return true;
     } catch {
@@ -166,199 +193,336 @@ export default function AdminPage() {
     }
   }
 
-  function resetItemFields() {
-    setItemTitle("");
-    setItemContentHtml("");
-    setItemImageDataUrl("");
-    setItemImageName("");
+  function resetEntityFields() {
+    setNameInput("");
+    setEntityThumbnailDataUrl("");
+    setEntityThumbnailName("");
+    setStepTitleInput("");
+    setStepContentInput("");
+    setStepImageDataUrl("");
+    setStepImageName("");
+  }
 
-    if (editorRef.current) {
-      editorRef.current.innerHTML = "";
+  async function toDataUrl(file: File): Promise<string> {
+    return new Promise<string>((resolve, reject) => {
+      const reader = new FileReader();
+      reader.onload = () => {
+        if (typeof reader.result === "string") {
+          resolve(reader.result);
+          return;
+        }
+
+        reject(new Error("Could not read image."));
+      };
+      reader.onerror = () => reject(new Error("Could not read image."));
+      reader.readAsDataURL(file);
+    });
+  }
+
+  async function handleEntityThumbnailUpload(event: ChangeEvent<HTMLInputElement>) {
+    const file = event.target.files?.[0];
+
+    if (!file) {
+      setEntityThumbnailDataUrl("");
+      setEntityThumbnailName("");
+      return;
+    }
+
+    try {
+      const dataUrl = await toDataUrl(file);
+      setEntityThumbnailDataUrl(dataUrl);
+      setEntityThumbnailName(file.name);
+    } catch {
+      setError("Could not read image.");
+    }
+  }
+
+  async function handleStepImageUpload(event: ChangeEvent<HTMLInputElement>) {
+    const file = event.target.files?.[0];
+
+    if (!file) {
+      setStepImageDataUrl("");
+      setStepImageName("");
+      return;
+    }
+
+    try {
+      const dataUrl = await toDataUrl(file);
+      setStepImageDataUrl(dataUrl);
+      setStepImageName(file.name);
+    } catch {
+      setError("Could not read image.");
+    }
+  }
+
+  async function handleEditThumbnailUpload(event: ChangeEvent<HTMLInputElement>) {
+    const file = event.target.files?.[0];
+    if (!file) return;
+
+    try {
+      const dataUrl = await toDataUrl(file);
+      setEditState((current) => ({ ...current, thumbnailDataUrl: dataUrl }));
+    } catch {
+      setError("Could not read image.");
+    }
+  }
+
+  async function handleEditStepImageUpload(event: ChangeEvent<HTMLInputElement>) {
+    const file = event.target.files?.[0];
+    if (!file) return;
+
+    try {
+      const dataUrl = await toDataUrl(file);
+      setEditState((current) => ({ ...current, imageDataUrl: dataUrl }));
+    } catch {
+      setError("Could not read image.");
     }
   }
 
   async function handleAddEntity(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
 
+    if (!selectedColour && !entityThumbnailDataUrl) {
+      setError("Thumbnail image is required.");
+      return;
+    }
+
     if (!selectedPrinter) {
-      await runAction({ action: "addPrinter", name: nameInput });
+      if (await runAction({ action: "addPrinter", name: nameInput, thumbnailDataUrl: entityThumbnailDataUrl })) {
+        resetEntityFields();
+      }
       return;
     }
 
     if (!selectedPaper) {
-      await runAction({ action: "addPaper", printerId: selectedPrinter.id, name: nameInput });
+      if (
+        await runAction({
+          action: "addPaper",
+          printerId: selectedPrinter.id,
+          name: nameInput,
+          thumbnailDataUrl: entityThumbnailDataUrl,
+        })
+      ) {
+        resetEntityFields();
+      }
       return;
     }
 
     if (!selectedColour) {
-      await runAction({
-        action: "addColour",
-        printerId: selectedPrinter.id,
-        paperId: selectedPaper.id,
-        name: nameInput,
-      });
+      if (
+        await runAction({
+          action: "addColour",
+          printerId: selectedPrinter.id,
+          paperId: selectedPaper.id,
+          name: nameInput,
+          thumbnailDataUrl: entityThumbnailDataUrl,
+        })
+      ) {
+        resetEntityFields();
+      }
       return;
     }
 
-    if (!selectedStep) {
+    if (!stepImageDataUrl) {
+      setError("Step image is required.");
+      return;
+    }
+
+    if (
       await runAction({
         action: "addStep",
         printerId: selectedPrinter.id,
         paperId: selectedPaper.id,
         colourId: selectedColour.id,
-        name: nameInput,
+        title: stepTitleInput,
+        contentHtml: stepContentInput,
+        imageDataUrl: stepImageDataUrl,
+      })
+    ) {
+      resetEntityFields();
+    }
+  }
+
+  async function handleDelete(level: Level, id: string) {
+    if (!window.confirm("Delete this item and all nested data?")) {
+      return;
+    }
+
+    if (level === "printer") {
+      await runAction({ action: "deletePrinter", printerId: id });
+      if (selection.printerId === id) {
+        setSelection({ printerId: null, paperId: null, colourId: null, stepId: null });
+      }
+      return;
+    }
+
+    if (level === "paper" && selectedPrinter) {
+      await runAction({ action: "deletePaper", printerId: selectedPrinter.id, paperId: id });
+      if (selection.paperId === id) {
+        setSelection((current) => ({ ...current, paperId: null, colourId: null, stepId: null }));
+      }
+      return;
+    }
+
+    if (level === "colour" && selectedPrinter && selectedPaper) {
+      await runAction({
+        action: "deleteColour",
+        printerId: selectedPrinter.id,
+        paperId: selectedPaper.id,
+        colourId: id,
+      });
+      if (selection.colourId === id) {
+        setSelection((current) => ({ ...current, colourId: null, stepId: null }));
+      }
+      return;
+    }
+
+    if (level === "step" && selectedPrinter && selectedPaper && selectedColour) {
+      await runAction({
+        action: "deleteStep",
+        printerId: selectedPrinter.id,
+        paperId: selectedPaper.id,
+        colourId: selectedColour.id,
+        stepId: id,
+      });
+      if (selection.stepId === id) {
+        setSelection((current) => ({ ...current, stepId: null }));
+      }
+    }
+  }
+
+  async function handleMove(level: Level, id: string, direction: Direction) {
+    if (level === "printer") {
+      await runAction({ action: "movePrinter", printerId: id, direction });
+      return;
+    }
+
+    if (level === "paper" && selectedPrinter) {
+      await runAction({ action: "movePaper", printerId: selectedPrinter.id, paperId: id, direction });
+      return;
+    }
+
+    if (level === "colour" && selectedPrinter && selectedPaper) {
+      await runAction({
+        action: "moveColour",
+        printerId: selectedPrinter.id,
+        paperId: selectedPaper.id,
+        colourId: id,
+        direction,
+      });
+      return;
+    }
+
+    if (level === "step" && selectedPrinter && selectedPaper && selectedColour) {
+      await runAction({
+        action: "moveStep",
+        printerId: selectedPrinter.id,
+        paperId: selectedPaper.id,
+        colourId: selectedColour.id,
+        stepId: id,
+        direction,
       });
     }
   }
 
-  async function handleAddStepItem(event: FormEvent<HTMLFormElement>) {
-    event.preventDefault();
-
-    if (!selectedPrinter || !selectedPaper || !selectedColour || !selectedStep) {
-      return;
-    }
-
-    if (!itemImageDataUrl) {
-      setError("Image is required.");
-      return;
-    }
-
-    const saved = await runAction({
-      action: "addStepItem",
-      printerId: selectedPrinter.id,
-      paperId: selectedPaper.id,
-      colourId: selectedColour.id,
-      stepId: selectedStep.id,
-      title: itemTitle,
-      contentHtml: itemContentHtml,
-      imageDataUrl: itemImageDataUrl,
+  function openEdit(
+    level: Level,
+    node: {
+      id: string;
+      name: string;
+      thumbnailDataUrl?: string;
+      title?: string;
+      contentHtml?: string;
+      imageDataUrl?: string;
+    },
+  ) {
+    setEditState({
+      open: true,
+      level,
+      id: node.id,
+      name: node.name,
+      thumbnailDataUrl: node.thumbnailDataUrl ?? "",
+      title: node.title ?? "",
+      contentHtml: node.contentHtml ?? "",
+      imageDataUrl: node.imageDataUrl ?? "",
     });
-
-    if (saved) {
-      resetItemFields();
-    }
   }
 
-  async function handleImageUpload(event: ChangeEvent<HTMLInputElement>) {
-    const file = event.target.files?.[0];
+  function closeEdit() {
+    setEditState({
+      open: false,
+      level: null,
+      id: "",
+      name: "",
+      thumbnailDataUrl: "",
+      title: "",
+      contentHtml: "",
+      imageDataUrl: "",
+    });
+  }
 
-    if (!file) {
-      setItemImageDataUrl("");
-      setItemImageName("");
+  async function saveEdit() {
+    if (!editState.level) {
       return;
     }
 
-    try {
-      const dataUrl = await new Promise<string>((resolve, reject) => {
-        const reader = new FileReader();
-        reader.onload = () => {
-          if (typeof reader.result === "string") {
-            resolve(reader.result);
-            return;
-          }
-
-          reject(new Error("Could not read image."));
-        };
-        reader.onerror = () => reject(new Error("Could not read image."));
-        reader.readAsDataURL(file);
+    if (editState.level === "printer") {
+      await runAction({
+        action: "updatePrinter",
+        printerId: editState.id,
+        name: editState.name,
+        thumbnailDataUrl: editState.thumbnailDataUrl,
       });
-
-      setItemImageDataUrl(dataUrl);
-      setItemImageName(file.name);
-    } catch {
-      setError("Could not read image.");
-    }
-  }
-
-  function formatEditor(command: "bold" | "italic" | "insertUnorderedList") {
-    document.execCommand(command);
-    if (editorRef.current) {
-      setItemContentHtml(editorRef.current.innerHTML);
-    }
-  }
-
-  function goBackOneLevel() {
-    if (selection.stepId !== null) {
-      setSelection((current) => ({ ...current, stepId: null }));
+      closeEdit();
       return;
     }
 
-    if (selection.colourId !== null) {
-      setSelection((current) => ({ ...current, colourId: null, stepId: null }));
+    if (editState.level === "paper" && selectedPrinter) {
+      await runAction({
+        action: "updatePaper",
+        printerId: selectedPrinter.id,
+        paperId: editState.id,
+        name: editState.name,
+        thumbnailDataUrl: editState.thumbnailDataUrl,
+      });
+      closeEdit();
       return;
     }
 
-    if (selection.paperId !== null) {
-      setSelection((current) => ({ ...current, paperId: null, colourId: null, stepId: null }));
+    if (editState.level === "colour" && selectedPrinter && selectedPaper) {
+      await runAction({
+        action: "updateColour",
+        printerId: selectedPrinter.id,
+        paperId: selectedPaper.id,
+        colourId: editState.id,
+        name: editState.name,
+        thumbnailDataUrl: editState.thumbnailDataUrl,
+      });
+      closeEdit();
       return;
     }
 
-    if (selection.printerId !== null) {
-      setSelection({ printerId: null, paperId: null, colourId: null, stepId: null });
+    if (editState.level === "step" && selectedPrinter && selectedPaper && selectedColour) {
+      await runAction({
+        action: "updateStep",
+        printerId: selectedPrinter.id,
+        paperId: selectedPaper.id,
+        colourId: selectedColour.id,
+        stepId: editState.id,
+        title: editState.title,
+        contentHtml: editState.contentHtml,
+        imageDataUrl: editState.imageDataUrl,
+      });
+      closeEdit();
     }
   }
 
   const breadcrumb = [
-    {
-      label: "Printers",
-      onClick: () => {
-        setSelection({ printerId: null, paperId: null, colourId: null, stepId: null });
-      },
-    },
-    ...(selectedPrinter
-      ? [
-          {
-            label: selectedPrinter.name,
-            onClick: () => {
-              setSelection({
-                printerId: selectedPrinter.id,
-                paperId: null,
-                colourId: null,
-                stepId: null,
-              });
-            },
-          },
-        ]
-      : []),
-    ...(selectedPaper
-      ? [
-          {
-            label: selectedPaper.name,
-            onClick: () => {
-              setSelection((current) => ({
-                ...current,
-                paperId: selectedPaper.id,
-                colourId: null,
-                stepId: null,
-              }));
-            },
-          },
-        ]
-      : []),
-    ...(selectedColour
-      ? [
-          {
-            label: selectedColour.name,
-            onClick: () => {
-              setSelection((current) => ({
-                ...current,
-                colourId: selectedColour.id,
-                stepId: null,
-              }));
-            },
-          },
-        ]
-      : []),
-    ...(selectedStep
-      ? [
-          {
-            label: selectedStep.name,
-            onClick: () => {
-              setSelection((current) => ({ ...current, stepId: selectedStep.id }));
-            },
-          },
-        ]
-      : []),
+    { label: "Printers", onClick: () => setSelection({ printerId: null, paperId: null, colourId: null, stepId: null }) },
+    ...(selectedPrinter ? [{ label: selectedPrinter.name, onClick: () => setSelection({ printerId: selectedPrinter.id, paperId: null, colourId: null, stepId: null }) }] : []),
+    ...(selectedPaper ? [{ label: selectedPaper.name, onClick: () => setSelection((current) => ({ ...current, paperId: selectedPaper.id, colourId: null, stepId: null })) }] : []),
+    ...(selectedColour ? [{ label: selectedColour.name, onClick: () => setSelection((current) => ({ ...current, colourId: selectedColour.id, stepId: null })) }] : []),
+    ...(selectedStep ? [{ label: selectedStep.name, onClick: () => setSelection((current) => ({ ...current, stepId: selectedStep.id })) }] : []),
   ];
 
   const formLabel = !selectedPrinter
@@ -367,9 +531,7 @@ export default function AdminPage() {
       ? `Add Paper in ${selectedPrinter.name}`
       : !selectedColour
         ? `Add Colour in ${selectedPaper.name}`
-        : !selectedStep
-          ? `Add Step in ${selectedColour.name}`
-          : "Add Item in Step";
+        : `Add Step in ${selectedColour.name}`;
 
   const listTitle = !selectedPrinter
     ? "Printers"
@@ -377,9 +539,15 @@ export default function AdminPage() {
       ? "Papers"
       : !selectedColour
         ? "Colours"
-        : !selectedStep
-          ? "Steps"
-          : "Step Items";
+        : "Steps";
+
+  const currentLevel: Level = !selectedPrinter
+    ? "printer"
+    : !selectedPaper
+      ? "paper"
+      : !selectedColour
+        ? "colour"
+        : "step";
 
   const currentList = !selectedPrinter
     ? tutorialState.printers
@@ -387,281 +555,208 @@ export default function AdminPage() {
       ? selectedPrinter.papers
       : !selectedColour
         ? selectedPaper.colours
-        : !selectedStep
-          ? selectedColour.steps
-          : selectedStep.items;
+        : selectedColour.steps;
 
   return (
-    <Box sx={{ minHeight: "100vh", py: 5 }}>
-      <Container maxWidth="lg">
-        <Stack spacing={2.5}>
-          <Box>
-            <Typography variant="h4" component="h1" gutterBottom>
-              Tutorial Printer Admin
-            </Typography>
-            <Typography color="text.secondary">
-              Create tutorials by drilling down through Printer, Paper, Colour, Step, and Item.
-            </Typography>
-          </Box>
+    <Box sx={{ minHeight: "100vh", py: 4 }}>
+      <Container maxWidth="xl">
+        <Box sx={{ display: "grid", gap: 2.5, gridTemplateColumns: { xs: "1fr", md: "280px 1fr" } }}>
+          <Paper elevation={2} sx={{ p: 2, height: "fit-content", position: { md: "sticky" }, top: { md: 20 } }}>
+            <Typography variant="subtitle1" fontWeight={700} sx={{ mb: 1.5 }}>Printers</Typography>
+            <List sx={{ p: 0 }}>
+              {tutorialState.printers.map((printer) => (
+                <ListItem key={printer.id} disablePadding sx={{ mb: 0.5 }}>
+                  <ListItemButton
+                    selected={selection.printerId === printer.id}
+                    onClick={() => setSelection({ printerId: printer.id, paperId: null, colourId: null, stepId: null })}
+                    sx={{ borderRadius: 2 }}
+                  >
+                    <ListItemAvatar sx={{ minWidth: 40 }}>
+                      <Avatar src={printer.thumbnailDataUrl || undefined} alt={printer.name}>
+                        {printer.name.charAt(0).toUpperCase()}
+                      </Avatar>
+                    </ListItemAvatar>
+                    <ListItemText primary={printer.name} />
+                  </ListItemButton>
+                </ListItem>
+              ))}
+            </List>
+          </Paper>
 
-          <Breadcrumbs aria-label="breadcrumb">
-            {breadcrumb.map((item, index) => (
-              <Link
-                key={item.label + String(index)}
-                component="button"
-                type="button"
-                underline="hover"
-                color={index === breadcrumb.length - 1 ? "text.primary" : "primary"}
-                onClick={item.onClick}
-              >
-                {item.label}
-              </Link>
-            ))}
-          </Breadcrumbs>
-
-          {selection.printerId !== null ? (
+          <Stack spacing={2.5}>
             <Box>
-              <Button variant="outlined" onClick={goBackOneLevel}>
-                Back One Level
-              </Button>
+              <Typography variant="h4" component="h1" gutterBottom>Tutorial Printer Admin</Typography>
+              <Typography color="text.secondary">Hierarchy: Printers &gt; Papers &gt; Colours &gt; Steps</Typography>
             </Box>
-          ) : null}
 
-          {error ? <Alert severity="error">{error}</Alert> : null}
-          {success ? <Alert severity="success">{success}</Alert> : null}
-          {loadingState ? <Alert severity="info">Loading...</Alert> : null}
+            <Breadcrumbs aria-label="breadcrumb">
+              {breadcrumb.map((item, index) => (
+                <Link
+                  key={item.label + String(index)}
+                  component="button"
+                  type="button"
+                  underline="hover"
+                  color={index === breadcrumb.length - 1 ? "text.primary" : "primary"}
+                  onClick={item.onClick}
+                >
+                  {item.label}
+                </Link>
+              ))}
+            </Breadcrumbs>
 
-          {!loadingState ? (
-            <Box
-              sx={{
-                display: "grid",
-                gap: 2.5,
-                gridTemplateColumns: { xs: "1fr", md: "1fr 1fr" },
-              }}
-            >
+            {error ? <Alert severity="error">{error}</Alert> : null}
+            {success ? <Alert severity="success">{success}</Alert> : null}
+            {loadingState ? <Alert severity="info">Loading...</Alert> : null}
+
+            {!loadingState ? (
               <Paper elevation={2} sx={{ p: 2.5 }}>
-                <Typography variant="h6" gutterBottom>
-                  {formLabel}
-                </Typography>
-
-                {selectedStep ? (
-                  <Box component="form" onSubmit={(event) => void handleAddStepItem(event)}>
-                    <Stack spacing={2}>
-                      <TextField
-                        label="Item title"
-                        value={itemTitle}
-                        onChange={(event) => setItemTitle(event.target.value)}
-                        required
-                        inputProps={{ maxLength: 100 }}
-                        fullWidth
-                      />
-
-                      <Box>
-                        <Typography variant="body2" fontWeight={500} sx={{ mb: 1 }}>
-                          WYSIWYG content
-                        </Typography>
-                        <Stack direction="row" spacing={1} sx={{ mb: 1 }}>
-                          <Button variant="outlined" onClick={() => formatEditor("bold")}>
-                            Bold
-                          </Button>
-                          <Button variant="outlined" onClick={() => formatEditor("italic")}>
-                            Italic
-                          </Button>
-                          <Button
-                            variant="outlined"
-                            onClick={() => formatEditor("insertUnorderedList")}
-                          >
-                            List
-                          </Button>
-                        </Stack>
-                        <Box
-                          ref={editorRef}
-                          contentEditable
-                          suppressContentEditableWarning
-                          onInput={(event) =>
-                            setItemContentHtml((event.currentTarget as HTMLDivElement).innerHTML)
-                          }
-                          sx={{
-                            border: "1px solid",
-                            borderColor: "divider",
-                            borderRadius: 2,
-                            p: 1.25,
-                            minHeight: 140,
-                            backgroundColor: "background.paper",
-                          }}
-                        />
-                      </Box>
-
-                      <Box>
-                        <Typography variant="body2" fontWeight={500} sx={{ mb: 1 }}>
-                          Image upload
-                        </Typography>
-                        <Box
-                          component="input"
-                          type="file"
-                          accept="image/*"
-                          required
-                          onChange={(event: ChangeEvent<HTMLInputElement>) => {
-                            void handleImageUpload(event);
-                          }}
-                        />
-                        {itemImageName ? (
-                          <Typography variant="caption" color="text.secondary" display="block" sx={{ mt: 1 }}>
-                            Selected: {itemImageName}
-                          </Typography>
-                        ) : null}
-                      </Box>
-
-                      <Stack direction="row" spacing={1.5}>
-                        <Button type="submit" variant="contained" disabled={loading}>
-                          {loading ? "Saving..." : "Add Item"}
-                        </Button>
-                        <Button type="button" variant="outlined" onClick={resetItemFields}>
-                          Reset fields
-                        </Button>
-                      </Stack>
-                    </Stack>
-                  </Box>
-                ) : (
-                  <Box component="form" onSubmit={(event) => void handleAddEntity(event)}>
-                    <Stack spacing={2}>
-                      <TextField
-                        label="Name"
-                        value={nameInput}
-                        onChange={(event) => setNameInput(event.target.value)}
-                        required
-                        inputProps={{ maxLength: 100 }}
-                        fullWidth
-                      />
-                      <Box>
-                        <Button type="submit" variant="contained" disabled={loading}>
-                          {loading ? "Saving..." : "Save"}
-                        </Button>
-                      </Box>
-                    </Stack>
-                  </Box>
-                )}
-              </Paper>
-
-              <Paper elevation={2} sx={{ p: 2.5 }}>
-                <Typography variant="h6" gutterBottom>
-                  {listTitle}
-                </Typography>
-
-                {currentList.length === 0 ? (
-                  <Typography color="text.secondary">No entries yet.</Typography>
-                ) : null}
+                <Typography variant="h6" gutterBottom>{listTitle}</Typography>
 
                 <List sx={{ p: 0 }}>
-                  {currentList.map((entry) => {
-                    if (selectedStep) {
-                      const item = entry as StepItem;
-
-                      return (
-                        <ListItem
-                          key={item.id}
-                          sx={{
-                            display: "block",
-                            border: "1px solid",
-                            borderColor: "divider",
-                            borderRadius: 2,
-                            mb: 1.25,
-                            p: 1.5,
-                          }}
-                        >
-                          <Typography fontWeight={600}>{item.title}</Typography>
-                          <Typography variant="caption" color="text.secondary" display="block" sx={{ mb: 1 }}>
-                            Created: {new Date(item.createdAt).toLocaleString()}
-                          </Typography>
-                          <Box
-                            sx={{ mb: 1.25 }}
-                            dangerouslySetInnerHTML={{ __html: item.contentHtml }}
-                          />
-                          <Image
-                            src={item.imageDataUrl}
-                            alt={item.title}
-                            width={140}
-                            height={140}
-                            unoptimized
-                            style={{ borderRadius: 8, objectFit: "cover" }}
-                          />
-                        </ListItem>
-                      );
-                    }
-
-                    const node = entry as Printer | Paper | Colour | Step;
-
-                    return (
-                      <ListItem
-                        key={node.id}
-                        sx={{
-                          border: "1px solid",
-                          borderColor: "divider",
-                          borderRadius: 2,
-                          mb: 1.25,
-                          p: 1.25,
-                        }}
-                      >
-                        <Box
-                          sx={{
-                            width: "100%",
-                            display: "flex",
-                            justifyContent: "space-between",
-                            alignItems: "center",
-                            gap: 1,
-                          }}
-                        >
-                          <Typography>{node.name}</Typography>
+                  {(currentList as Array<Step | Paper | Colour | Printer>).map((node, index, list) => (
+                    <ListItem key={node.id} sx={{ border: "1px solid", borderColor: "divider", borderRadius: 2, mb: 1.25, p: 1.25, alignItems: "stretch" }}>
+                      <Stack spacing={1.25} sx={{ width: "100%" }}>
+                        <Stack direction="row" spacing={1.25} alignItems="center">
+                          <Avatar src={"thumbnailDataUrl" in node ? node.thumbnailDataUrl || undefined : undefined} alt={node.name}>{node.name.charAt(0).toUpperCase()}</Avatar>
+                          <Typography sx={{ flex: 1 }}>{node.name}</Typography>
                           <Button
                             variant="outlined"
                             size="small"
                             onClick={() => {
                               if (!selectedPrinter) {
-                                setSelection({
-                                  printerId: node.id,
-                                  paperId: null,
-                                  colourId: null,
-                                  stepId: null,
-                                });
+                                setSelection({ printerId: node.id, paperId: null, colourId: null, stepId: null });
                                 return;
                               }
-
                               if (!selectedPaper) {
-                                setSelection((current) => ({
-                                  ...current,
-                                  paperId: node.id,
-                                  colourId: null,
-                                  stepId: null,
-                                }));
+                                setSelection((current) => ({ ...current, paperId: node.id, colourId: null, stepId: null }));
                                 return;
                               }
-
                               if (!selectedColour) {
-                                setSelection((current) => ({
-                                  ...current,
-                                  colourId: node.id,
-                                  stepId: null,
-                                }));
+                                setSelection((current) => ({ ...current, colourId: node.id, stepId: null }));
                                 return;
                               }
-
-                              if (!selectedStep) {
-                                setSelection((current) => ({ ...current, stepId: node.id }));
-                              }
+                              setSelection((current) => ({ ...current, stepId: node.id }));
                             }}
                           >
                             Open
                           </Button>
-                        </Box>
-                      </ListItem>
-                    );
-                  })}
+                        </Stack>
+
+                        <Stack direction="row" spacing={1} flexWrap="wrap">
+                          <Button size="small" variant="outlined" onClick={() => openEdit(currentLevel, node)}>Edit</Button>
+                          <Button size="small" variant="outlined" color="error" onClick={() => void handleDelete(currentLevel, node.id)}>Delete</Button>
+                          <Button size="small" variant="outlined" disabled={index === 0} onClick={() => void handleMove(currentLevel, node.id, "up")}>↑</Button>
+                          <Button size="small" variant="outlined" disabled={index === list.length - 1} onClick={() => void handleMove(currentLevel, node.id, "down")}>↓</Button>
+                        </Stack>
+
+                        {selectedColour ? (
+                          <Box sx={{ border: "1px solid", borderColor: "divider", borderRadius: 2, p: 1.25 }}>
+                            <Typography variant="subtitle2" fontWeight={700}>{(node as Step).title || "Untitled"}</Typography>
+                            <Box sx={{ mt: 1, mb: 1 }} dangerouslySetInnerHTML={{ __html: (node as Step).contentHtml || "" }} />
+                            {(node as Step).imageDataUrl ? (
+                              <Image src={(node as Step).imageDataUrl} alt={(node as Step).title || (node as Step).name} width={220} height={140} unoptimized style={{ borderRadius: 6, objectFit: "cover" }} />
+                            ) : null}
+                          </Box>
+                        ) : null}
+                      </Stack>
+                    </ListItem>
+                  ))}
                 </List>
+
+                <Divider sx={{ my: 2.5 }} />
+
+                <Typography variant="h6" gutterBottom>{formLabel}</Typography>
+                <Box component="form" onSubmit={(event) => void handleAddEntity(event)}>
+                  <Stack spacing={2}>
+                    {!selectedColour ? (
+                      <TextField label="Name" value={nameInput} onChange={(e) => setNameInput(e.target.value)} required fullWidth />
+                    ) : (
+                      <Typography variant="body2" color="text.secondary">
+                        Step name is automatic (Step 1, Step 2, ...).
+                      </Typography>
+                    )}
+
+                    {!selectedColour ? (
+                      <Box>
+                        <Typography variant="body2" fontWeight={500} sx={{ mb: 1 }}>Thumbnail image</Typography>
+                        <Box component="input" type="file" accept="image/*" required onChange={(e: ChangeEvent<HTMLInputElement>) => { void handleEntityThumbnailUpload(e); }} />
+                        {entityThumbnailName ? <Typography variant="caption" color="text.secondary" display="block" sx={{ mt: 1 }}>Selected: {entityThumbnailName}</Typography> : null}
+                      </Box>
+                    ) : null}
+
+                    {selectedColour ? (
+                      <>
+                        <TextField label="Step title" value={stepTitleInput} onChange={(e) => setStepTitleInput(e.target.value)} required fullWidth />
+                        <TextField
+                          label="Step content (HTML allowed)"
+                          value={stepContentInput}
+                          onChange={(e) => setStepContentInput(e.target.value)}
+                          required
+                          multiline
+                          minRows={5}
+                          fullWidth
+                        />
+                        <Box>
+                          <Typography variant="body2" fontWeight={500} sx={{ mb: 1 }}>Step image</Typography>
+                          <Box component="input" type="file" accept="image/*" required onChange={(e: ChangeEvent<HTMLInputElement>) => { void handleStepImageUpload(e); }} />
+                          {stepImageName ? <Typography variant="caption" color="text.secondary" display="block" sx={{ mt: 1 }}>Selected: {stepImageName}</Typography> : null}
+                        </Box>
+                      </>
+                    ) : null}
+
+                    <Stack direction="row" spacing={1.5}>
+                      <Button type="submit" variant="contained" disabled={loading}>{loading ? "Saving..." : "Save"}</Button>
+                      <Button type="button" variant="outlined" onClick={resetEntityFields}>Reset fields</Button>
+                    </Stack>
+                  </Stack>
+                </Box>
               </Paper>
-            </Box>
-          ) : null}
-        </Stack>
+            ) : null}
+          </Stack>
+        </Box>
       </Container>
+
+      <Dialog open={editState.open} onClose={closeEdit} fullWidth maxWidth="sm">
+        <DialogTitle>Edit {editState.level ?? "entry"}</DialogTitle>
+        <DialogContent>
+          <Stack spacing={2} sx={{ pt: 1 }}>
+            {editState.level !== "step" ? (
+              <TextField label="Name" value={editState.name} onChange={(e) => setEditState((c) => ({ ...c, name: e.target.value }))} fullWidth />
+            ) : (
+              <Typography variant="body2" color="text.secondary">
+                Step name is automatic and cannot be edited.
+              </Typography>
+            )}
+            {editState.level !== "step" ? (
+              <Box>
+                <Typography variant="body2" fontWeight={500} sx={{ mb: 1 }}>Thumbnail image</Typography>
+                <Box component="input" type="file" accept="image/*" onChange={(e: ChangeEvent<HTMLInputElement>) => { void handleEditThumbnailUpload(e); }} />
+              </Box>
+            ) : null}
+            {editState.level === "step" ? (
+              <>
+                <TextField label="Step title" value={editState.title} onChange={(e) => setEditState((c) => ({ ...c, title: e.target.value }))} fullWidth />
+                <TextField
+                  label="Step content (HTML allowed)"
+                  value={editState.contentHtml}
+                  onChange={(e) => setEditState((c) => ({ ...c, contentHtml: e.target.value }))}
+                  multiline
+                  minRows={5}
+                  fullWidth
+                />
+                <Box>
+                  <Typography variant="body2" fontWeight={500} sx={{ mb: 1 }}>Step image</Typography>
+                  <Box component="input" type="file" accept="image/*" onChange={(e: ChangeEvent<HTMLInputElement>) => { void handleEditStepImageUpload(e); }} />
+                </Box>
+              </>
+            ) : null}
+          </Stack>
+        </DialogContent>
+        <DialogActions>
+          <Button onClick={closeEdit}>Cancel</Button>
+          <Button variant="contained" onClick={() => void saveEdit()}>Save</Button>
+        </DialogActions>
+      </Dialog>
     </Box>
   );
 }
