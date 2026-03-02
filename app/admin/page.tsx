@@ -101,6 +101,8 @@ type TutorialState = {
   deletedItems?: DeletedItem[];
 };
 
+type Direction = "up" | "down";
+
 const emptyState: TutorialState = { papers: [], printers: [] };
 
 type RichHtmlEditorProps = {
