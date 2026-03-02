@@ -9,11 +9,11 @@ function toDownloadUrl(path: string, token: string): string {
   return `https://firebasestorage.googleapis.com/v0/b/${bucket.name}/o/${encodedPath}?alt=media&token=${token}`;
 }
 
-export async function resolveImageUrl(value: string, path: string): Promise<string> {
-  const input = value.trim();
+export async function resolveImageUrl(value: string | undefined, path: string): Promise<string> {
+  const input = (value ?? "").trim();
 
   if (!input) {
-    throw new Error("Image value is required.");
+    return ""; // Return empty string for optional images
   }
 
   if (input.startsWith("http://") || input.startsWith("https://")) {

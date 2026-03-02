@@ -1,4 +1,4 @@
-import { NextResponse } from "next/server";
+import { NextRequest, NextResponse } from "next/server";
 
 import {
   addColour,
@@ -10,32 +10,84 @@ import {
   deletePrinter,
   deleteStep,
   getTutorialState,
-  moveColour,
-  movePaper,
-  movePrinter,
-  moveStep,
-  reorderColour,
-  reorderPaper,
-  reorderPrinter,
   reorderStep,
-  undoStep,
   updateColour,
   updatePaper,
   updatePrinter,
   updateStep,
+  addPaperToPrinter,
+  removePaperFromPrinter,
+  restoreDeletedItem,
+  permanentlyDeleteItem,
+  removeInvalidPapersFromPrinter,
+  type TutorialState,
 } from "../../../lib/tutorial-store";
 
-type Direction = "up" | "down";
-
 type ActionPayload =
-  | { action: "addPrinter"; name: string; thumbnailDataUrl: string }
-  | { action: "addPaper"; printerId: string; name: string; thumbnailDataUrl: string }
+  | {
+      action: "addPrinter";
+      name: string;
+      description?: string;
+      thumbnailDataUrl?: string;
+    }
+  | {
+      action: "updatePrinter";
+      printerId: string;
+      name?: string;
+      description?: string;
+      thumbnailDataUrl?: string;
+      published?: boolean;
+    }
+  | { action: "deletePrinter"; printerId: string }
+  | {
+      action: "addPaper";
+      name: string;
+      description?: string;
+      thumbnailDataUrl?: string;
+      printerIds?: string[];
+    }
+  | {
+      action: "updatePaper";
+      paperId: string;
+      name?: string;
+      description?: string;
+      thumbnailDataUrl?: string;
+      published?: boolean;
+    }
+  | { action: "deletePaper"; paperId: string }
+  | {
+      action: "addPaperToPrinter";
+      printerId: string;
+      paperId: string;
+    }
+  | {
+      action: "removePaperFromPrinter";
+      printerId: string;
+      paperId: string;
+    }
   | {
       action: "addColour";
       printerId: string;
       paperId: string;
       name: string;
-      thumbnailDataUrl: string;
+      thumbnailDataUrl?: string;
+      description?: string;
+    }
+  | {
+      action: "updateColour";
+      printerId: string;
+      paperId: string;
+      colourId: string;
+      name?: string;
+      thumbnailDataUrl?: string;
+      published?: boolean;
+      description?: string;
+    }
+  | {
+      action: "deleteColour";
+      printerId: string;
+      paperId: string;
+      colourId: string;
     }
   | {
       action: "addStep";
@@ -46,42 +98,16 @@ type ActionPayload =
       contentHtml: string;
       imageDataUrl: string;
     }
-  | { action: "updatePrinter"; printerId: string; name: string; thumbnailDataUrl: string }
-  | {
-      action: "updatePaper";
-      printerId: string;
-      paperId: string;
-      name: string;
-      thumbnailDataUrl: string;
-    }
-  | {
-      action: "updateColour";
-      printerId: string;
-      paperId: string;
-      colourId: string;
-      name: string;
-      thumbnailDataUrl: string;
-    }
   | {
       action: "updateStep";
       printerId: string;
       paperId: string;
       colourId: string;
       stepId: string;
-      title: string;
-      contentHtml: string;
-      imageDataUrl: string;
+      title?: string;
+      contentHtml?: string;
+      imageDataUrl?: string;
     }
-  | {
-      action: "undoStep";
-      printerId: string;
-      paperId: string;
-      colourId: string;
-      stepId: string;
-    }
-  | { action: "deletePrinter"; printerId: string }
-  | { action: "deletePaper"; printerId: string; paperId: string }
-  | { action: "deleteColour"; printerId: string; paperId: string; colourId: string }
   | {
       action: "deleteStep";
       printerId: string;
@@ -89,255 +115,190 @@ type ActionPayload =
       colourId: string;
       stepId: string;
     }
-  | { action: "movePrinter"; printerId: string; direction: Direction }
-  | { action: "movePaper"; printerId: string; paperId: string; direction: Direction }
-  | {
-      action: "moveColour";
-      printerId: string;
-      paperId: string;
-      colourId: string;
-      direction: Direction;
-    }
-  | {
-      action: "moveStep";
-      printerId: string;
-      paperId: string;
-      colourId: string;
-      stepId: string;
-      direction: Direction;
-    }
-  | { action: "reorderPrinter"; sourceId: string; targetId: string }
-  | { action: "reorderPaper"; printerId: string; sourceId: string; targetId: string }
-  | {
-      action: "reorderColour";
-      printerId: string;
-      paperId: string;
-      sourceId: string;
-      targetId: string;
-    }
   | {
       action: "reorderStep";
       printerId: string;
       paperId: string;
       colourId: string;
-      sourceId: string;
-      targetId: string;
+      stepId: string;
+      direction: "up" | "down";
+    }
+  | {
+      action: "restoreDeletedItem";
+      deletedItemId: string;
+    }
+  | {
+      action: "permanentlyDeleteItem";
+      deletedItemId: string;
+    }
+  | {
+      action: "removeInvalidPapersFromPrinter";
+      printerId: string;
     };
 
-export async function GET() {
-  return NextResponse.json(await getTutorialState());
+async function executeAction(payload: ActionPayload): Promise<TutorialState> {
+  switch (payload.action) {
+    case "addPrinter":
+      return addPrinter(payload.name, payload.description, payload.thumbnailDataUrl);
+
+    case "updatePrinter":
+      return updatePrinter(
+        payload.printerId,
+        payload.name,
+        payload.description,
+        payload.thumbnailDataUrl,
+        payload.published,
+      );
+
+    case "deletePrinter":
+      return deletePrinter(payload.printerId);
+
+    case "addPaper":
+      return addPaper(
+        payload.name,
+        payload.description,
+        payload.thumbnailDataUrl,
+        payload.printerIds,
+      );
+
+    case "updatePaper":
+      return updatePaper(
+        payload.paperId,
+        payload.name,
+        payload.description,
+        payload.thumbnailDataUrl,
+        payload.published,
+      );
+
+    case "deletePaper":
+      return deletePaper(payload.paperId);
+
+    case "addPaperToPrinter":
+      return addPaperToPrinter(payload.printerId, payload.paperId);
+
+    case "removePaperFromPrinter":
+      return removePaperFromPrinter(payload.printerId, payload.paperId);
+
+    case "addColour":
+      return addColour(
+        payload.printerId,
+        payload.paperId,
+        payload.name,
+        payload.thumbnailDataUrl,
+        payload.description,
+      );
+
+    case "updateColour":
+      return updateColour(
+        payload.printerId,
+        payload.paperId,
+        payload.colourId,
+        payload.name,
+        payload.thumbnailDataUrl,
+        payload.published,
+        payload.description,
+      );
+
+    case "deleteColour":
+      return deleteColour(payload.printerId, payload.paperId, payload.colourId);
+
+    case "addStep":
+      return addStep(
+        payload.printerId,
+        payload.paperId,
+        payload.colourId,
+        payload.title,
+        payload.contentHtml,
+        payload.imageDataUrl,
+      );
+
+    case "updateStep":
+      return updateStep(
+        payload.printerId,
+        payload.paperId,
+        payload.colourId,
+        payload.stepId,
+        payload.title,
+        payload.contentHtml,
+        payload.imageDataUrl,
+      );
+
+    case "deleteStep":
+      return deleteStep(
+        payload.printerId,
+        payload.paperId,
+        payload.colourId,
+        payload.stepId,
+      );
+
+    case "reorderStep":
+      return reorderStep(
+        payload.printerId,
+        payload.paperId,
+        payload.colourId,
+        payload.stepId,
+        payload.direction,
+      );
+
+    case "restoreDeletedItem":
+      return restoreDeletedItem(payload.deletedItemId);
+
+    case "permanentlyDeleteItem":
+      return permanentlyDeleteItem(payload.deletedItemId);
+
+    case "removeInvalidPapersFromPrinter":
+      return removeInvalidPapersFromPrinter(payload.printerId);
+
+    default:
+      throw new Error(`Unknown action: ${(payload as { action: string }).action}`);
+  }
 }
 
-export async function POST(request: Request) {
-  let payload: unknown;
-
+export async function POST(req: NextRequest) {
   try {
-    payload = await request.json();
-  } catch {
-    return NextResponse.json({ error: "Request body must be JSON." }, { status: 400 });
-  }
+    const body = (await req.json()) as { action: string; payload: unknown };
 
-  if (!payload || typeof payload !== "object" || !("action" in payload)) {
-    return NextResponse.json({ error: "Field 'action' is required." }, { status: 400 });
-  }
-
-  try {
-    const actionPayload = payload as ActionPayload;
-
-    switch (actionPayload.action) {
-      case "addPrinter":
-        return NextResponse.json(
-          await addPrinter(actionPayload.name, actionPayload.thumbnailDataUrl),
-          { status: 201 },
-        );
-      case "addPaper":
-        return NextResponse.json(
-          await addPaper(
-            actionPayload.printerId,
-            actionPayload.name,
-            actionPayload.thumbnailDataUrl,
-          ),
-          { status: 201 },
-        );
-      case "addColour":
-        return NextResponse.json(
-          await addColour(
-            actionPayload.printerId,
-            actionPayload.paperId,
-            actionPayload.name,
-            actionPayload.thumbnailDataUrl,
-          ),
-          { status: 201 },
-        );
-      case "addStep":
-        return NextResponse.json(
-          await addStep(actionPayload.printerId, actionPayload.paperId, actionPayload.colourId, {
-            title: actionPayload.title,
-            contentHtml: actionPayload.contentHtml,
-            imageDataUrl: actionPayload.imageDataUrl,
-          }),
-          { status: 201 },
-        );
-      case "updatePrinter":
-        return NextResponse.json(
-          await updatePrinter(
-            actionPayload.printerId,
-            actionPayload.name,
-            actionPayload.thumbnailDataUrl,
-          ),
-          { status: 200 },
-        );
-      case "updatePaper":
-        return NextResponse.json(
-          await updatePaper(
-            actionPayload.printerId,
-            actionPayload.paperId,
-            actionPayload.name,
-            actionPayload.thumbnailDataUrl,
-          ),
-          { status: 200 },
-        );
-      case "updateColour":
-        return NextResponse.json(
-          await updateColour(
-            actionPayload.printerId,
-            actionPayload.paperId,
-            actionPayload.colourId,
-            actionPayload.name,
-            actionPayload.thumbnailDataUrl,
-          ),
-          { status: 200 },
-        );
-      case "updateStep":
-        return NextResponse.json(
-          await updateStep(
-            actionPayload.printerId,
-            actionPayload.paperId,
-            actionPayload.colourId,
-            actionPayload.stepId,
-            {
-              title: actionPayload.title,
-              contentHtml: actionPayload.contentHtml,
-              imageDataUrl: actionPayload.imageDataUrl,
-            },
-          ),
-          { status: 200 },
-        );
-      case "undoStep":
-        return NextResponse.json(
-          await undoStep(
-            actionPayload.printerId,
-            actionPayload.paperId,
-            actionPayload.colourId,
-            actionPayload.stepId,
-          ),
-          { status: 200 },
-        );
-      case "deletePrinter":
-        return NextResponse.json(await deletePrinter(actionPayload.printerId), { status: 200 });
-      case "deletePaper":
-        return NextResponse.json(
-          await deletePaper(actionPayload.printerId, actionPayload.paperId),
-          { status: 200 },
-        );
-      case "deleteColour":
-        return NextResponse.json(
-          await deleteColour(
-            actionPayload.printerId,
-            actionPayload.paperId,
-            actionPayload.colourId,
-          ),
-          { status: 200 },
-        );
-      case "deleteStep":
-        return NextResponse.json(
-          await deleteStep(
-            actionPayload.printerId,
-            actionPayload.paperId,
-            actionPayload.colourId,
-            actionPayload.stepId,
-          ),
-          { status: 200 },
-        );
-      case "movePrinter":
-        return NextResponse.json(
-          await movePrinter(actionPayload.printerId, actionPayload.direction),
-          { status: 200 },
-        );
-      case "movePaper":
-        return NextResponse.json(
-          await movePaper(
-            actionPayload.printerId,
-            actionPayload.paperId,
-            actionPayload.direction,
-          ),
-          { status: 200 },
-        );
-      case "moveColour":
-        return NextResponse.json(
-          await moveColour(
-            actionPayload.printerId,
-            actionPayload.paperId,
-            actionPayload.colourId,
-            actionPayload.direction,
-          ),
-          { status: 200 },
-        );
-      case "moveStep":
-        return NextResponse.json(
-          await moveStep(
-            actionPayload.printerId,
-            actionPayload.paperId,
-            actionPayload.colourId,
-            actionPayload.stepId,
-            actionPayload.direction,
-          ),
-          { status: 200 },
-        );
-      case "reorderPrinter":
-        return NextResponse.json(
-          await reorderPrinter(actionPayload.sourceId, actionPayload.targetId),
-          { status: 200 },
-        );
-      case "reorderPaper":
-        return NextResponse.json(
-          await reorderPaper(
-            actionPayload.printerId,
-            actionPayload.sourceId,
-            actionPayload.targetId,
-          ),
-          { status: 200 },
-        );
-      case "reorderColour":
-        return NextResponse.json(
-          await reorderColour(
-            actionPayload.printerId,
-            actionPayload.paperId,
-            actionPayload.sourceId,
-            actionPayload.targetId,
-          ),
-          { status: 200 },
-        );
-      case "reorderStep":
-        return NextResponse.json(
-          await reorderStep(
-            actionPayload.printerId,
-            actionPayload.paperId,
-            actionPayload.colourId,
-            actionPayload.sourceId,
-            actionPayload.targetId,
-          ),
-          { status: 200 },
-        );
-      default:
-        return NextResponse.json({ error: "Unsupported action." }, { status: 400 });
+    if (!body.action || !body.payload) {
+      return NextResponse.json(
+        { error: "Missing action or payload" },
+        { status: 400 },
+      );
     }
+
+    console.log(`[API] Processing action: ${body.action}`);
+
+    // Merge action into payload for executeAction
+    const actionPayload = { ...(body.payload as Record<string, unknown>), action: body.action } as ActionPayload;
+    const state = await executeAction(actionPayload);
+
+    return NextResponse.json({ state });
   } catch (error) {
+    const errorMessage = error instanceof Error ? error.message : "Unknown error";
+    const errorStack = error instanceof Error ? error.stack : "";
+
+    console.error("API Error:", {
+      message: errorMessage,
+      stack: errorStack,
+      error,
+    });
+
     return NextResponse.json(
       {
-        error: error instanceof Error ? error.message : "Unable to process request.",
+        error: errorMessage,
+        details: process.env.NODE_ENV === "development" ? errorStack : undefined,
       },
-      { status: 400 },
+      { status: 500 },
     );
+  }
+}
+
+export async function GET() {
+  try {
+    const state = await getTutorialState();
+    return NextResponse.json({ state });
+  } catch (error) {
+    console.error("API Error:", error);
+    const message = error instanceof Error ? error.message : "Unknown error";
+    return NextResponse.json({ error: message }, { status: 500 });
   }
 }

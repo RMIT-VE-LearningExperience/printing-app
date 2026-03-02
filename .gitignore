@@ -2,3 +2,5 @@ node_modules
 .next
 .env.local
 .env.*.local
+firebase-credentials.json
+printer-app-531a8-firebase-adminsdk-*.json
