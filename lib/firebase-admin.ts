@@ -2,7 +2,6 @@ import { applicationDefault, cert, getApps, initializeApp } from "firebase-admin
 import { getFirestore } from "firebase-admin/firestore";
 import { getStorage } from "firebase-admin/storage";
 import * as fs from "fs";
-import * as path from "path";
 
 function getPrivateKey() {
   const value = process.env.FIREBASE_PRIVATE_KEY;

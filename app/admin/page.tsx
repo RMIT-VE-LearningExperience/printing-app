@@ -1,6 +1,5 @@
 "use client";
 
-import Image from "next/image";
 import {
   Alert,
   Avatar,
@@ -22,7 +21,6 @@ import {
   ListItemText,
   Menu,
   MenuItem,
-  Popover,
   Paper,
   Stack,
   Table,
@@ -102,9 +100,6 @@ type TutorialState = {
   printers: Printer[];
   deletedItems?: DeletedItem[];
 };
-
-type Level = "printer" | "paper" | "colour" | "step";
-type Direction = "up" | "down";
 
 const emptyState: TutorialState = { papers: [], printers: [] };
 
@@ -3338,22 +3333,6 @@ export default function AdminPage() {
           Delete
         </MenuItem>
       </Menu>
-    </Box>
-  );
-}
-
-// Grid component for layout
-function Grid({ children, container, spacing = 2, sx = {} }: any) {
-  return (
-    <Box
-      sx={{
-        display: "grid",
-        gridTemplateColumns: "repeat(auto-fill, minmax(200px, 1fr))",
-        gap: spacing * 8,
-        ...sx,
-      }}
-    >
-      {children}
     </Box>
   );
 }
