@@ -894,7 +894,8 @@ export async function restoreDeletedItem(deletedItemId: string): Promise<Tutoria
   try {
     const deletedRef = await assertDocExists(deletedItemsCollection(), deletedItemId, "Deleted item");
     const deletedDoc = await deletedRef.get();
-    const deletedData = deletedDoc.data() as DeletedItem;
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const deletedData = deletedDoc.data() as any;
 
     if (deletedData.type === "printer") {
       // Restore printer
