@@ -27,11 +27,33 @@ function loadServiceAccount() {
   return null;
 }
 
+function getStorageBucket(): string | undefined {
+  // Try explicit environment variable first
+  if (process.env.FIREBASE_STORAGE_BUCKET) {
+    return process.env.FIREBASE_STORAGE_BUCKET;
+  }
+
+  // Try to get from FIREBASE_CONFIG
+  try {
+    const firebaseConfig = process.env.FIREBASE_CONFIG;
+    if (firebaseConfig) {
+      const config = JSON.parse(firebaseConfig);
+      return config.storageBucket;
+    }
+  } catch (error) {
+    console.warn("Could not parse FIREBASE_CONFIG:", error);
+  }
+
+  return undefined;
+}
+
 function initAdminApp() {
   const existing = getApps()[0];
   if (existing) {
     return existing;
   }
+
+  const storageBucket = getStorageBucket();
 
   // Try to use environment variables first
   const projectId = process.env.FIREBASE_PROJECT_ID;
@@ -46,7 +68,7 @@ function initAdminApp() {
         clientEmail,
         privateKey,
       }),
-      storageBucket: process.env.FIREBASE_STORAGE_BUCKET,
+      storageBucket,
     });
   }
 
@@ -56,7 +78,7 @@ function initAdminApp() {
     console.log("Initializing Firebase with service account file");
     return initializeApp({
       credential: cert(serviceAccount),
-      storageBucket: process.env.FIREBASE_STORAGE_BUCKET,
+      storageBucket,
     });
   }
 
@@ -64,7 +86,7 @@ function initAdminApp() {
   console.log("Initializing Firebase with application default credentials");
   return initializeApp({
     credential: applicationDefault(),
-    storageBucket: process.env.FIREBASE_STORAGE_BUCKET,
+    storageBucket,
   });
 }
 
