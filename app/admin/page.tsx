@@ -37,6 +37,18 @@ import {
   Checkbox,
   FormControlLabel,
 } from "@mui/material";
+import {
+  Home as HomeIcon,
+  Print as PrintIcon,
+  Article as ArticleIcon,
+  Inventory as InventoryIcon,
+  Palette as PaletteIcon,
+  DeleteOutline as DeleteOutlineIcon,
+  Visibility as VisibilityIcon,
+  ChevronLeft as ChevronLeftIcon,
+  ChevronRight as ChevronRightIcon,
+  Add as AddIcon,
+} from "@mui/icons-material";
 import { type ChangeEvent, useEffect, useMemo, useRef, useState } from "react";
 
 type Step = {
@@ -1179,41 +1191,48 @@ export default function AdminPage() {
       <Box
         sx={{
           width: sidebarCollapsed ? 80 : 300,
-          bgcolor: "#f5f5f5",
+          bgcolor: "#1f1f1f",
           borderRight: "1px solid",
-          borderColor: "divider",
-          p: 2,
+          borderColor: "#2d2d2d",
+          p: sidebarCollapsed ? 1 : 2,
           overflowY: "auto",
-          transition: "width 0.3s ease",
+          transition: "all 0.3s ease",
+          display: "flex",
+          flexDirection: "column",
         }}
       >
         {/* Toggle Button and Title */}
-        <Box sx={{ display: "flex", alignItems: "center", justifyContent: "space-between", mb: 2 }}>
+        <Box sx={{ display: "flex", alignItems: "center", justifyContent: "space-between", mb: 3 }}>
           <IconButton
             size="small"
             onClick={() => setSidebarCollapsed(!sidebarCollapsed)}
-            sx={{ padding: 0 }}
+            sx={{
+              padding: 0.5,
+              color: "#ffffff",
+              "&:hover": { bgcolor: "rgba(255, 255, 255, 0.1)" },
+            }}
           >
-            {sidebarCollapsed ? "❯" : "❮"}
+            {sidebarCollapsed ? <ChevronRightIcon /> : <ChevronLeftIcon />}
           </IconButton>
           {!sidebarCollapsed && (
             <Link
               component="button"
-              variant="h6"
+              variant="subtitle1"
               onClick={(e) => {
                 e.preventDefault();
                 goHome();
               }}
               sx={{
-                fontWeight: 700,
+                fontWeight: 600,
                 cursor: "pointer",
                 flex: 1,
-                marginLeft: 1,
+                marginLeft: 1.5,
                 textAlign: "left",
                 textDecoration: "none",
-                color: "inherit",
+                color: "#ffffff",
+                fontSize: "0.95rem",
                 "&:hover": {
-                  textDecoration: "underline",
+                  color: "#1E88E5",
                 },
               }}
             >
@@ -1222,53 +1241,84 @@ export default function AdminPage() {
           )}
         </Box>
 
-        {/* Preview Section */}
-        {sidebarCollapsed ? (
-          <Stack spacing={1} sx={{ mb: 1 }}>
-            <Box sx={{ display: "flex", justifyContent: "center" }}>
-              <Tooltip title="Home" placement="right">
-                <IconButton
-                  onClick={goHome}
-                  size="large"
-                  sx={{
-                    width: 60,
-                    height: 60,
-                    borderRadius: "50%",
-                    bgcolor: "rgba(0, 0, 0, 0.04)",
-                    "&:hover": { bgcolor: "rgba(0, 0, 0, 0.08)" },
-                  }}
-                >
-                  🏠
-                </IconButton>
-              </Tooltip>
-            </Box>
-            <Box sx={{ display: "flex", justifyContent: "center" }}>
-              <Tooltip title="Preview" placement="right">
-                <IconButton
-                  size="large"
-                  sx={{
-                    width: 60,
-                    height: 60,
-                    borderRadius: "50%",
-                    bgcolor: "rgba(0, 0, 0, 0.04)",
-                    "&:hover": { bgcolor: "rgba(0, 0, 0, 0.08)" },
-                  }}
-                >
-                  📄
-                </IconButton>
-              </Tooltip>
-            </Box>
-          </Stack>
-        ) : (
-          <Stack direction="row" spacing={1} sx={{ mb: 3 }}>
-            <Button size="small" variant="outlined" fullWidth>
+        {/* Navigation Items */}
+        <Stack spacing={sidebarCollapsed ? 1.5 : 1} sx={{ flex: 1 }}>
+          {/* Home Button */}
+          {sidebarCollapsed ? (
+            <Tooltip title="Home" placement="right">
+              <IconButton
+                onClick={goHome}
+                size="large"
+                sx={{
+                  width: 50,
+                  height: 50,
+                  borderRadius: 1,
+                  color: !selectedPrinterId && !showFullPaperList && !showAllColoursView && !showDeletedItems ? "#1E88E5" : "#ffffff",
+                  bgcolor: !selectedPrinterId && !showFullPaperList && !showAllColoursView && !showDeletedItems ? "rgba(30, 136, 229, 0.12)" : "transparent",
+                  "&:hover": { bgcolor: "rgba(255, 255, 255, 0.1)" },
+                  transition: "all 0.2s ease",
+                }}
+              >
+                <HomeIcon sx={{ fontSize: 24 }} />
+              </IconButton>
+            </Tooltip>
+          ) : (
+            <Button
+              fullWidth
+              startIcon={<HomeIcon />}
+              variant={!selectedPrinterId && !showFullPaperList && !showAllColoursView && !showDeletedItems ? "contained" : "outlined"}
+              onClick={goHome}
+              sx={{
+                justifyContent: "flex-start",
+                mb: 1,
+                bgcolor: !selectedPrinterId && !showFullPaperList && !showAllColoursView && !showDeletedItems ? "#1E88E5" : "transparent",
+                color: "#ffffff",
+                borderColor: "rgba(255, 255, 255, 0.2)",
+                "&:hover": {
+                  bgcolor: !selectedPrinterId && !showFullPaperList && !showAllColoursView && !showDeletedItems ? "#1565C0" : "rgba(255, 255, 255, 0.1)",
+                },
+              }}
+            >
+              HOME
+            </Button>
+          )}
+
+          {/* Preview Button */}
+          {sidebarCollapsed ? (
+            <Tooltip title="Preview" placement="right">
+              <IconButton
+                size="large"
+                sx={{
+                  width: 50,
+                  height: 50,
+                  borderRadius: 1,
+                  color: "#ffffff",
+                  bgcolor: "transparent",
+                  "&:hover": { bgcolor: "rgba(255, 255, 255, 0.1)" },
+                  transition: "all 0.2s ease",
+                }}
+              >
+                <VisibilityIcon sx={{ fontSize: 24 }} />
+              </IconButton>
+            </Tooltip>
+          ) : (
+            <Button
+              fullWidth
+              startIcon={<VisibilityIcon />}
+              variant="outlined"
+              sx={{
+                justifyContent: "flex-start",
+                color: "#ffffff",
+                borderColor: "rgba(255, 255, 255, 0.2)",
+                "&:hover": {
+                  bgcolor: "rgba(255, 255, 255, 0.1)",
+                },
+              }}
+            >
               PREVIEW
             </Button>
-            <Button size="small" variant="outlined" fullWidth>
-              PREVIEW PAGE
-            </Button>
-          </Stack>
-        )}
+          )}
+        </Stack>
 
         {!sidebarCollapsed && (
           <>
@@ -1317,13 +1367,14 @@ export default function AdminPage() {
                           src={printer.thumbnailDataUrl || undefined}
                           alt={printer.name}
                           sx={{
-                            width: 60,
-                            height: 60,
+                            width: 50,
+                            height: 50,
                             border: selectedPrinterId === printer.id && !showFullPaperList ? "2px solid" : "1px solid transparent",
-                            borderColor: "primary.main",
+                            borderColor: "#1E88E5",
+                            bgcolor: selectedPrinterId === printer.id && !showFullPaperList ? "rgba(30, 136, 229, 0.12)" : "#333333",
                             transition: "all 180ms ease",
                             "&:hover": {
-                              boxShadow: 2,
+                              boxShadow: "0 0 0 2px rgba(30, 136, 229, 0.2)",
                             },
                           }}
                         >
@@ -1335,94 +1386,108 @@ export default function AdminPage() {
                 </Stack>
 
                 {/* Full Paper List Section */}
-                <Box sx={{ display: "flex", justifyContent: "center", mb: 1 }}>
-                  <Tooltip title="Full Paper List" placement="right">
-                    <IconButton
-                      onClick={goToFullPaperList}
-                      sx={{
-                        width: 60,
-                        height: 60,
-                        borderRadius: "50%",
-                        bgcolor: showFullPaperList ? "primary.main" : "rgba(0, 0, 0, 0.04)",
-                        color: showFullPaperList ? "white" : "inherit",
-                        "&:hover": { bgcolor: showFullPaperList ? "primary.dark" : "rgba(0, 0, 0, 0.08)" },
-                      }}
-                    >
-                      📦
-                    </IconButton>
-                  </Tooltip>
-                </Box>
+                <Tooltip title="Full Paper List" placement="right">
+                  <IconButton
+                    onClick={goToFullPaperList}
+                    size="large"
+                    sx={{
+                      width: 50,
+                      height: 50,
+                      borderRadius: 1,
+                      color: showFullPaperList ? "#1E88E5" : "#ffffff",
+                      bgcolor: showFullPaperList ? "rgba(30, 136, 229, 0.12)" : "transparent",
+                      "&:hover": { bgcolor: "rgba(255, 255, 255, 0.1)" },
+                      transition: "all 0.2s ease",
+                    }}
+                  >
+                    <InventoryIcon sx={{ fontSize: 24 }} />
+                  </IconButton>
+                </Tooltip>
 
                 {/* Colour Management Section */}
-                <Box sx={{ display: "flex", justifyContent: "center", mb: 1 }}>
-                  <Tooltip title="Colour Management" placement="right">
-                    <IconButton
-                      onClick={() => {
-                        setShowAllColoursView(true);
-                        setShowFullPaperList(false);
-                        setSelectedPrinterId(null);
-                        setSelectedPaperId(null);
-                        setSelectedColorId(null);
-                        setSelectedStepId(null);
-                        setShowDeletedItems(false);
-                      }}
-                      sx={{
-                        width: 60,
-                        height: 60,
-                        borderRadius: "50%",
-                        bgcolor: showAllColoursView ? "primary.main" : "rgba(0, 0, 0, 0.04)",
-                        color: showAllColoursView ? "white" : "inherit",
-                        "&:hover": { bgcolor: showAllColoursView ? "primary.dark" : "rgba(0, 0, 0, 0.08)" },
-                      }}
-                    >
-                      🔺
-                    </IconButton>
-                  </Tooltip>
-                </Box>
+                <Tooltip title="Colour Management" placement="right">
+                  <IconButton
+                    onClick={() => {
+                      setShowAllColoursView(true);
+                      setShowFullPaperList(false);
+                      setSelectedPrinterId(null);
+                      setSelectedPaperId(null);
+                      setSelectedColorId(null);
+                      setSelectedStepId(null);
+                      setShowDeletedItems(false);
+                    }}
+                    size="large"
+                    sx={{
+                      width: 50,
+                      height: 50,
+                      borderRadius: 1,
+                      color: showAllColoursView ? "#1E88E5" : "#ffffff",
+                      bgcolor: showAllColoursView ? "rgba(30, 136, 229, 0.12)" : "transparent",
+                      "&:hover": { bgcolor: "rgba(255, 255, 255, 0.1)" },
+                      transition: "all 0.2s ease",
+                    }}
+                  >
+                    <PaletteIcon sx={{ fontSize: 24 }} />
+                  </IconButton>
+                </Tooltip>
 
                 {/* Deleted Items Section */}
-                <Box sx={{ display: "flex", justifyContent: "center" }}>
-                  <Tooltip title="Deleted Items" placement="right">
-                    <IconButton
-                      onClick={() => {
-                        setShowDeletedItems(true);
-                        setShowFullPaperList(false);
-                        setSelectedPrinterId(null);
-                        setSelectedPaperId(null);
-                        setSelectedColorId(null);
-                      }}
-                      sx={{
-                        width: 60,
-                        height: 60,
-                        borderRadius: "50%",
-                        bgcolor: showDeletedItems ? "primary.main" : "rgba(0, 0, 0, 0.04)",
-                        color: showDeletedItems ? "white" : "inherit",
-                        "&:hover": { bgcolor: showDeletedItems ? "primary.dark" : "rgba(0, 0, 0, 0.08)" },
-                      }}
-                    >
-                      🗑️
-                    </IconButton>
-                  </Tooltip>
-                </Box>
+                <Tooltip title="Deleted Items" placement="right">
+                  <IconButton
+                    onClick={() => {
+                      setShowDeletedItems(true);
+                      setShowFullPaperList(false);
+                      setSelectedPrinterId(null);
+                      setSelectedPaperId(null);
+                      setSelectedColorId(null);
+                    }}
+                    size="large"
+                    sx={{
+                      width: 50,
+                      height: 50,
+                      borderRadius: 1,
+                      color: showDeletedItems ? "#1E88E5" : "#ffffff",
+                      bgcolor: showDeletedItems ? "rgba(30, 136, 229, 0.12)" : "transparent",
+                      "&:hover": { bgcolor: "rgba(255, 255, 255, 0.1)" },
+                      transition: "all 0.2s ease",
+                    }}
+                  >
+                    <DeleteOutlineIcon sx={{ fontSize: 24 }} />
+                  </IconButton>
+                </Tooltip>
               </Stack>
             ) : (
               <Stack spacing={1.5}>
                 <Box>
               <Stack direction="row" alignItems="center" justifyContent="space-between" sx={{ mb: 1 }}>
-                <Typography variant="subtitle2" fontWeight={600}>
+                <Typography
+                  variant="subtitle2"
+                  fontWeight={600}
+                  sx={{
+                    color: "#ffffff",
+                    textTransform: "uppercase",
+                    fontSize: "0.75rem",
+                    letterSpacing: "0.5px"
+                  }}
+                >
                   PRINTER LIST
                 </Typography>
-                <Button
+                <IconButton
                   size="small"
                   onClick={() => setShowAddPrinterModal(true)}
-                  sx={{ minWidth: "auto", p: 0.5 }}
+                  sx={{
+                    minWidth: "auto",
+                    p: 0.5,
+                    color: "#1E88E5",
+                    "&:hover": { bgcolor: "rgba(30, 136, 229, 0.12)" }
+                  }}
                 >
-                  +
-                </Button>
+                  <AddIcon sx={{ fontSize: 20 }} />
+                </IconButton>
               </Stack>
 
               {expandedPrinterList && tutorialState.printers.length > 0 && (
-                <List sx={{ p: 0, bgcolor: "white", borderRadius: 1 }}>
+                <List sx={{ p: 0, borderRadius: 1 }}>
                   {tutorialState.printers.map((printer) => (
                     <ListItem
                       key={printer.id}
@@ -1434,8 +1499,10 @@ export default function AdminPage() {
                         sx={{
                           borderRadius: 1,
                           transition: "all 180ms ease",
+                          bgcolor: selectedPrinterId === printer.id && !showFullPaperList ? "rgba(30, 136, 229, 0.12)" : "transparent",
+                          color: selectedPrinterId === printer.id && !showFullPaperList ? "#1E88E5" : "#ffffff",
                           "&:hover": {
-                            bgcolor: "action.hover",
+                            bgcolor: "rgba(255, 255, 255, 0.1)",
                           },
                         }}
                       >
@@ -1443,19 +1510,35 @@ export default function AdminPage() {
                           <Avatar
                             src={printer.thumbnailDataUrl || undefined}
                             alt={printer.name}
-                            sx={{ width: 32, height: 32 }}
+                            sx={{
+                              width: 32,
+                              height: 32,
+                              bgcolor: "#333333",
+                              border: selectedPrinterId === printer.id && !showFullPaperList ? "2px solid #1E88E5" : "1px solid transparent",
+                            }}
                           >
                             {printer.name.charAt(0).toUpperCase()}
                           </Avatar>
                         </ListItemAvatar>
-                        <ListItemText primary={printer.name} />
+                        <ListItemText
+                          primary={printer.name}
+                          sx={{
+                            "& .MuiListItemText-primary": {
+                              color: "inherit",
+                            }
+                          }}
+                        />
                         <IconButton
                           size="small"
                           onClick={(e) => {
                             e.stopPropagation();
                             handlePrinterMenuOpen(e, printer.id);
                           }}
-                          sx={{ ml: 1 }}
+                          sx={{
+                            ml: 1,
+                            color: "inherit",
+                            "&:hover": { color: "#1E88E5" }
+                          }}
                         >
                           ⋯
                         </IconButton>
@@ -1470,37 +1553,60 @@ export default function AdminPage() {
                 fullWidth
                 size="small"
                 onClick={() => setExpandedPrinterList(true)}
-                sx={{ textTransform: "none" }}
+                sx={{
+                  textTransform: "none",
+                  color: "#1E88E5",
+                  borderColor: "rgba(30, 136, 229, 0.3)",
+                  "&:hover": {
+                    bgcolor: "rgba(30, 136, 229, 0.08)",
+                    borderColor: "rgba(30, 136, 229, 0.5)"
+                  }
+                }}
               >
                 Show {tutorialState.printers.length} Printers
               </Button>
             )}
 
             {tutorialState.printers.length === 0 && expandedPrinterList && (
-              <Typography variant="body2" color="text.secondary" sx={{ p: 2, textAlign: "center" }}>
+              <Typography
+                variant="body2"
+                sx={{
+                  p: 2,
+                  textAlign: "center",
+                  color: "rgba(255, 255, 255, 0.5)"
+                }}
+              >
                 No printers yet
               </Typography>
             )}
           </Box>
 
-          <Divider />
+          <Divider sx={{ my: 2, borderColor: "#2d2d2d" }} />
 
-          {/* Full Paper List Link */}
+          {/* Full Paper List Button */}
           <Button
             fullWidth
+            startIcon={<InventoryIcon />}
             variant={showFullPaperList ? "contained" : "outlined"}
             onClick={goToFullPaperList}
             sx={{
               justifyContent: "flex-start",
-              textTransform: "none",
+              mb: 1,
+              bgcolor: showFullPaperList ? "#1E88E5" : "transparent",
+              color: "#ffffff",
+              borderColor: "rgba(255, 255, 255, 0.2)",
+              "&:hover": {
+                bgcolor: showFullPaperList ? "#1565C0" : "rgba(255, 255, 255, 0.1)",
+              },
             }}
           >
             Full Paper List
           </Button>
 
-          {/* Colour Management Link */}
+          {/* Colour Management Button */}
           <Button
             fullWidth
+            startIcon={<PaletteIcon />}
             variant={showAllColoursView ? "contained" : "outlined"}
             onClick={() => {
               setShowAllColoursView(true);
@@ -1513,17 +1619,23 @@ export default function AdminPage() {
             }}
             sx={{
               justifyContent: "flex-start",
-              textTransform: "none",
+              bgcolor: showAllColoursView ? "#1E88E5" : "transparent",
+              color: "#ffffff",
+              borderColor: "rgba(255, 255, 255, 0.2)",
+              "&:hover": {
+                bgcolor: showAllColoursView ? "#1565C0" : "rgba(255, 255, 255, 0.1)",
+              },
             }}
           >
             Colour Management
           </Button>
 
-          <Divider sx={{ my: 2 }} />
+          <Divider sx={{ my: 2, borderColor: "#2d2d2d" }} />
 
           {/* Deleted Items Button */}
           <Button
             fullWidth
+            startIcon={<DeleteOutlineIcon />}
             variant={showDeletedItems ? "contained" : "outlined"}
             onClick={() => {
               setShowDeletedItems(true);
@@ -1534,8 +1646,12 @@ export default function AdminPage() {
             }}
             sx={{
               justifyContent: "flex-start",
-              textTransform: "none",
-              color: showDeletedItems ? "white" : "text.secondary",
+              bgcolor: showDeletedItems ? "#1E88E5" : "transparent",
+              color: "#ffffff",
+              borderColor: "rgba(255, 255, 255, 0.2)",
+              "&:hover": {
+                bgcolor: showDeletedItems ? "#1565C0" : "rgba(255, 255, 255, 0.1)",
+              },
             }}
           >
             Deleted Items
