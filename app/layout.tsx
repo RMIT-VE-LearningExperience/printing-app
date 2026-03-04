@@ -23,13 +23,15 @@ export default function RootLayout({ children }: RootLayoutProps) {
         </div>
         <footer
           style={{
-            padding: "16px",
+            padding: "20px 24px",
             textAlign: "right",
             fontSize: "14px",
-            color: "#666",
-            paddingRight: "24px",
-            paddingBottom: "24px",
+            color: "#7B1FA2",
+            backgroundColor: "#252525",
+            borderTop: "1px solid #3a3a3a",
             marginTop: "auto",
+            fontWeight: 500,
+            letterSpacing: "0.3px",
           }}
         >
           © {currentYear} Designed by the Digital Design & Media Team · Learning & Teaching Innovation · RMIT College of Vocational Education
