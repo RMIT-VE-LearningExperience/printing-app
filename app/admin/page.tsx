@@ -1400,8 +1400,8 @@ export default function AdminPage() {
                           src={printer.thumbnailDataUrl || undefined}
                           alt={printer.name}
                           sx={{
-                            width: 50,
-                            height: 50,
+                            width: 40,
+                            height: 40,
                             border: selectedPrinterId === printer.id && !showFullPaperList ? "2px solid" : "1px solid transparent",
                             borderColor: "#1E88E5",
                             bgcolor: selectedPrinterId === printer.id && !showFullPaperList ? "rgba(30, 136, 229, 0.12)" : "#333333",
