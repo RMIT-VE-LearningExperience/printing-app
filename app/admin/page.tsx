@@ -324,7 +324,7 @@ export default function AdminPage() {
     if (tutorialState.printers && tutorialState.printers.length < 5) {
       setExpandedPrinterList(true);
     }
-  }, [tutorialState.printers?.length]);
+  }, [tutorialState.printers]);
 
   // Persist sidebar collapse state to localStorage
   useEffect(() => {
@@ -3573,14 +3573,6 @@ export default function AdminPage() {
                     Title
                   </Typography>
                   <Typography variant="body1">{step.title}</Typography>
-                </Box>
-                <Box>
-                  <Typography variant="body2" color="text.secondary">
-                    Last Modified
-                  </Typography>
-                  <Typography variant="body1">
-                    {step.lastModified ? new Date(step.lastModified).toLocaleString() : "N/A"}
-                  </Typography>
                 </Box>
               </Stack>
             ) : null;
