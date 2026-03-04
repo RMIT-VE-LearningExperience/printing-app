@@ -1366,84 +1366,86 @@ export default function AdminPage() {
           )}
         </Stack>
 
-        {/* Homepage Customization - Only on HOME page and on expanded sidebar */}
-        {!sidebarCollapsed && !showFullPaperList && !showAllColoursView && !selectedPrinterId && !showDeletedItems && (
-          <Stack spacing={2} sx={{ mb: 3, pb: 2, borderBottom: "1px solid", borderColor: "#2d2d2d" }}>
-            <TextField
-              label="Homepage Header"
-              size="small"
-              fullWidth
-              value={homePageTitle}
-              onChange={(e) => setHomePageTitle(e.target.value)}
-              placeholder="e.g., PRINTER GUIDE"
-              sx={{
-                "& .MuiInputBase-input": {
-                  color: "#ffffff",
-                },
-                "& .MuiInputBase-input::placeholder": {
-                  color: "rgba(255, 255, 255, 0.5)",
-                  opacity: 1,
-                },
-                "& .MuiOutlinedInput-root": {
-                  "& fieldset": {
-                    borderColor: "rgba(255, 255, 255, 0.2)",
-                  },
-                  "&:hover fieldset": {
-                    borderColor: "rgba(255, 255, 255, 0.3)",
-                  },
-                  "&.Mui-focused fieldset": {
-                    borderColor: "#1E88E5",
-                  },
-                },
-                "& .MuiInputLabel-root": {
-                  color: "rgba(255, 255, 255, 0.7)",
-                  "&.Mui-focused": {
-                    color: "#1E88E5",
-                  },
-                },
-              }}
-            />
-            <TextField
-              label="Homepage Description"
-              size="small"
-              fullWidth
-              multiline
-              rows={3}
-              value={homePageDescription}
-              onChange={(e) => setHomePageDescription(e.target.value)}
-              placeholder="e.g., A step-by-step guide..."
-              sx={{
-                "& .MuiInputBase-input": {
-                  color: "#ffffff",
-                },
-                "& .MuiInputBase-input::placeholder": {
-                  color: "rgba(255, 255, 255, 0.5)",
-                  opacity: 1,
-                },
-                "& .MuiOutlinedInput-root": {
-                  "& fieldset": {
-                    borderColor: "rgba(255, 255, 255, 0.2)",
-                  },
-                  "&:hover fieldset": {
-                    borderColor: "rgba(255, 255, 255, 0.3)",
-                  },
-                  "&.Mui-focused fieldset": {
-                    borderColor: "#1E88E5",
-                  },
-                },
-                "& .MuiInputLabel-root": {
-                  color: "rgba(255, 255, 255, 0.7)",
-                  "&.Mui-focused": {
-                    color: "#1E88E5",
-                  },
-                },
-              }}
-            />
-          </Stack>
-        )}
-
         {!sidebarCollapsed && (
-          <Divider sx={{ my: 2, borderColor: "#2d2d2d" }} />
+          <>
+            {/* Homepage Customization - Only on HOME page */}
+            {!showFullPaperList && !showAllColoursView && !selectedPrinterId && !showDeletedItems && (
+              <Stack spacing={2} sx={{ mb: 3, pb: 2, borderBottom: "1px solid", borderColor: "#2d2d2d" }}>
+                <TextField
+                  label="Homepage Header"
+                  size="small"
+                  fullWidth
+                  value={homePageTitle}
+                  onChange={(e) => setHomePageTitle(e.target.value)}
+                  placeholder="e.g., PRINTER GUIDE"
+                  sx={{
+                    "& .MuiInputBase-input": {
+                      color: "#ffffff",
+                    },
+                    "& .MuiInputBase-input::placeholder": {
+                      color: "rgba(255, 255, 255, 0.5)",
+                      opacity: 1,
+                    },
+                    "& .MuiOutlinedInput-root": {
+                      "& fieldset": {
+                        borderColor: "rgba(255, 255, 255, 0.2)",
+                      },
+                      "&:hover fieldset": {
+                        borderColor: "rgba(255, 255, 255, 0.3)",
+                      },
+                      "&.Mui-focused fieldset": {
+                        borderColor: "#1E88E5",
+                      },
+                    },
+                    "& .MuiInputLabel-root": {
+                      color: "rgba(255, 255, 255, 0.7)",
+                      "&.Mui-focused": {
+                        color: "#1E88E5",
+                      },
+                    },
+                  }}
+                />
+                <TextField
+                  label="Homepage Description"
+                  size="small"
+                  fullWidth
+                  multiline
+                  rows={3}
+                  value={homePageDescription}
+                  onChange={(e) => setHomePageDescription(e.target.value)}
+                  placeholder="e.g., A step-by-step guide..."
+                  sx={{
+                    "& .MuiInputBase-input": {
+                      color: "#ffffff",
+                    },
+                    "& .MuiInputBase-input::placeholder": {
+                      color: "rgba(255, 255, 255, 0.5)",
+                      opacity: 1,
+                    },
+                    "& .MuiOutlinedInput-root": {
+                      "& fieldset": {
+                        borderColor: "rgba(255, 255, 255, 0.2)",
+                      },
+                      "&:hover fieldset": {
+                        borderColor: "rgba(255, 255, 255, 0.3)",
+                      },
+                      "&.Mui-focused fieldset": {
+                        borderColor: "#1E88E5",
+                      },
+                    },
+                    "& .MuiInputLabel-root": {
+                      color: "rgba(255, 255, 255, 0.7)",
+                      "&.Mui-focused": {
+                        color: "#1E88E5",
+                      },
+                    },
+                  }}
+                />
+              </Stack>
+            )}
+
+            <Divider sx={{ my: 2, borderColor: "#2d2d2d" }} />
+          </>
         )}
 
         {/* Printer List */}
@@ -1890,8 +1892,8 @@ export default function AdminPage() {
                           Printer {printersSortByName ? "↑" : "↓"}
                         </TableCell>
                         <TableCell align="center" sx={{ fontWeight: 700, width: 50, color: "#252525", fontSize: "0.95rem", padding: "16px" }}>⋯</TableCell>
-                        <TableCell sx={{ fontWeight: 700, color: "#252525", fontSize: "0.95rem", padding: "16px" }}>Last Edited</TableCell>
-                        <TableCell align="right" sx={{ fontWeight: 700, color: "#252525", fontSize: "0.95rem", padding: "16px" }}>Status</TableCell>
+                        <TableCell align="center" sx={{ fontWeight: 700, color: "#252525", fontSize: "0.95rem", padding: "16px" }}>Last Edited</TableCell>
+                        <TableCell align="center" sx={{ fontWeight: 700, color: "#252525", fontSize: "0.95rem", padding: "16px" }}>Status</TableCell>
                       </TableRow>
                     </TableHead>
                     <TableBody>
@@ -1929,12 +1931,12 @@ export default function AdminPage() {
                               ⋯
                             </IconButton>
                           </TableCell>
-                          <TableCell>
+                          <TableCell align="center">
                             <Typography variant="body2" color="text.secondary">
                               {printer.lastModified ? new Date(printer.lastModified).toLocaleDateString() : "N/A"}
                             </Typography>
                           </TableCell>
-                          <TableCell align="right">
+                          <TableCell align="center">
                             <Button
                               size="small"
                               variant="contained"
@@ -2008,8 +2010,8 @@ export default function AdminPage() {
                       Paper {papersSortByName ? "↑" : "↓"}
                     </TableCell>
                     <TableCell align="center" sx={{ fontWeight: 700, width: 50, color: "#252525", fontSize: "0.95rem", padding: "16px" }}>⋯</TableCell>
-                    <TableCell sx={{ fontWeight: 700, color: "#252525", fontSize: "0.95rem", padding: "16px" }}>Last Edited</TableCell>
-                    <TableCell align="right" sx={{ fontWeight: 700, color: "#252525", fontSize: "0.95rem", padding: "16px" }}>Status</TableCell>
+                    <TableCell align="center" sx={{ fontWeight: 700, color: "#252525", fontSize: "0.95rem", padding: "16px" }}>Last Edited</TableCell>
+                    <TableCell align="center" sx={{ fontWeight: 700, color: "#252525", fontSize: "0.95rem", padding: "16px" }}>Status</TableCell>
                   </TableRow>
                 </TableHead>
                 <TableBody>
@@ -2054,12 +2056,12 @@ export default function AdminPage() {
                             ⋯
                           </IconButton>
                         </TableCell>
-                        <TableCell>
+                        <TableCell align="center">
                           <Typography variant="body2" color="text.secondary">
                             {paper.lastModified ? new Date(paper.lastModified).toLocaleDateString() : "N/A"}
                           </Typography>
                         </TableCell>
-                        <TableCell align="right">
+                        <TableCell align="center">
                           <Button
                             size="small"
                             variant="contained"
@@ -2134,8 +2136,8 @@ export default function AdminPage() {
                         Colour {coloursSortByName ? "↑" : "↓"}
                       </TableCell>
                       <TableCell align="center" sx={{ fontWeight: 700, width: 50, color: "#252525", fontSize: "0.95rem", padding: "16px" }}>⋯</TableCell>
-                      <TableCell sx={{ fontWeight: 700, color: "#252525", fontSize: "0.95rem", padding: "16px" }}>Last Edited</TableCell>
-                      <TableCell align="right" sx={{ fontWeight: 700, color: "#252525", fontSize: "0.95rem", padding: "16px" }}>Status</TableCell>
+                      <TableCell align="center" sx={{ fontWeight: 700, color: "#252525", fontSize: "0.95rem", padding: "16px" }}>Last Edited</TableCell>
+                      <TableCell align="center" sx={{ fontWeight: 700, color: "#252525", fontSize: "0.95rem", padding: "16px" }}>Status</TableCell>
                     </TableRow>
                   </TableHead>
                   <TableBody>
@@ -2189,12 +2191,12 @@ export default function AdminPage() {
                             ⋯
                           </IconButton>
                         </TableCell>
-                        <TableCell>
+                        <TableCell align="center">
                           <Typography variant="body2" color="text.secondary">
                             {colour.lastModified ? new Date(colour.lastModified).toLocaleDateString() : "N/A"}
                           </Typography>
                         </TableCell>
-                        <TableCell align="right">
+                        <TableCell align="center">
                           <Button
                             size="small"
                             variant="contained"
