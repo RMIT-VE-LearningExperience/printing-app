@@ -1243,8 +1243,8 @@ export default function AdminPage() {
 
         {/* Navigation Items */}
         <Stack spacing={sidebarCollapsed ? 1.5 : 1} sx={{ flex: 1 }}>
-          {/* Home Button */}
-          {sidebarCollapsed ? (
+          {/* Home Button - Collapsed Only */}
+          {sidebarCollapsed && (
             <Tooltip title="Home" placement="right">
               <IconButton
                 onClick={goHome}
@@ -1262,25 +1262,6 @@ export default function AdminPage() {
                 <HomeIcon sx={{ fontSize: 24 }} />
               </IconButton>
             </Tooltip>
-          ) : (
-            <Button
-              fullWidth
-              startIcon={<HomeIcon />}
-              variant={!selectedPrinterId && !showFullPaperList && !showAllColoursView && !showDeletedItems ? "contained" : "outlined"}
-              onClick={goHome}
-              sx={{
-                justifyContent: "flex-start",
-                mb: 1,
-                bgcolor: !selectedPrinterId && !showFullPaperList && !showAllColoursView && !showDeletedItems ? "#1E88E5" : "transparent",
-                color: "#ffffff",
-                borderColor: "rgba(255, 255, 255, 0.2)",
-                "&:hover": {
-                  bgcolor: !selectedPrinterId && !showFullPaperList && !showAllColoursView && !showDeletedItems ? "#1565C0" : "rgba(255, 255, 255, 0.1)",
-                },
-              }}
-            >
-              HOME
-            </Button>
           )}
 
           {/* Preview Button */}
