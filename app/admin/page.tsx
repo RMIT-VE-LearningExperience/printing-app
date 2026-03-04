@@ -1324,7 +1324,7 @@ export default function AdminPage() {
           <>
             {/* Homepage Customization - Only on HOME page */}
             {!showFullPaperList && !showAllColoursView && !selectedPrinterId && !showDeletedItems && (
-              <Stack spacing={2} sx={{ mb: 3, pb: 2, borderBottom: "1px solid", borderColor: "divider" }}>
+              <Stack spacing={2} sx={{ mb: 3, pb: 2, borderBottom: "1px solid", borderColor: "#2d2d2d" }}>
                 <TextField
                   label="Homepage Header"
                   size="small"
@@ -1332,6 +1332,32 @@ export default function AdminPage() {
                   value={homePageTitle}
                   onChange={(e) => setHomePageTitle(e.target.value)}
                   placeholder="e.g., PRINTER GUIDE"
+                  sx={{
+                    "& .MuiInputBase-input": {
+                      color: "#ffffff",
+                    },
+                    "& .MuiInputBase-input::placeholder": {
+                      color: "rgba(255, 255, 255, 0.5)",
+                      opacity: 1,
+                    },
+                    "& .MuiOutlinedInput-root": {
+                      "& fieldset": {
+                        borderColor: "rgba(255, 255, 255, 0.2)",
+                      },
+                      "&:hover fieldset": {
+                        borderColor: "rgba(255, 255, 255, 0.3)",
+                      },
+                      "&.Mui-focused fieldset": {
+                        borderColor: "#1E88E5",
+                      },
+                    },
+                    "& .MuiInputLabel-root": {
+                      color: "rgba(255, 255, 255, 0.7)",
+                      "&.Mui-focused": {
+                        color: "#1E88E5",
+                      },
+                    },
+                  }}
                 />
                 <TextField
                   label="Homepage Description"
@@ -1342,6 +1368,32 @@ export default function AdminPage() {
                   value={homePageDescription}
                   onChange={(e) => setHomePageDescription(e.target.value)}
                   placeholder="e.g., A step-by-step guide..."
+                  sx={{
+                    "& .MuiInputBase-input": {
+                      color: "#ffffff",
+                    },
+                    "& .MuiInputBase-input::placeholder": {
+                      color: "rgba(255, 255, 255, 0.5)",
+                      opacity: 1,
+                    },
+                    "& .MuiOutlinedInput-root": {
+                      "& fieldset": {
+                        borderColor: "rgba(255, 255, 255, 0.2)",
+                      },
+                      "&:hover fieldset": {
+                        borderColor: "rgba(255, 255, 255, 0.3)",
+                      },
+                      "&.Mui-focused fieldset": {
+                        borderColor: "#1E88E5",
+                      },
+                    },
+                    "& .MuiInputLabel-root": {
+                      color: "rgba(255, 255, 255, 0.7)",
+                      "&.Mui-focused": {
+                        color: "#1E88E5",
+                      },
+                    },
+                  }}
                 />
               </Stack>
             )}
