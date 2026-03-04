@@ -32,15 +32,12 @@ import {
   TextField,
   Tooltip,
   Typography,
-  Chip,
   Collapse,
   Checkbox,
   FormControlLabel,
 } from "@mui/material";
 import {
   Home as HomeIcon,
-  Print as PrintIcon,
-  Article as ArticleIcon,
   Inventory as InventoryIcon,
   Palette as PaletteIcon,
   DeleteOutline as DeleteOutlineIcon,
@@ -371,7 +368,7 @@ export default function AdminPage() {
         void runAction("removeInvalidPapersFromPrinter", { printerId: epsoPrinter.id });
       }
     }
-  }, []); // Run only once on mount
+  }, [tutorialState.printers]);
 
   // Computed values
   const selectedPrinter = useMemo(
