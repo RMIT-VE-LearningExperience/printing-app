@@ -43,6 +43,7 @@ export type Paper = {
   createdAt?: Date;
   modifiedBy: string;
   colours: Colour[];
+  published?: boolean; // Per-printer publish status
 };
 
 export type PrinterPaper = {
@@ -63,7 +64,7 @@ export type Printer = {
   published: boolean;
   lastModified: Date;
   createdAt?: Date;
-  papers: PrinterPaperWithPublished[];
+  papers: Paper[];
 };
 
 export type DeletedItem = {
