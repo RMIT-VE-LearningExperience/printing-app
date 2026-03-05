@@ -778,7 +778,7 @@ export default function AdminPage() {
     if (!confirm("Are you sure you want to delete this paper?")) return;
 
     try {
-      await runAction("deletePaper", {
+      await runAction("removePaperFromPrinter", {
         printerId: selectedPrinterId,
         paperId,
       });
@@ -1255,14 +1255,14 @@ export default function AdminPage() {
   }
 
   return (
-    <Box sx={{ display: "flex", minHeight: "100vh", bgcolor: "#fafafa" }}>
+    <Box sx={{ display: "flex", minHeight: "100vh", bgcolor: "#FFFFFF" }}>
       {/* LEFT SIDEBAR */}
       <Box
         sx={{
           width: sidebarCollapsed ? 80 : 300,
-          bgcolor: "#1f1f1f",
+          bgcolor: "#001F2D",
           borderRight: "1px solid",
-          borderColor: "#2d2d2d",
+          borderColor: "#003549",
           p: sidebarCollapsed ? 1 : 2,
           overflowY: "auto",
           transition: "all 0.3s ease",
@@ -1301,7 +1301,7 @@ export default function AdminPage() {
                 color: "#ffffff",
                 fontSize: "0.95rem",
                 "&:hover": {
-                  color: "#1E88E5",
+                  color: "#009DC9",
                 },
               }}
             >
@@ -1323,7 +1323,7 @@ export default function AdminPage() {
                     width: 50,
                     height: 50,
                     borderRadius: 1,
-                    color: !selectedPrinterId && !showFullPaperList && !showAllColoursView && !showDeletedItems ? "#1E88E5" : "#ffffff",
+                    color: !selectedPrinterId && !showFullPaperList && !showAllColoursView && !showDeletedItems ? "#009DC9" : "#ffffff",
                     bgcolor: !selectedPrinterId && !showFullPaperList && !showAllColoursView && !showDeletedItems ? "rgba(30, 136, 229, 0.12)" : "transparent",
                     "&:hover": { bgcolor: "rgba(255, 255, 255, 0.1)" },
                     transition: "all 0.2s ease",
@@ -1376,9 +1376,10 @@ export default function AdminPage() {
 
         {!sidebarCollapsed && (
           <>
+            <Divider sx={{ my: 1.5, borderColor: "#003549" }} />
             {/* Homepage Customization - Only on HOME page */}
             {!showFullPaperList && !showAllColoursView && !selectedPrinterId && !showDeletedItems && (
-              <Stack spacing={2} sx={{ mb: 3, pb: 2, borderBottom: "1px solid", borderColor: "#2d2d2d" }}>
+              <Stack spacing={2} sx={{ mb: 2, pb: 2 }}>
                 <TextField
                   label="Homepage Header"
                   size="small"
@@ -1402,13 +1403,13 @@ export default function AdminPage() {
                         borderColor: "rgba(255, 255, 255, 0.3)",
                       },
                       "&.Mui-focused fieldset": {
-                        borderColor: "#1E88E5",
+                        borderColor: "#009DC9",
                       },
                     },
                     "& .MuiInputLabel-root": {
                       color: "rgba(255, 255, 255, 0.7)",
                       "&.Mui-focused": {
-                        color: "#1E88E5",
+                        color: "#009DC9",
                       },
                     },
                   }}
@@ -1438,13 +1439,13 @@ export default function AdminPage() {
                         borderColor: "rgba(255, 255, 255, 0.3)",
                       },
                       "&.Mui-focused fieldset": {
-                        borderColor: "#1E88E5",
+                        borderColor: "#009DC9",
                       },
                     },
                     "& .MuiInputLabel-root": {
                       color: "rgba(255, 255, 255, 0.7)",
                       "&.Mui-focused": {
-                        color: "#1E88E5",
+                        color: "#009DC9",
                       },
                     },
                   }}
@@ -1452,7 +1453,7 @@ export default function AdminPage() {
               </Stack>
             )}
 
-            <Divider sx={{ my: 2, borderColor: "#2d2d2d" }} />
+            <Divider sx={{ my: 1.5, borderColor: "#003549" }} />
           </>
         )}
 
@@ -1478,8 +1479,8 @@ export default function AdminPage() {
                             width: 40,
                             height: 40,
                             border: selectedPrinterId === printer.id && !showFullPaperList ? "2px solid" : "1px solid transparent",
-                            borderColor: "#1E88E5",
-                            bgcolor: selectedPrinterId === printer.id && !showFullPaperList ? "rgba(30, 136, 229, 0.12)" : "#333333",
+                            borderColor: "#009DC9",
+                            bgcolor: selectedPrinterId === printer.id && !showFullPaperList ? "rgba(30, 136, 229, 0.12)" : "#001F2D",
                             transition: "all 180ms ease",
                             "&:hover": {
                               boxShadow: "0 0 0 2px rgba(30, 136, 229, 0.2)",
@@ -1503,7 +1504,7 @@ export default function AdminPage() {
                         width: 50,
                         height: 50,
                         borderRadius: 1,
-                        color: showFullPaperList ? "#1E88E5" : "#ffffff",
+                        color: showFullPaperList ? "#009DC9" : "#ffffff",
                         bgcolor: showFullPaperList ? "rgba(30, 136, 229, 0.12)" : "transparent",
                         "&:hover": { bgcolor: "rgba(255, 255, 255, 0.1)" },
                         transition: "all 0.2s ease",
@@ -1532,7 +1533,7 @@ export default function AdminPage() {
                         width: 50,
                         height: 50,
                         borderRadius: 1,
-                        color: showAllColoursView ? "#1E88E5" : "#ffffff",
+                        color: showAllColoursView ? "#009DC9" : "#ffffff",
                         bgcolor: showAllColoursView ? "rgba(30, 136, 229, 0.12)" : "transparent",
                         "&:hover": { bgcolor: "rgba(255, 255, 255, 0.1)" },
                         transition: "all 0.2s ease",
@@ -1559,7 +1560,7 @@ export default function AdminPage() {
                         width: 50,
                         height: 50,
                         borderRadius: 1,
-                        color: showDeletedItems ? "#1E88E5" : "#ffffff",
+                        color: showDeletedItems ? "#009DC9" : "#ffffff",
                         bgcolor: showDeletedItems ? "rgba(30, 136, 229, 0.12)" : "transparent",
                         "&:hover": { bgcolor: "rgba(255, 255, 255, 0.1)" },
                         transition: "all 0.2s ease",
@@ -1592,7 +1593,7 @@ export default function AdminPage() {
                   sx={{
                     minWidth: "auto",
                     p: 0.5,
-                    color: "#1E88E5",
+                    color: "#009DC9",
                     "&:hover": { bgcolor: "rgba(30, 136, 229, 0.12)" }
                   }}
                 >
@@ -1614,7 +1615,7 @@ export default function AdminPage() {
                           borderRadius: 1,
                           transition: "all 180ms ease",
                           bgcolor: selectedPrinterId === printer.id && !showFullPaperList ? "rgba(30, 136, 229, 0.12)" : "transparent",
-                          color: selectedPrinterId === printer.id && !showFullPaperList ? "#1E88E5" : "#ffffff",
+                          color: selectedPrinterId === printer.id && !showFullPaperList ? "#009DC9" : "#ffffff",
                           "&:hover": {
                             bgcolor: "rgba(255, 255, 255, 0.1)",
                           },
@@ -1627,8 +1628,8 @@ export default function AdminPage() {
                             sx={{
                               width: 32,
                               height: 32,
-                              bgcolor: "#333333",
-                              border: selectedPrinterId === printer.id && !showFullPaperList ? "2px solid #1E88E5" : "1px solid transparent",
+                              bgcolor: "#001F2D",
+                              border: selectedPrinterId === printer.id && !showFullPaperList ? "2px solid #009DC9" : "1px solid transparent",
                             }}
                           >
                             {printer.name.charAt(0).toUpperCase()}
@@ -1651,7 +1652,7 @@ export default function AdminPage() {
                           sx={{
                             ml: 1,
                             color: "inherit",
-                            "&:hover": { color: "#1E88E5" }
+                            "&:hover": { color: "#009DC9" }
                           }}
                         >
                           ⋯
@@ -1669,7 +1670,7 @@ export default function AdminPage() {
                 onClick={() => setExpandedPrinterList(true)}
                 sx={{
                   textTransform: "none",
-                  color: "#1E88E5",
+                  color: "#009DC9",
                   borderColor: "rgba(30, 136, 229, 0.3)",
                   "&:hover": {
                     bgcolor: "rgba(30, 136, 229, 0.08)",
@@ -1695,7 +1696,7 @@ export default function AdminPage() {
             )}
           </Box>
 
-          <Divider sx={{ my: 2, borderColor: "#2d2d2d" }} />
+          <Divider sx={{ my: 2, borderColor: "#003549" }} />
 
           {/* Full Paper List Button */}
           <Button
@@ -1706,11 +1707,11 @@ export default function AdminPage() {
             sx={{
               justifyContent: "flex-start",
               mb: 1,
-              bgcolor: showFullPaperList ? "#1E88E5" : "transparent",
+              bgcolor: showFullPaperList ? "#009DC9" : "transparent",
               color: "#ffffff",
               borderColor: "rgba(255, 255, 255, 0.2)",
               "&:hover": {
-                bgcolor: showFullPaperList ? "#1565C0" : "rgba(255, 255, 255, 0.1)",
+                bgcolor: showFullPaperList ? "#0081A8" : "rgba(255, 255, 255, 0.1)",
               },
             }}
           >
@@ -1733,18 +1734,18 @@ export default function AdminPage() {
             }}
             sx={{
               justifyContent: "flex-start",
-              bgcolor: showAllColoursView ? "#1E88E5" : "transparent",
+              bgcolor: showAllColoursView ? "#009DC9" : "transparent",
               color: "#ffffff",
               borderColor: "rgba(255, 255, 255, 0.2)",
               "&:hover": {
-                bgcolor: showAllColoursView ? "#1565C0" : "rgba(255, 255, 255, 0.1)",
+                bgcolor: showAllColoursView ? "#0081A8" : "rgba(255, 255, 255, 0.1)",
               },
             }}
           >
             Colour Management
           </Button>
 
-          <Divider sx={{ my: 2, borderColor: "#2d2d2d" }} />
+          <Divider sx={{ my: 2, borderColor: "#003549" }} />
 
           {/* Deleted Items Button */}
           <Button
@@ -1760,11 +1761,11 @@ export default function AdminPage() {
             }}
             sx={{
               justifyContent: "flex-start",
-              bgcolor: showDeletedItems ? "#1E88E5" : "transparent",
+              bgcolor: showDeletedItems ? "#009DC9" : "transparent",
               color: "#ffffff",
               borderColor: "rgba(255, 255, 255, 0.2)",
               "&:hover": {
-                bgcolor: showDeletedItems ? "#1565C0" : "rgba(255, 255, 255, 0.1)",
+                bgcolor: showDeletedItems ? "#0081A8" : "rgba(255, 255, 255, 0.1)",
               },
             }}
           >
@@ -1775,7 +1776,7 @@ export default function AdminPage() {
       </Box>
 
       {/* MAIN CONTENT */}
-      <Box sx={{ flex: 1, p: 3, overflowY: "auto", backgroundColor: "#f5f5f5" }}>
+      <Box sx={{ flex: 1, p: 3, overflowY: "auto", backgroundColor: "#E0F4FF" }}>
         {/* Alerts */}
         {error && (
           <Alert severity="error" onClose={() => setError(null)} sx={{ mb: 2, backgroundColor: "#ffebee", color: "#b71c1c" }}>
@@ -1796,7 +1797,7 @@ export default function AdminPage() {
               variant="body2"
               onClick={goHome}
               underline="hover"
-              sx={{ color: "#1E88E5", fontWeight: 500, "&:hover": { color: "#1565C0" }, cursor: "pointer" }}
+              sx={{ color: "#009DC9", fontWeight: 500, "&:hover": { color: "#0081A8" }, cursor: "pointer" }}
             >
               HOME
             </Link>
@@ -1806,7 +1807,7 @@ export default function AdminPage() {
                 variant="body2"
                 onClick={() => goToPrinterPapers(selectedPrinterId)}
                 underline="hover"
-                sx={{ color: "#1E88E5", fontWeight: 500, "&:hover": { color: "#1565C0" }, cursor: "pointer" }}
+                sx={{ color: "#009DC9", fontWeight: 500, "&:hover": { color: "#0081A8" }, cursor: "pointer" }}
               >
                 {selectedPrinter.name.toUpperCase()}
               </Link>
@@ -1817,7 +1818,7 @@ export default function AdminPage() {
                 variant="body2"
                 onClick={() => goToPaperColours(selectedPaperId)}
                 underline="hover"
-                sx={{ color: "#1E88E5", fontWeight: 500, "&:hover": { color: "#1565C0" }, cursor: "pointer" }}
+                sx={{ color: "#009DC9", fontWeight: 500, "&:hover": { color: "#0081A8" }, cursor: "pointer" }}
               >
                 {selectedPaper.name.toUpperCase()}
               </Link>
@@ -1828,23 +1829,23 @@ export default function AdminPage() {
                 variant="body2"
                 onClick={() => goToColourSteps(selectedColorId)}
                 underline="hover"
-                sx={{ color: "#1E88E5", fontWeight: 500, "&:hover": { color: "#1565C0" }, cursor: "pointer" }}
+                sx={{ color: "#009DC9", fontWeight: 500, "&:hover": { color: "#0081A8" }, cursor: "pointer" }}
               >
                 {selectedColor.name.toUpperCase()}
               </Link>
             )}
             {!showDeletedItems && !showFullPaperList && !showAllColoursView && selectedStepId && selectedStep && (
-              <Typography color="text.primary" variant="body2" sx={{ color: "#616161", fontWeight: 500 }}>
+              <Typography color="text.primary" variant="body2" sx={{ color: "#006788", fontWeight: 500 }}>
                 {selectedStep.title.toUpperCase()}
               </Typography>
             )}
             {showFullPaperList && (
-              <Typography color="text.primary" variant="body2" sx={{ color: "#616161", fontWeight: 500 }}>
+              <Typography color="text.primary" variant="body2" sx={{ color: "#006788", fontWeight: 500 }}>
                 FULL PAPER LIST
               </Typography>
             )}
             {showAllColoursView && (
-              <Typography color="text.primary" variant="body2" sx={{ color: "#616161", fontWeight: 500 }}>
+              <Typography color="text.primary" variant="body2" sx={{ color: "#006788", fontWeight: 500 }}>
                 COLOUR MANAGEMENT
               </Typography>
             )}
@@ -1862,7 +1863,7 @@ export default function AdminPage() {
               <Box>
                 <Box sx={{ display: "flex", justifyContent: "space-between", alignItems: "center", mb: 2 }}>
                   <Box>
-                    <Typography variant="h5" sx={{ color: "#252525", fontWeight: 700, mb: 0.5 }}>Printers List</Typography>
+                    <Typography variant="h5" sx={{ color: "#001F2D", fontWeight: 700, mb: 0.5 }}>Printers List</Typography>
                     <Typography variant="body2" color="text.secondary" sx={{ mt: 0.5 }}>
                       Select your Printer:
                     </Typography>
@@ -1871,11 +1872,11 @@ export default function AdminPage() {
                     variant="contained"
                     onClick={() => setShowAddPrinterModal(true)}
                     sx={{
-                      backgroundColor: "#1E88E5",
+                      backgroundColor: "#009DC9",
                       color: "#ffffff",
                       fontWeight: 600,
                       textTransform: "none",
-                      "&:hover": { backgroundColor: "#1565C0" }
+                      "&:hover": { backgroundColor: "#0081A8" }
                     }}
                   >
                     + Add Printer
@@ -1885,13 +1886,13 @@ export default function AdminPage() {
                 <TableContainer component={Paper} elevation={2} sx={{ borderRadius: 1, overflow: "hidden" }}>
                   <Table>
                     <TableHead>
-                      <TableRow sx={{ backgroundColor: "#f0f7ff", borderBottom: "2px solid #e0e0e0" }}>
+                      <TableRow sx={{ backgroundColor: "#F4FAFF", borderBottom: "2px solid #BDE9FF" }}>
                         <TableCell
                           sx={{
                             fontWeight: 700,
                             cursor: "pointer",
                             userSelect: "none",
-                            color: "#252525",
+                            color: "#001F2D",
                             fontSize: "0.95rem",
                             padding: "16px"
                           }}
@@ -1899,9 +1900,9 @@ export default function AdminPage() {
                         >
                           Printer {printersSortByName ? "↑" : "↓"}
                         </TableCell>
-                        <TableCell align="center" sx={{ fontWeight: 700, width: 50, color: "#252525", fontSize: "0.95rem", padding: "16px" }}>⋯</TableCell>
-                        <TableCell align="center" sx={{ fontWeight: 700, color: "#252525", fontSize: "0.95rem", padding: "16px" }}>Last Edited</TableCell>
-                        <TableCell align="center" sx={{ fontWeight: 700, color: "#252525", fontSize: "0.95rem", padding: "16px" }}>Status</TableCell>
+                        <TableCell align="center" sx={{ fontWeight: 700, width: 50, color: "#001F2D", fontSize: "0.95rem", padding: "16px" }}>⋯</TableCell>
+                        <TableCell align="center" sx={{ fontWeight: 700, color: "#001F2D", fontSize: "0.95rem", padding: "16px" }}>Last Edited</TableCell>
+                        <TableCell align="center" sx={{ fontWeight: 700, color: "#001F2D", fontSize: "0.95rem", padding: "16px" }}>Status</TableCell>
                       </TableRow>
                     </TableHead>
                     <TableBody>
@@ -1912,8 +1913,8 @@ export default function AdminPage() {
                           onClick={() => goToPrinterPapers(printer.id)}
                           sx={{
                             cursor: "pointer",
-                            borderBottom: "1px solid #e0e0e0",
-                            "&:hover": { backgroundColor: "#f5f5f5" }
+                            borderBottom: "1px solid #BDE9FF",
+                            "&:hover": { backgroundColor: "#E0F4FF" }
                           }}
                         >
                           <TableCell>
@@ -1944,7 +1945,7 @@ export default function AdminPage() {
                               {printer.lastModified ? new Date(printer.lastModified).toLocaleDateString() : "N/A"}
                             </Typography>
                           </TableCell>
-                          <TableCell align="center">
+                          <TableCell align="center" onClick={(e) => e.stopPropagation()}>
                             <Switch
                               checked={printer.published}
                               onChange={(e) => {
@@ -1982,7 +1983,7 @@ export default function AdminPage() {
           <Box>
             <Box sx={{ display: "flex", justifyContent: "space-between", alignItems: "center", mb: 3 }}>
               <Box>
-                <Typography variant="h5" sx={{ color: "#252525", fontWeight: 700, mb: 0.5 }}>Papers for {selectedPrinter.name}</Typography>
+                <Typography variant="h5" sx={{ color: "#001F2D", fontWeight: 700, mb: 0.5 }}>Papers for {selectedPrinter.name}</Typography>
                 <Typography variant="body2" color="text.secondary" sx={{ mt: 0.5 }}>
                   Choose your paper type:
                 </Typography>
@@ -1991,11 +1992,11 @@ export default function AdminPage() {
                 variant="contained"
                 onClick={() => setShowAddPaperModal(true)}
                 sx={{
-                  backgroundColor: "#1E88E5",
+                  backgroundColor: "#009DC9",
                   color: "#ffffff",
                   fontWeight: 600,
                   textTransform: "none",
-                  "&:hover": { backgroundColor: "#1565C0" }
+                  "&:hover": { backgroundColor: "#0081A8" }
                 }}
               >
                 + Add Paper
@@ -2005,13 +2006,13 @@ export default function AdminPage() {
             <TableContainer component={Paper} elevation={2} sx={{ borderRadius: 1, overflow: "hidden" }}>
               <Table>
                 <TableHead>
-                  <TableRow sx={{ backgroundColor: "#f0f7ff", borderBottom: "2px solid #e0e0e0" }}>
+                  <TableRow sx={{ backgroundColor: "#F4FAFF", borderBottom: "2px solid #BDE9FF" }}>
                     <TableCell
                       sx={{
                         fontWeight: 700,
                         cursor: "pointer",
                         userSelect: "none",
-                        color: "#252525",
+                        color: "#001F2D",
                         fontSize: "0.95rem",
                         padding: "16px"
                       }}
@@ -2019,9 +2020,9 @@ export default function AdminPage() {
                     >
                       Paper {papersSortByName ? "↑" : "↓"}
                     </TableCell>
-                    <TableCell align="center" sx={{ fontWeight: 700, width: 50, color: "#252525", fontSize: "0.95rem", padding: "16px" }}>⋯</TableCell>
-                    <TableCell align="center" sx={{ fontWeight: 700, color: "#252525", fontSize: "0.95rem", padding: "16px" }}>Last Edited</TableCell>
-                    <TableCell align="center" sx={{ fontWeight: 700, color: "#252525", fontSize: "0.95rem", padding: "16px" }}>Status</TableCell>
+                    <TableCell align="center" sx={{ fontWeight: 700, width: 50, color: "#001F2D", fontSize: "0.95rem", padding: "16px" }}>⋯</TableCell>
+                    <TableCell align="center" sx={{ fontWeight: 700, color: "#001F2D", fontSize: "0.95rem", padding: "16px" }}>Last Edited</TableCell>
+                    <TableCell align="center" sx={{ fontWeight: 700, color: "#001F2D", fontSize: "0.95rem", padding: "16px" }}>Status</TableCell>
                   </TableRow>
                 </TableHead>
                 <TableBody>
@@ -2051,8 +2052,8 @@ export default function AdminPage() {
                         onClick={() => goToPaperColours(paper.id)}
                         sx={{
                           cursor: "pointer",
-                          borderBottom: "1px solid #e0e0e0",
-                          "&:hover": { backgroundColor: "#f5f5f5" }
+                          borderBottom: "1px solid #BDE9FF",
+                          "&:hover": { backgroundColor: "#E0F4FF" }
                         }}
                       >
                         <TableCell>
@@ -2083,7 +2084,7 @@ export default function AdminPage() {
                             {paper.lastModified ? new Date(paper.lastModified).toLocaleDateString() : "N/A"}
                           </Typography>
                         </TableCell>
-                        <TableCell align="center">
+                        <TableCell align="center" onClick={(e) => e.stopPropagation()}>
                           <Switch
                             checked={printerPaper.published}
                             onChange={(e) => {
@@ -2119,7 +2120,7 @@ export default function AdminPage() {
           <Box>
             <Box sx={{ display: "flex", justifyContent: "space-between", alignItems: "center", mb: 3 }}>
               <Box>
-                <Typography variant="h5" sx={{ color: "#252525", fontWeight: 700, mb: 0.5 }}>Colour Management - {selectedPaper.name}</Typography>
+                <Typography variant="h5" sx={{ color: "#001F2D", fontWeight: 700, mb: 0.5 }}>Colour Management - {selectedPaper.name}</Typography>
                 <Typography variant="body2" color="text.secondary" sx={{ mt: 0.5 }}>
                   I want to preserve:
                 </Typography>
@@ -2128,11 +2129,11 @@ export default function AdminPage() {
                 variant="contained"
                 onClick={() => setShowAddColourModal(true)}
                 sx={{
-                  backgroundColor: "#1E88E5",
+                  backgroundColor: "#009DC9",
                   color: "#ffffff",
                   fontWeight: 600,
                   textTransform: "none",
-                  "&:hover": { backgroundColor: "#1565C0" }
+                  "&:hover": { backgroundColor: "#0081A8" }
                 }}
               >
                 + Add Colour
@@ -2145,13 +2146,13 @@ export default function AdminPage() {
               <TableContainer component={Paper} elevation={2} sx={{ borderRadius: 1, overflow: "hidden" }}>
                 <Table>
                   <TableHead>
-                    <TableRow sx={{ backgroundColor: "#f0f7ff", borderBottom: "2px solid #e0e0e0" }}>
+                    <TableRow sx={{ backgroundColor: "#F4FAFF", borderBottom: "2px solid #BDE9FF" }}>
                       <TableCell
                         sx={{
                           fontWeight: 700,
                           cursor: "pointer",
                           userSelect: "none",
-                          color: "#252525",
+                          color: "#001F2D",
                           fontSize: "0.95rem",
                           padding: "16px"
                         }}
@@ -2159,9 +2160,9 @@ export default function AdminPage() {
                       >
                         Colour {coloursSortByName ? "↑" : "↓"}
                       </TableCell>
-                      <TableCell align="center" sx={{ fontWeight: 700, width: 50, color: "#252525", fontSize: "0.95rem", padding: "16px" }}>⋯</TableCell>
-                      <TableCell align="center" sx={{ fontWeight: 700, color: "#252525", fontSize: "0.95rem", padding: "16px" }}>Last Edited</TableCell>
-                      <TableCell align="center" sx={{ fontWeight: 700, color: "#252525", fontSize: "0.95rem", padding: "16px" }}>Status</TableCell>
+                      <TableCell align="center" sx={{ fontWeight: 700, width: 50, color: "#001F2D", fontSize: "0.95rem", padding: "16px" }}>⋯</TableCell>
+                      <TableCell align="center" sx={{ fontWeight: 700, color: "#001F2D", fontSize: "0.95rem", padding: "16px" }}>Last Edited</TableCell>
+                      <TableCell align="center" sx={{ fontWeight: 700, color: "#001F2D", fontSize: "0.95rem", padding: "16px" }}>Status</TableCell>
                     </TableRow>
                   </TableHead>
                   <TableBody>
@@ -2194,8 +2195,8 @@ export default function AdminPage() {
                           onClick={() => goToColourSteps(ppColour.colourId)}
                           sx={{
                             cursor: "pointer",
-                            borderBottom: "1px solid #e0e0e0",
-                            "&:hover": { backgroundColor: "#f5f5f5" }
+                            borderBottom: "1px solid #BDE9FF",
+                            "&:hover": { backgroundColor: "#E0F4FF" }
                           }}
                         >
                           <TableCell>
@@ -2242,7 +2243,7 @@ export default function AdminPage() {
                               {colour.lastModified ? new Date(colour.lastModified).toLocaleDateString() : "N/A"}
                             </Typography>
                           </TableCell>
-                          <TableCell align="center">
+                          <TableCell align="center" onClick={(e) => e.stopPropagation()}>
                             <Switch
                               checked={ppColour.published}
                               onChange={(e) => {
@@ -2279,17 +2280,17 @@ export default function AdminPage() {
           <Box>
             <Box sx={{ display: "flex", justifyContent: "space-between", alignItems: "center", mb: 3 }}>
               <Box>
-                <Typography variant="h5" sx={{ color: "#252525", fontWeight: 700, mb: 0.5 }}>Step Instructions - {selectedColor.name}</Typography>
+                <Typography variant="h5" sx={{ color: "#001F2D", fontWeight: 700, mb: 0.5 }}>Step Instructions - {selectedColor.name}</Typography>
               </Box>
               <Button
                 variant="contained"
                 onClick={() => setShowAddStepModal(true)}
                 sx={{
-                  backgroundColor: "#1E88E5",
+                  backgroundColor: "#009DC9",
                   color: "#ffffff",
                   fontWeight: 600,
                   textTransform: "none",
-                  "&:hover": { backgroundColor: "#1565C0" }
+                  "&:hover": { backgroundColor: "#0081A8" }
                 }}
               >
                 + Add Step
@@ -2307,7 +2308,7 @@ export default function AdminPage() {
                     sx={{
                       p: 3,
                       borderRadius: 1,
-                      border: "1px solid #e0e0e0",
+                      border: "1px solid #BDE9FF",
                       transition: "all 200ms ease",
                       "&:hover": {
                         boxShadow: "0 4px 12px rgba(0, 0, 0, 0.1)",
@@ -2317,7 +2318,7 @@ export default function AdminPage() {
                     <Box sx={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start" }}>
                       <Box sx={{ flex: 1 }}>
                         <Box sx={{ display: "flex", alignItems: "center", gap: 2, mb: 1 }}>
-                          <Typography variant="h6" fontWeight={700} sx={{ color: "#252525" }}>
+                          <Typography variant="h6" fontWeight={700} sx={{ color: "#001F2D" }}>
                             Step {index + 1}: {step.title}
                           </Typography>
                           <Button
@@ -2325,13 +2326,13 @@ export default function AdminPage() {
                             variant="outlined"
                             onClick={() => setExpandedSteps(expandedSteps === step.id ? null : step.id)}
                             sx={{
-                              color: "#1E88E5",
-                              borderColor: "#1E88E5",
+                              color: "#009DC9",
+                              borderColor: "#009DC9",
                               fontWeight: 600,
                               textTransform: "none",
                               "&:hover": {
                                 backgroundColor: "rgba(30, 136, 229, 0.08)",
-                                borderColor: "#1565C0"
+                                borderColor: "#0081A8"
                               }
                             }}
                           >
@@ -2418,7 +2419,7 @@ export default function AdminPage() {
           <Box>
             <Box sx={{ display: "flex", justifyContent: "space-between", alignItems: "center", mb: 3 }}>
               <Box>
-                <Typography variant="h5" sx={{ color: "#252525", fontWeight: 700, mb: 0.5 }}>All Papers</Typography>
+                <Typography variant="h5" sx={{ color: "#001F2D", fontWeight: 700, mb: 0.5 }}>All Papers</Typography>
                 <Typography variant="body2" color="text.secondary" sx={{ mt: 0.5 }}>
                   View and manage all papers across the system
                 </Typography>
@@ -2431,11 +2432,11 @@ export default function AdminPage() {
                   setShowAddPaperSearch(false);
                 }}
                 sx={{
-                  backgroundColor: "#1E88E5",
+                  backgroundColor: "#009DC9",
                   color: "#ffffff",
                   fontWeight: 600,
                   textTransform: "none",
-                  "&:hover": { backgroundColor: "#1565C0" }
+                  "&:hover": { backgroundColor: "#0081A8" }
                 }}
               >
                 + Add Paper
@@ -2445,13 +2446,13 @@ export default function AdminPage() {
             <TableContainer component={Paper} elevation={2} sx={{ borderRadius: 1, overflow: "hidden" }}>
               <Table>
                 <TableHead>
-                  <TableRow sx={{ backgroundColor: "#f0f7ff", borderBottom: "2px solid #e0e0e0" }}>
+                  <TableRow sx={{ backgroundColor: "#F4FAFF", borderBottom: "2px solid #BDE9FF" }}>
                     <TableCell
                       sx={{
                         fontWeight: 700,
                         cursor: "pointer",
                         userSelect: "none",
-                        color: "#252525",
+                        color: "#001F2D",
                         fontSize: "0.95rem",
                         padding: "16px"
                       }}
@@ -2459,9 +2460,9 @@ export default function AdminPage() {
                     >
                       Paper Type {fullPaperListSortByName ? "↑" : "↓"}
                     </TableCell>
-                    <TableCell sx={{ fontWeight: 700, color: "#252525", fontSize: "0.95rem", padding: "16px" }}>Active In</TableCell>
-                    <TableCell sx={{ fontWeight: 700, color: "#252525", fontSize: "0.95rem", padding: "16px" }}>Last Edited</TableCell>
-                    <TableCell align="right" sx={{ fontWeight: 700, color: "#252525", fontSize: "0.95rem", padding: "16px" }}>Actions</TableCell>
+                    <TableCell sx={{ fontWeight: 700, color: "#001F2D", fontSize: "0.95rem", padding: "16px" }}>Active In</TableCell>
+                    <TableCell sx={{ fontWeight: 700, color: "#001F2D", fontSize: "0.95rem", padding: "16px" }}>Last Edited</TableCell>
+                    <TableCell align="right" sx={{ fontWeight: 700, color: "#001F2D", fontSize: "0.95rem", padding: "16px" }}>Actions</TableCell>
                   </TableRow>
                 </TableHead>
                 <TableBody>
@@ -2471,9 +2472,9 @@ export default function AdminPage() {
                       hover
                       sx={{
                         transition: "all 200ms ease",
-                        borderBottom: "1px solid #e0e0e0",
+                        borderBottom: "1px solid #BDE9FF",
                         "&:hover": {
-                          backgroundColor: "#f5f5f5",
+                          backgroundColor: "#E0F4FF",
                         },
                       }}
                     >
@@ -2527,7 +2528,7 @@ export default function AdminPage() {
           <Box>
             <Box sx={{ display: "flex", justifyContent: "space-between", alignItems: "center", mb: 3 }}>
               <Box>
-                <Typography variant="h5" sx={{ color: "#252525", fontWeight: 700, mb: 0.5 }}>Colour Management</Typography>
+                <Typography variant="h5" sx={{ color: "#001F2D", fontWeight: 700, mb: 0.5 }}>Colour Management</Typography>
                 <Typography variant="body2" color="text.secondary" sx={{ mt: 0.5 }}>
                   View and manage all colours across all papers and printers
                 </Typography>
@@ -2537,13 +2538,13 @@ export default function AdminPage() {
             <TableContainer component={Paper} elevation={2} sx={{ borderRadius: 1, overflow: "hidden" }}>
               <Table>
                 <TableHead>
-                  <TableRow sx={{ backgroundColor: "#f0f7ff", borderBottom: "2px solid #e0e0e0" }}>
+                  <TableRow sx={{ backgroundColor: "#F4FAFF", borderBottom: "2px solid #BDE9FF" }}>
                     <TableCell
                       sx={{
                         fontWeight: 700,
                         cursor: "pointer",
                         userSelect: "none",
-                        color: "#252525",
+                        color: "#001F2D",
                         fontSize: "0.95rem",
                         padding: "16px"
                       }}
@@ -2551,9 +2552,9 @@ export default function AdminPage() {
                     >
                       Colour {colourManagementSortByName ? "↑" : "↓"}
                     </TableCell>
-                    <TableCell sx={{ fontWeight: 700, color: "#252525", fontSize: "0.95rem", padding: "16px" }}>Paper</TableCell>
-                    <TableCell sx={{ fontWeight: 700, color: "#252525", fontSize: "0.95rem", padding: "16px" }}>Printer</TableCell>
-                    <TableCell sx={{ fontWeight: 700, color: "#252525", fontSize: "0.95rem", padding: "16px" }}>Last Edited</TableCell>
+                    <TableCell sx={{ fontWeight: 700, color: "#001F2D", fontSize: "0.95rem", padding: "16px" }}>Paper</TableCell>
+                    <TableCell sx={{ fontWeight: 700, color: "#001F2D", fontSize: "0.95rem", padding: "16px" }}>Printer</TableCell>
+                    <TableCell sx={{ fontWeight: 700, color: "#001F2D", fontSize: "0.95rem", padding: "16px" }}>Last Edited</TableCell>
                   </TableRow>
                 </TableHead>
                 <TableBody>
@@ -2579,9 +2580,9 @@ export default function AdminPage() {
                           hover
                           sx={{
                             transition: "all 200ms ease",
-                            borderBottom: "1px solid #e0e0e0",
+                            borderBottom: "1px solid #BDE9FF",
                             "&:hover": {
-                              backgroundColor: "#f5f5f5",
+                              backgroundColor: "#E0F4FF",
                             },
                           }}
                         >
@@ -2650,7 +2651,7 @@ export default function AdminPage() {
         {showDeletedItems && (
           <Box>
             <Box sx={{ mb: 3 }}>
-              <Typography variant="h5" sx={{ color: "#252525", fontWeight: 700, mb: 0.5 }}>Deleted Items</Typography>
+              <Typography variant="h5" sx={{ color: "#001F2D", fontWeight: 700, mb: 0.5 }}>Deleted Items</Typography>
               <Typography variant="body2" color="text.secondary" sx={{ mt: 0.5 }}>
                 Restore or permanently delete removed items
               </Typography>
@@ -2659,10 +2660,10 @@ export default function AdminPage() {
             {tutorialState.deletedItems && tutorialState.deletedItems.length > 0 ? (
               <Stack spacing={2}>
                 {tutorialState.deletedItems.map((item) => (
-                  <Paper key={item.id} elevation={1} sx={{ p: 3, borderRadius: 1, border: "1px solid #e0e0e0" }}>
+                  <Paper key={item.id} elevation={1} sx={{ p: 3, borderRadius: 1, border: "1px solid #BDE9FF" }}>
                     <Stack direction="row" justifyContent="space-between" alignItems="center">
                       <Box>
-                        <Typography variant="subtitle2" fontWeight={600} sx={{ color: "#252525" }}>
+                        <Typography variant="subtitle2" fontWeight={600} sx={{ color: "#001F2D" }}>
                           {item.name}
                         </Typography>
                         <Stack direction="row" spacing={2} sx={{ mt: 0.5 }}>
@@ -2746,7 +2747,7 @@ export default function AdminPage() {
         fullWidth
         PaperProps={{ sx: { borderRadius: 2, boxShadow: "0 8px 32px rgba(0, 0, 0, 0.12)" } }}
       >
-        <DialogTitle sx={{ backgroundColor: "#f0f7ff", borderBottom: "2px solid #e0e0e0", fontWeight: 700, color: "#1E88E5", fontSize: "1.1rem", py: 2.5 }}>NEW PRINTER</DialogTitle>
+        <DialogTitle sx={{ backgroundColor: "#F4FAFF", borderBottom: "2px solid #BDE9FF", fontWeight: 700, color: "#009DC9", fontSize: "1.1rem", py: 2.5 }}>NEW PRINTER</DialogTitle>
         <DialogContent sx={{ pt: 16, backgroundColor: "#ffffff" }}>
           <Stack spacing={2}>
             <Box sx={{ mt: 8 }}>
@@ -2819,7 +2820,7 @@ export default function AdminPage() {
             />
           </Stack>
         </DialogContent>
-        <DialogActions sx={{ borderTop: "1px solid #e0e0e0", pt: 2, pb: 2, px: 3, backgroundColor: "#fafafa" }}>
+        <DialogActions sx={{ borderTop: "1px solid #BDE9FF", pt: 2, pb: 2, px: 3, backgroundColor: "#F4FAFF" }}>
           <Button
             onClick={() => {
               setShowAddPrinterModal(false);
@@ -2828,7 +2829,7 @@ export default function AdminPage() {
               setNewPrinterThumbnail("");
               setNewPrinterThumbnailName("");
             }}
-            sx={{ color: "#1E88E5", fontWeight: 600, textTransform: "none" }}
+            sx={{ color: "#009DC9", fontWeight: 600, textTransform: "none" }}
           >
             Cancel
           </Button>
@@ -2837,12 +2838,12 @@ export default function AdminPage() {
             variant="contained"
             disabled={loading}
             sx={{
-              backgroundColor: "#1E88E5",
+              backgroundColor: "#009DC9",
               color: "#ffffff",
               fontWeight: 600,
               textTransform: "none",
-              "&:hover": { backgroundColor: "#1565C0" },
-              "&:disabled": { backgroundColor: "#bdbdbd", color: "#ffffff" }
+              "&:hover": { backgroundColor: "#0081A8" },
+              "&:disabled": { backgroundColor: "#FFFFFF", color: "#ffffff" }
             }}
           >
             {loading ? "Adding..." : "ADD"}
@@ -2864,7 +2865,7 @@ export default function AdminPage() {
         fullWidth
         PaperProps={{ sx: { borderRadius: 2, boxShadow: "0 8px 32px rgba(0, 0, 0, 0.12)" } }}
       >
-        <DialogTitle sx={{ backgroundColor: "#f0f7ff", borderBottom: "2px solid #e0e0e0", fontWeight: 700, color: "#1E88E5", fontSize: "1.1rem", py: 2.5 }}>EDIT PRINTER</DialogTitle>
+        <DialogTitle sx={{ backgroundColor: "#F4FAFF", borderBottom: "2px solid #BDE9FF", fontWeight: 700, color: "#009DC9", fontSize: "1.1rem", py: 2.5 }}>EDIT PRINTER</DialogTitle>
         <DialogContent sx={{ pt: 16, backgroundColor: "#ffffff" }}>
           <Stack spacing={2}>
             <Box sx={{ mt: 8 }}>
@@ -2937,7 +2938,7 @@ export default function AdminPage() {
             />
           </Stack>
         </DialogContent>
-        <DialogActions sx={{ borderTop: "1px solid #e0e0e0", pt: 2, pb: 2, px: 3, backgroundColor: "#fafafa" }}>
+        <DialogActions sx={{ borderTop: "1px solid #BDE9FF", pt: 2, pb: 2, px: 3, backgroundColor: "#F4FAFF" }}>
           <Button
             onClick={() => {
               setShowEditPrinterModal(false);
@@ -2947,7 +2948,7 @@ export default function AdminPage() {
               setEditPrinterThumbnail("");
               setEditPrinterThumbnailName("");
             }}
-            sx={{ color: "#1E88E5", fontWeight: 600, textTransform: "none" }}
+            sx={{ color: "#009DC9", fontWeight: 600, textTransform: "none" }}
           >
             Cancel
           </Button>
@@ -2956,12 +2957,12 @@ export default function AdminPage() {
             variant="contained"
             disabled={loading}
             sx={{
-              backgroundColor: "#1E88E5",
+              backgroundColor: "#009DC9",
               color: "#ffffff",
               fontWeight: 600,
               textTransform: "none",
-              "&:hover": { backgroundColor: "#1565C0" },
-              "&:disabled": { backgroundColor: "#bdbdbd", color: "#ffffff" }
+              "&:hover": { backgroundColor: "#0081A8" },
+              "&:disabled": { backgroundColor: "#FFFFFF", color: "#ffffff" }
             }}
           >
             {loading ? "Saving..." : "SAVE"}
@@ -2986,7 +2987,7 @@ export default function AdminPage() {
         fullWidth
         PaperProps={{ sx: { borderRadius: 2, boxShadow: "0 8px 32px rgba(0, 0, 0, 0.12)" } }}
       >
-        <DialogTitle sx={{ backgroundColor: "#f0f7ff", borderBottom: "2px solid #e0e0e0", fontWeight: 700, color: "#1E88E5", fontSize: "1.1rem", py: 2.5 }}>NEW PAPER</DialogTitle>
+        <DialogTitle sx={{ backgroundColor: "#F4FAFF", borderBottom: "2px solid #BDE9FF", fontWeight: 700, color: "#009DC9", fontSize: "1.1rem", py: 2.5 }}>NEW PAPER</DialogTitle>
         <DialogContent sx={{ pt: 16, backgroundColor: "#ffffff" }}>
           <Stack spacing={0}>
             {/* Accordion-style sections */}
@@ -3048,13 +3049,13 @@ export default function AdminPage() {
                                 }}
                                 sx={{
                                   p: 1.5,
-                                  border: "1px solid #e0e0e0",
+                                  border: "1px solid #BDE9FF",
                                   borderRadius: 1,
                                   cursor: "pointer",
                                   display: "flex",
                                   alignItems: "center",
                                   gap: 1.5,
-                                  "&:hover": { backgroundColor: "#f5f5f5" },
+                                  "&:hover": { backgroundColor: "#E0F4FF" },
                                 }}
                               >
                                 <Avatar
@@ -3274,7 +3275,7 @@ export default function AdminPage() {
             </Box>
           </Stack>
         </DialogContent>
-        <DialogActions sx={{ borderTop: "1px solid #e0e0e0", pt: 2, pb: 2, px: 3, backgroundColor: "#fafafa" }}>
+        <DialogActions sx={{ borderTop: "1px solid #BDE9FF", pt: 2, pb: 2, px: 3, backgroundColor: "#F4FAFF" }}>
           <Button
             onClick={() => {
               setShowAddPaperModal(false);
@@ -3289,7 +3290,7 @@ export default function AdminPage() {
               setSelectedSearchPaperPrinters([]);
               setPaperSearchQuery("");
             }}
-            sx={{ color: "#1E88E5", fontWeight: 600, textTransform: "none" }}
+            sx={{ color: "#009DC9", fontWeight: 600, textTransform: "none" }}
           >
             Cancel
           </Button>
@@ -3305,12 +3306,12 @@ export default function AdminPage() {
               variant="contained"
               disabled={loading || (selectedSearchPaper ? selectedSearchPaperPrinters.length === 0 : newPaperSelectedPrinters.length === 0)}
               sx={{
-                backgroundColor: "#1E88E5",
+                backgroundColor: "#009DC9",
                 color: "#ffffff",
                 fontWeight: 600,
                 textTransform: "none",
-                "&:hover": { backgroundColor: "#1565C0" },
-                "&:disabled": { backgroundColor: "#bdbdbd", color: "#ffffff" }
+                "&:hover": { backgroundColor: "#0081A8" },
+                "&:disabled": { backgroundColor: "#FFFFFF", color: "#ffffff" }
               }}
             >
               {loading ? "Adding..." : "ADD"}
@@ -3334,7 +3335,7 @@ export default function AdminPage() {
         fullWidth
         PaperProps={{ sx: { borderRadius: 2, boxShadow: "0 8px 32px rgba(0, 0, 0, 0.12)" } }}
       >
-        <DialogTitle sx={{ backgroundColor: "#f0f7ff", borderBottom: "2px solid #e0e0e0", fontWeight: 700, color: "#1E88E5", fontSize: "1.1rem", py: 2.5 }}>EDIT PAPER</DialogTitle>
+        <DialogTitle sx={{ backgroundColor: "#F4FAFF", borderBottom: "2px solid #BDE9FF", fontWeight: 700, color: "#009DC9", fontSize: "1.1rem", py: 2.5 }}>EDIT PAPER</DialogTitle>
         <DialogContent sx={{ pt: 16, backgroundColor: "#ffffff" }}>
           <Stack spacing={2}>
             <Box sx={{ mt: 8 }}>
@@ -3434,7 +3435,7 @@ export default function AdminPage() {
             </Box>
           </Stack>
         </DialogContent>
-        <DialogActions sx={{ borderTop: "1px solid #e0e0e0", pt: 2, pb: 2, px: 3, backgroundColor: "#fafafa" }}>
+        <DialogActions sx={{ borderTop: "1px solid #BDE9FF", pt: 2, pb: 2, px: 3, backgroundColor: "#F4FAFF" }}>
           <Button
             onClick={() => {
               setShowEditPaperModal(false);
@@ -3445,7 +3446,7 @@ export default function AdminPage() {
               setEditPaperThumbnailName("");
               setEditPaperSelectedPrinters([]);
             }}
-            sx={{ color: "#1E88E5", fontWeight: 600, textTransform: "none" }}
+            sx={{ color: "#009DC9", fontWeight: 600, textTransform: "none" }}
           >
             Cancel
           </Button>
@@ -3454,12 +3455,12 @@ export default function AdminPage() {
             variant="contained"
             disabled={loading}
             sx={{
-              backgroundColor: "#1E88E5",
+              backgroundColor: "#009DC9",
               color: "#ffffff",
               fontWeight: 600,
               textTransform: "none",
-              "&:hover": { backgroundColor: "#1565C0" },
-              "&:disabled": { backgroundColor: "#bdbdbd", color: "#ffffff" }
+              "&:hover": { backgroundColor: "#0081A8" },
+              "&:disabled": { backgroundColor: "#FFFFFF", color: "#ffffff" }
             }}
           >
             {loading ? "Saving..." : "SAVE"}
@@ -3474,7 +3475,7 @@ export default function AdminPage() {
         fullWidth
         PaperProps={{ sx: { borderRadius: 2, boxShadow: "0 8px 32px rgba(0, 0, 0, 0.12)" } }}
       >
-        <DialogTitle sx={{ backgroundColor: "#f0f7ff", borderBottom: "2px solid #e0e0e0", fontWeight: 700, color: "#1E88E5", fontSize: "1.1rem", py: 2.5 }}>PAPER INFO</DialogTitle>
+        <DialogTitle sx={{ backgroundColor: "#F4FAFF", borderBottom: "2px solid #BDE9FF", fontWeight: 700, color: "#009DC9", fontSize: "1.1rem", py: 2.5 }}>PAPER INFO</DialogTitle>
         <DialogContent sx={{ pt: 16, backgroundColor: "#ffffff" }}>
           {infoPaperId && (() => {
             const paper = allPapers.find((p) => p.id === infoPaperId);
@@ -3504,10 +3505,10 @@ export default function AdminPage() {
             ) : null;
           })()}
         </DialogContent>
-        <DialogActions sx={{ borderTop: "1px solid #e0e0e0", pt: 2, pb: 2, px: 3, backgroundColor: "#fafafa" }}>
+        <DialogActions sx={{ borderTop: "1px solid #BDE9FF", pt: 2, pb: 2, px: 3, backgroundColor: "#F4FAFF" }}>
           <Button
             onClick={() => setShowPaperInfoModal(false)}
-            sx={{ color: "#1E88E5", fontWeight: 600, textTransform: "none" }}
+            sx={{ color: "#009DC9", fontWeight: 600, textTransform: "none" }}
           >
             Close
           </Button>
@@ -3522,7 +3523,7 @@ export default function AdminPage() {
         fullWidth
         PaperProps={{ sx: { borderRadius: 2, boxShadow: "0 8px 32px rgba(0, 0, 0, 0.12)" } }}
       >
-        <DialogTitle sx={{ backgroundColor: "#f0f7ff", borderBottom: "2px solid #e0e0e0", fontWeight: 700, color: "#1E88E5", fontSize: "1.1rem", py: 2.5 }}>PRINTER INFO</DialogTitle>
+        <DialogTitle sx={{ backgroundColor: "#F4FAFF", borderBottom: "2px solid #BDE9FF", fontWeight: 700, color: "#009DC9", fontSize: "1.1rem", py: 2.5 }}>PRINTER INFO</DialogTitle>
         <DialogContent sx={{ pt: 16, backgroundColor: "#ffffff" }}>
           {infoPrinterId && (() => {
             const printer = tutorialState.printers.find((p) => p.id === infoPrinterId);
@@ -3546,10 +3547,10 @@ export default function AdminPage() {
             ) : null;
           })()}
         </DialogContent>
-        <DialogActions sx={{ borderTop: "1px solid #e0e0e0", pt: 2, pb: 2, px: 3, backgroundColor: "#fafafa" }}>
+        <DialogActions sx={{ borderTop: "1px solid #BDE9FF", pt: 2, pb: 2, px: 3, backgroundColor: "#F4FAFF" }}>
           <Button
             onClick={() => setShowPrinterInfoModal(false)}
-            sx={{ color: "#1E88E5", fontWeight: 600, textTransform: "none" }}
+            sx={{ color: "#009DC9", fontWeight: 600, textTransform: "none" }}
           >
             Close
           </Button>
@@ -3564,7 +3565,7 @@ export default function AdminPage() {
         fullWidth
         PaperProps={{ sx: { borderRadius: 2, boxShadow: "0 8px 32px rgba(0, 0, 0, 0.12)" } }}
       >
-        <DialogTitle sx={{ backgroundColor: "#f0f7ff", borderBottom: "2px solid #e0e0e0", fontWeight: 700, color: "#1E88E5", fontSize: "1.1rem", py: 2.5 }}>COLOUR INFO</DialogTitle>
+        <DialogTitle sx={{ backgroundColor: "#F4FAFF", borderBottom: "2px solid #BDE9FF", fontWeight: 700, color: "#009DC9", fontSize: "1.1rem", py: 2.5 }}>COLOUR INFO</DialogTitle>
         <DialogContent sx={{ pt: 16, backgroundColor: "#ffffff" }}>
           {infoColourId && (() => {
             // Look up the colour from the global papers list
@@ -3596,10 +3597,10 @@ export default function AdminPage() {
             ) : null;
           })()}
         </DialogContent>
-        <DialogActions sx={{ borderTop: "1px solid #e0e0e0", pt: 2, pb: 2, px: 3, backgroundColor: "#fafafa" }}>
+        <DialogActions sx={{ borderTop: "1px solid #BDE9FF", pt: 2, pb: 2, px: 3, backgroundColor: "#F4FAFF" }}>
           <Button
             onClick={() => setShowColourInfoModal(false)}
-            sx={{ color: "#1E88E5", fontWeight: 600, textTransform: "none" }}
+            sx={{ color: "#009DC9", fontWeight: 600, textTransform: "none" }}
           >
             Close
           </Button>
@@ -3614,7 +3615,7 @@ export default function AdminPage() {
         fullWidth
         PaperProps={{ sx: { borderRadius: 2, boxShadow: "0 8px 32px rgba(0, 0, 0, 0.12)" } }}
       >
-        <DialogTitle sx={{ backgroundColor: "#f0f7ff", borderBottom: "2px solid #e0e0e0", fontWeight: 700, color: "#1E88E5", fontSize: "1.1rem", py: 2.5 }}>STEP INFO</DialogTitle>
+        <DialogTitle sx={{ backgroundColor: "#F4FAFF", borderBottom: "2px solid #BDE9FF", fontWeight: 700, color: "#009DC9", fontSize: "1.1rem", py: 2.5 }}>STEP INFO</DialogTitle>
         <DialogContent sx={{ pt: 16, backgroundColor: "#ffffff" }}>
           {infoStepId && (() => {
             const step = selectedColor?.steps.find((s) => s.id === infoStepId);
@@ -3630,10 +3631,10 @@ export default function AdminPage() {
             ) : null;
           })()}
         </DialogContent>
-        <DialogActions sx={{ borderTop: "1px solid #e0e0e0", pt: 2, pb: 2, px: 3, backgroundColor: "#fafafa" }}>
+        <DialogActions sx={{ borderTop: "1px solid #BDE9FF", pt: 2, pb: 2, px: 3, backgroundColor: "#F4FAFF" }}>
           <Button
             onClick={() => setShowStepInfoModal(false)}
-            sx={{ color: "#1E88E5", fontWeight: 600, textTransform: "none" }}
+            sx={{ color: "#009DC9", fontWeight: 600, textTransform: "none" }}
           >
             Close
           </Button>
@@ -3654,7 +3655,7 @@ export default function AdminPage() {
         fullWidth
         PaperProps={{ sx: { borderRadius: 2, boxShadow: "0 8px 32px rgba(0, 0, 0, 0.12)" } }}
       >
-        <DialogTitle sx={{ backgroundColor: "#f0f7ff", borderBottom: "2px solid #e0e0e0", fontWeight: 700, color: "#1E88E5", fontSize: "1.1rem", py: 2.5 }}>NEW COLOUR</DialogTitle>
+        <DialogTitle sx={{ backgroundColor: "#F4FAFF", borderBottom: "2px solid #BDE9FF", fontWeight: 700, color: "#009DC9", fontSize: "1.1rem", py: 2.5 }}>NEW COLOUR</DialogTitle>
         <DialogContent sx={{ pt: 16, backgroundColor: "#ffffff" }}>
           <Stack spacing={2}>
             <Box sx={{ mt: 8 }}>
@@ -3726,7 +3727,7 @@ export default function AdminPage() {
             />
           </Stack>
         </DialogContent>
-        <DialogActions sx={{ borderTop: "1px solid #e0e0e0", pt: 2, pb: 2, px: 3, backgroundColor: "#fafafa" }}>
+        <DialogActions sx={{ borderTop: "1px solid #BDE9FF", pt: 2, pb: 2, px: 3, backgroundColor: "#F4FAFF" }}>
           <Button
             onClick={() => {
               setShowAddColourModal(false);
@@ -3735,7 +3736,7 @@ export default function AdminPage() {
               setNewColourThumbnail("");
               setNewColourThumbnailName("");
             }}
-            sx={{ color: "#1E88E5", fontWeight: 600, textTransform: "none" }}
+            sx={{ color: "#009DC9", fontWeight: 600, textTransform: "none" }}
           >
             Cancel
           </Button>
@@ -3744,12 +3745,12 @@ export default function AdminPage() {
             variant="contained"
             disabled={loading}
             sx={{
-              backgroundColor: "#1E88E5",
+              backgroundColor: "#009DC9",
               color: "#ffffff",
               fontWeight: 600,
               textTransform: "none",
-              "&:hover": { backgroundColor: "#1565C0" },
-              "&:disabled": { backgroundColor: "#bdbdbd", color: "#ffffff" }
+              "&:hover": { backgroundColor: "#0081A8" },
+              "&:disabled": { backgroundColor: "#FFFFFF", color: "#ffffff" }
             }}
           >
             {loading ? "Adding..." : "ADD"}
@@ -3771,7 +3772,7 @@ export default function AdminPage() {
         fullWidth
         PaperProps={{ sx: { borderRadius: 2, boxShadow: "0 8px 32px rgba(0, 0, 0, 0.12)" } }}
       >
-        <DialogTitle sx={{ backgroundColor: "#f0f7ff", borderBottom: "2px solid #e0e0e0", fontWeight: 700, color: "#1E88E5", fontSize: "1.1rem", py: 2.5 }}>EDIT COLOUR</DialogTitle>
+        <DialogTitle sx={{ backgroundColor: "#F4FAFF", borderBottom: "2px solid #BDE9FF", fontWeight: 700, color: "#009DC9", fontSize: "1.1rem", py: 2.5 }}>EDIT COLOUR</DialogTitle>
         <DialogContent sx={{ pt: 16, backgroundColor: "#ffffff" }}>
           <Stack spacing={2}>
             <Box sx={{ mt: 8 }}>
@@ -3843,7 +3844,7 @@ export default function AdminPage() {
             />
           </Stack>
         </DialogContent>
-        <DialogActions sx={{ borderTop: "1px solid #e0e0e0", pt: 2, pb: 2, px: 3, backgroundColor: "#fafafa" }}>
+        <DialogActions sx={{ borderTop: "1px solid #BDE9FF", pt: 2, pb: 2, px: 3, backgroundColor: "#F4FAFF" }}>
           <Button
             onClick={() => {
               setShowEditColourModal(false);
@@ -3853,7 +3854,7 @@ export default function AdminPage() {
               setEditColourThumbnail("");
               setEditColourThumbnailName("");
             }}
-            sx={{ color: "#1E88E5", fontWeight: 600, textTransform: "none" }}
+            sx={{ color: "#009DC9", fontWeight: 600, textTransform: "none" }}
           >
             Cancel
           </Button>
@@ -3862,12 +3863,12 @@ export default function AdminPage() {
             variant="contained"
             disabled={loading}
             sx={{
-              backgroundColor: "#1E88E5",
+              backgroundColor: "#009DC9",
               color: "#ffffff",
               fontWeight: 600,
               textTransform: "none",
-              "&:hover": { backgroundColor: "#1565C0" },
-              "&:disabled": { backgroundColor: "#bdbdbd", color: "#ffffff" }
+              "&:hover": { backgroundColor: "#0081A8" },
+              "&:disabled": { backgroundColor: "#FFFFFF", color: "#ffffff" }
             }}
           >
             {loading ? "Saving..." : "SAVE"}
@@ -3889,7 +3890,7 @@ export default function AdminPage() {
         fullWidth
         PaperProps={{ sx: { borderRadius: 2, boxShadow: "0 8px 32px rgba(0, 0, 0, 0.12)" } }}
       >
-        <DialogTitle sx={{ backgroundColor: "#f0f7ff", borderBottom: "2px solid #e0e0e0", fontWeight: 700, color: "#1E88E5", fontSize: "1.1rem", py: 2.5 }}>NEW STEP</DialogTitle>
+        <DialogTitle sx={{ backgroundColor: "#F4FAFF", borderBottom: "2px solid #BDE9FF", fontWeight: 700, color: "#009DC9", fontSize: "1.1rem", py: 2.5 }}>NEW STEP</DialogTitle>
         <DialogContent sx={{ pt: 16, backgroundColor: "#ffffff" }}>
           <Stack spacing={2}>
             <TextField
@@ -3953,10 +3954,10 @@ export default function AdminPage() {
             </Box>
           </Stack>
         </DialogContent>
-        <DialogActions sx={{ borderTop: "1px solid #e0e0e0", pt: 2, pb: 2, px: 3, backgroundColor: "#fafafa" }}>
+        <DialogActions sx={{ borderTop: "1px solid #BDE9FF", pt: 2, pb: 2, px: 3, backgroundColor: "#F4FAFF" }}>
           <Button
             onClick={() => setShowAddStepModal(false)}
-            sx={{ color: "#1E88E5", fontWeight: 600, textTransform: "none" }}
+            sx={{ color: "#009DC9", fontWeight: 600, textTransform: "none" }}
           >
             Cancel
           </Button>
@@ -3965,12 +3966,12 @@ export default function AdminPage() {
             variant="contained"
             disabled={loading}
             sx={{
-              backgroundColor: "#1E88E5",
+              backgroundColor: "#009DC9",
               color: "#ffffff",
               fontWeight: 600,
               textTransform: "none",
-              "&:hover": { backgroundColor: "#1565C0" },
-              "&:disabled": { backgroundColor: "#bdbdbd", color: "#ffffff" }
+              "&:hover": { backgroundColor: "#0081A8" },
+              "&:disabled": { backgroundColor: "#FFFFFF", color: "#ffffff" }
             }}
           >
             {loading ? "Adding..." : "ADD"}
@@ -3992,7 +3993,7 @@ export default function AdminPage() {
         fullWidth
         PaperProps={{ sx: { borderRadius: 2, boxShadow: "0 8px 32px rgba(0, 0, 0, 0.12)" } }}
       >
-        <DialogTitle sx={{ backgroundColor: "#f0f7ff", borderBottom: "2px solid #e0e0e0", fontWeight: 700, color: "#1E88E5", fontSize: "1.1rem", py: 2.5 }}>EDIT STEP</DialogTitle>
+        <DialogTitle sx={{ backgroundColor: "#F4FAFF", borderBottom: "2px solid #BDE9FF", fontWeight: 700, color: "#009DC9", fontSize: "1.1rem", py: 2.5 }}>EDIT STEP</DialogTitle>
         <DialogContent sx={{ pt: 16, backgroundColor: "#ffffff" }}>
           <Stack spacing={2}>
             <TextField
@@ -4056,10 +4057,10 @@ export default function AdminPage() {
             </Box>
           </Stack>
         </DialogContent>
-        <DialogActions sx={{ borderTop: "1px solid #e0e0e0", pt: 2, pb: 2, px: 3, backgroundColor: "#fafafa" }}>
+        <DialogActions sx={{ borderTop: "1px solid #BDE9FF", pt: 2, pb: 2, px: 3, backgroundColor: "#F4FAFF" }}>
           <Button
             onClick={() => setShowEditStepModal(false)}
-            sx={{ color: "#1E88E5", fontWeight: 600, textTransform: "none" }}
+            sx={{ color: "#009DC9", fontWeight: 600, textTransform: "none" }}
           >
             Cancel
           </Button>
@@ -4068,12 +4069,12 @@ export default function AdminPage() {
             variant="contained"
             disabled={loading}
             sx={{
-              backgroundColor: "#1E88E5",
+              backgroundColor: "#009DC9",
               color: "#ffffff",
               fontWeight: 600,
               textTransform: "none",
-              "&:hover": { backgroundColor: "#1565C0" },
-              "&:disabled": { backgroundColor: "#bdbdbd", color: "#ffffff" }
+              "&:hover": { backgroundColor: "#0081A8" },
+              "&:disabled": { backgroundColor: "#FFFFFF", color: "#ffffff" }
             }}
           >
             {loading ? "Saving..." : "SAVE"}

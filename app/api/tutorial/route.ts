@@ -167,7 +167,6 @@ async function executeAction(payload: ActionPayload): Promise<TutorialState> {
         payload.name,
         payload.description,
         payload.thumbnailDataUrl,
-        payload.published,
       );
 
     case "deletePaper":

@@ -27,7 +27,7 @@ export default function RootLayout({ children }: RootLayoutProps) {
             textAlign: "right",
             fontSize: "14px",
             color: "#ffffff",
-            backgroundColor: "#7B1FA2",
+            backgroundColor: "#000000",
             borderTop: "1px solid #6A1B82",
             marginTop: "auto",
             fontWeight: 500,
