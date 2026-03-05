@@ -102,7 +102,7 @@ type Printer = {
   published: boolean;
   lastModified: Date;
   createdAt?: Date;
-  papers: PrinterPaper[];
+  papers: Paper[];
 };
 
 type DeletedItem = {
