@@ -23,6 +23,7 @@ import {
   MenuItem,
   Paper,
   Stack,
+  Switch,
   Table,
   TableBody,
   TableCell,
@@ -1944,25 +1945,27 @@ export default function AdminPage() {
                             </Typography>
                           </TableCell>
                           <TableCell align="center">
-                            <Button
-                              size="small"
-                              variant="contained"
-                              onClick={(e) => {
+                            <Switch
+                              checked={printer.published}
+                              onChange={(e) => {
                                 e.stopPropagation();
                                 void handleUnpublishPrinter(printer.id, printer.published);
                               }}
                               sx={{
-                                backgroundColor: printer.published ? "#d32f2f" : "#388e3c",
-                                color: "#ffffff",
-                                fontWeight: 600,
-                                textTransform: "none",
-                                "&:hover": {
-                                  backgroundColor: printer.published ? "#c62828" : "#2e7d32"
-                                }
+                                "& .MuiSwitch-switchBase.Mui-checked": {
+                                  color: "#388e3c",
+                                },
+                                "& .MuiSwitch-switchBase.Mui-checked + .MuiSwitch-track": {
+                                  backgroundColor: "#c8e6c9",
+                                },
+                                "& .MuiSwitch-switchBase": {
+                                  color: "#d32f2f",
+                                },
+                                "& .MuiSwitch-track": {
+                                  backgroundColor: "#ffcdd2",
+                                },
                               }}
-                            >
-                              {printer.published ? "Unpublished" : "Publish"}
-                            </Button>
+                            />
                           </TableCell>
                         </TableRow>
                       ))}
@@ -2081,25 +2084,27 @@ export default function AdminPage() {
                           </Typography>
                         </TableCell>
                         <TableCell align="center">
-                          <Button
-                            size="small"
-                            variant="contained"
-                            onClick={(e) => {
+                          <Switch
+                            checked={printerPaper.published}
+                            onChange={(e) => {
                               e.stopPropagation();
                               void handleUnpublishPaper(paper.id, printerPaper.published);
                             }}
                             sx={{
-                              backgroundColor: printerPaper.published ? "#d32f2f" : "#388e3c",
-                              color: "#ffffff",
-                              fontWeight: 600,
-                              textTransform: "none",
-                              "&:hover": {
-                                backgroundColor: printerPaper.published ? "#c62828" : "#2e7d32"
-                              }
+                              "& .MuiSwitch-switchBase.Mui-checked": {
+                                color: "#388e3c",
+                              },
+                              "& .MuiSwitch-switchBase.Mui-checked + .MuiSwitch-track": {
+                                backgroundColor: "#c8e6c9",
+                              },
+                              "& .MuiSwitch-switchBase": {
+                                color: "#d32f2f",
+                              },
+                              "& .MuiSwitch-track": {
+                                backgroundColor: "#ffcdd2",
+                              },
                             }}
-                          >
-                            {printerPaper.published ? "Unpublished" : "Publish"}
-                          </Button>
+                          />
                         </TableCell>
                       </TableRow>
                     ))}
@@ -2238,25 +2243,27 @@ export default function AdminPage() {
                             </Typography>
                           </TableCell>
                           <TableCell align="center">
-                            <Button
-                              size="small"
-                              variant="contained"
-                              onClick={(e) => {
+                            <Switch
+                              checked={ppColour.published}
+                              onChange={(e) => {
                                 e.stopPropagation();
                                 void handleUnpublishColour(ppColour.colourId, ppColour.published);
                               }}
                               sx={{
-                                backgroundColor: ppColour.published ? "#d32f2f" : "#388e3c",
-                                color: "#ffffff",
-                                fontWeight: 600,
-                                textTransform: "none",
-                                "&:hover": {
-                                  backgroundColor: ppColour.published ? "#c62828" : "#2e7d32"
-                                }
+                                "& .MuiSwitch-switchBase.Mui-checked": {
+                                  color: "#388e3c",
+                                },
+                                "& .MuiSwitch-switchBase.Mui-checked + .MuiSwitch-track": {
+                                  backgroundColor: "#c8e6c9",
+                                },
+                                "& .MuiSwitch-switchBase": {
+                                  color: "#d32f2f",
+                                },
+                                "& .MuiSwitch-track": {
+                                  backgroundColor: "#ffcdd2",
+                                },
                               }}
-                            >
-                              {ppColour.published ? "Unpublished" : "Publish"}
-                            </Button>
+                            />
                           </TableCell>
                         </TableRow>
                     ))}
