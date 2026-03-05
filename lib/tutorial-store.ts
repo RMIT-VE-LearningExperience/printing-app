@@ -1008,7 +1008,6 @@ export async function reorderStep(
   direction: "up" | "down",
 ): Promise<TutorialState> {
   try {
-    const printerRef = await assertDocExists(printersCollection(), printerId, "Printer");
     const globalPaperRef = await assertDocExists(papersCollection(), paperId, "Paper");
     const globalColourRef = await assertDocExists(
       globalPaperRef.collection("colours"),

@@ -71,10 +71,6 @@ const colors = {
   lightText: "#666666",
 };
 
-function stripHtml(content: string): string {
-  return content.replace(/<[^>]+>/g, " ").replace(/\s+/g, " ").trim();
-}
-
 function sanitizeStepHtml(content: string): string {
   return content
     .replace(/<(?!\/?(p|br|ul|ol|li|b|strong|i|em|h3|a)(\s+[^>]*)?>)[^>]*>/gi, "")

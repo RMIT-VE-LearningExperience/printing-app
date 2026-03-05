@@ -487,20 +487,6 @@ export default function AdminPage() {
     return sorted;
   };
 
-  const sortColours = (items: Colour[]): Colour[] => {
-    const sorted = [...items];
-    if (coloursSortByName) {
-      sorted.sort((a, b) => a.name.localeCompare(b.name));
-    } else {
-      sorted.sort((a, b) => {
-        const dateA = a.createdAt || a.lastModified || new Date(0);
-        const dateB = b.createdAt || b.lastModified || new Date(0);
-        return new Date(dateA).getTime() - new Date(dateB).getTime();
-      });
-    }
-    return sorted;
-  };
-
   type ColourWithContext = {
     colour: Colour;
     paper: Paper;
