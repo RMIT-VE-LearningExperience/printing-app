@@ -360,7 +360,7 @@ export default function AdminPage() {
   useEffect(() => {
     const epsoPrinter = tutorialState.printers.find((p) => p.name === "Epson P800");
     if (epsoPrinter) {
-      const hasInvalidPapers = epsoPrinter.papers.some((p) => !p.paperId || p.paperId === "undefined");
+      const hasInvalidPapers = epsoPrinter.papers.some((p) => !p.id || p.id === "undefined");
       if (hasInvalidPapers) {
         void runAction("removeInvalidPapersFromPrinter", { printerId: epsoPrinter.id });
       }
