@@ -711,7 +711,7 @@ export default function AdminPage() {
 
       // Handle printer assignment changes
       const currentPrinters = tutorialState.printers
-        .filter((printer) => printer.papers.some((pp) => pp.paperId === editPaperId))
+        .filter((printer) => printer.papers.some((pp) => pp.id === editPaperId))
         .map((printer) => printer.id);
 
       // Find printers to remove from
@@ -1051,7 +1051,7 @@ export default function AdminPage() {
     if (paper) {
       // Find which printers have this paper
       const printersWithPaper = tutorialState.printers
-        .filter((printer) => printer.papers.some((pp) => pp.paperId === selectedPaperForMenu))
+        .filter((printer) => printer.papers.some((pp) => pp.id === selectedPaperForMenu))
         .map((printer) => printer.id);
 
       setEditPaperId(selectedPaperForMenu);
