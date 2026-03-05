@@ -70,12 +70,6 @@ type Colour = {
   published?: boolean; // Per-printer publish status (when part of printer.paper.colours)
 };
 
-type PrinterPaperColour = {
-  colourId: string;
-  published: boolean;
-  steps: Step[];
-};
-
 type Paper = {
   id: string;
   name: string;
@@ -86,12 +80,6 @@ type Paper = {
   modifiedBy: string;
   colours: Colour[];
   published?: boolean; // Per-printer publish status (when part of printer.papers)
-};
-
-type PrinterPaper = {
-  paperId: string;
-  published: boolean;
-  colours: PrinterPaperColour[];
 };
 
 type Printer = {
