@@ -63,9 +63,14 @@ type Colour = {
   name: string;
   description?: string;
   thumbnailDataUrl: string;
-  published: boolean;
   lastModified: Date;
   createdAt?: Date;
+  steps: Step[];
+};
+
+type PrinterPaperColour = {
+  colourId: string;
+  published: boolean;
   steps: Step[];
 };
 
@@ -74,15 +79,16 @@ type Paper = {
   name: string;
   description?: string;
   thumbnailDataUrl: string;
-  published: boolean;
   lastModified: Date;
   createdAt?: Date;
   modifiedBy: string;
+  colours: Colour[];
 };
 
 type PrinterPaper = {
   paperId: string;
-  colours: Colour[];
+  published: boolean;
+  colours: PrinterPaperColour[];
 };
 
 type Printer = {
@@ -387,8 +393,15 @@ export default function AdminPage() {
   );
 
   const selectedColor = useMemo(
-    () => selectedPrinterPaper?.colours.find((c) => c.id === selectedColorId) ?? null,
-    [selectedColorId, selectedPrinterPaper]
+    () => {
+      if (!selectedPrinterPaper || !selectedColorId) return null;
+      const ppColour = selectedPrinterPaper.colours.find((c) => c.colourId === selectedColorId);
+      if (!ppColour) return null;
+      // Look up the actual Colour object from tutorialState
+      const paper = tutorialState.papers.find((p) => p.id === selectedPaperId);
+      return paper?.colours.find((c) => c.id === selectedColorId) ?? null;
+    },
+    [selectedColorId, selectedPrinterPaper, selectedPaperId, tutorialState.papers]
   );
 
   const selectedStep = useMemo(
@@ -489,6 +502,7 @@ export default function AdminPage() {
 
   type ColourWithContext = {
     colour: Colour;
+    ppColour: PrinterPaperColour;
     paper: Paper;
     printer: Printer;
   };
@@ -779,10 +793,12 @@ export default function AdminPage() {
   };
 
   const handleUnpublishPaper = async (paperId: string, currentStatus?: boolean) => {
+    if (!selectedPrinterId) return;
     const newStatus = !currentStatus;
 
     try {
-      await runAction("updatePaper", {
+      await runAction("updatePaperInPrinter", {
+        printerId: selectedPrinterId,
         paperId,
         published: newStatus,
       });
@@ -809,7 +825,7 @@ export default function AdminPage() {
     const newStatus = !currentStatus;
 
     try {
-      await runAction("updateColour", {
+      await runAction("updateColourInPrinterPaper", {
         printerId: selectedPrinterId,
         paperId: selectedPaperId,
         colourId,
@@ -1104,28 +1120,19 @@ export default function AdminPage() {
   const handleColourMenuEdit = () => {
     if (!selectedColourForMenu) return;
 
-    // If coming from Colour Management view
-    if (colourMenuPrinterId && colourMenuPaperId) {
-      const printer = tutorialState.printers.find((p) => p.id === colourMenuPrinterId);
-      const printerPaper = printer?.papers.find((pp) => pp.paperId === colourMenuPaperId);
-      const colour = printerPaper?.colours.find((c) => c.id === selectedColourForMenu);
-      if (colour) {
-        setEditColourId(selectedColourForMenu);
-        setEditColourName(colour.name);
-        setEditColourDescription(colour.description || "");
-        setEditColourThumbnail(colour.thumbnailDataUrl);
-        setShowEditColourModal(true);
-      }
-    } else {
-      // Coming from regular Colours page
-      const colour = selectedPrinterPaper?.colours.find((c) => c.id === selectedColourForMenu);
-      if (colour) {
-        setEditColourId(selectedColourForMenu);
-        setEditColourName(colour.name);
-        setEditColourDescription(colour.description || "");
-        setEditColourThumbnail(colour.thumbnailDataUrl);
-        setShowEditColourModal(true);
-      }
+    // Look up the actual Colour object from tutorialState
+    const paper = tutorialState.papers.find((p) => selectedPaperId ? p.id === selectedPaperId : false) ||
+                  tutorialState.papers.find((p) =>
+                    colourMenuPaperId ? p.id === colourMenuPaperId : false
+                  );
+    const colour = paper?.colours.find((c) => c.id === selectedColourForMenu);
+
+    if (colour) {
+      setEditColourId(selectedColourForMenu);
+      setEditColourName(colour.name);
+      setEditColourDescription(colour.description || "");
+      setEditColourThumbnail(colour.thumbnailDataUrl);
+      setShowEditColourModal(true);
     }
     handleColourMenuClose();
   };
@@ -2015,14 +2022,26 @@ export default function AdminPage() {
                   </TableRow>
                 </TableHead>
                 <TableBody>
-                  {sortPapers(
-                    selectedPrinter.papers
+                  {(() => {
+                    const paperItems = selectedPrinter.papers
                       .map((printerPaper) => {
                         const paper = tutorialState.papers.find((p) => p.id === printerPaper.paperId);
-                        return paper || null;
+                        return paper ? { paper, printerPaper } : null;
                       })
-                      .filter((p): p is Paper => p !== null)
-                  ).map((paper) => (
+                      .filter((item): item is { paper: Paper; printerPaper: PrinterPaper } => item !== null);
+
+                    const sorted = [...paperItems];
+                    if (papersSortByName) {
+                      sorted.sort((a, b) => a.paper.name.localeCompare(b.paper.name));
+                    } else {
+                      sorted.sort((a, b) => {
+                        const dateA = a.paper.createdAt || a.paper.lastModified || new Date(0);
+                        const dateB = b.paper.createdAt || b.paper.lastModified || new Date(0);
+                        return new Date(dateA).getTime() - new Date(dateB).getTime();
+                      });
+                    }
+                    return sorted;
+                  })().map(({ paper, printerPaper }) => (
                       <TableRow
                         key={paper.id}
                         hover
@@ -2067,19 +2086,19 @@ export default function AdminPage() {
                             variant="contained"
                             onClick={(e) => {
                               e.stopPropagation();
-                              void handleUnpublishPaper(paper.id, paper.published);
+                              void handleUnpublishPaper(paper.id, printerPaper.published);
                             }}
                             sx={{
-                              backgroundColor: paper.published ? "#d32f2f" : "#388e3c",
+                              backgroundColor: printerPaper.published ? "#d32f2f" : "#388e3c",
                               color: "#ffffff",
                               fontWeight: 600,
                               textTransform: "none",
                               "&:hover": {
-                                backgroundColor: paper.published ? "#c62828" : "#2e7d32"
+                                backgroundColor: printerPaper.published ? "#c62828" : "#2e7d32"
                               }
                             }}
                           >
-                            {paper.published ? "Unpublished" : "Publish"}
+                            {printerPaper.published ? "Unpublished" : "Publish"}
                           </Button>
                         </TableCell>
                       </TableRow>
@@ -2141,83 +2160,105 @@ export default function AdminPage() {
                     </TableRow>
                   </TableHead>
                   <TableBody>
-                    {sortColours(selectedPrinterPaper?.colours || []).map((colour) => (
-                      <TableRow
-                        key={colour.id}
-                        hover
-                        onClick={() => goToColourSteps(colour.id)}
-                        sx={{
-                          cursor: "pointer",
-                          borderBottom: "1px solid #e0e0e0",
-                          "&:hover": { backgroundColor: "#f5f5f5" }
-                        }}
-                      >
-                        <TableCell>
-                          <Stack direction="row" alignItems="center" spacing={1}>
-                            {colour.thumbnailDataUrl && (
-                              <Box
-                                component="img"
-                                src={colour.thumbnailDataUrl}
-                                alt={colour.name}
-                                sx={{
-                                  width: 32,
-                                  height: 32,
-                                  borderRadius: 1,
-                                  objectFit: "cover",
-                                }}
-                              />
-                            )}
-                            {!colour.thumbnailDataUrl && (
-                              <Box
-                                sx={{
-                                  width: 32,
-                                  height: 32,
-                                  borderRadius: 1,
-                                  backgroundColor: "action.hover",
-                                }}
-                              />
-                            )}
-                            <Typography variant="body2">{colour.name}</Typography>
-                          </Stack>
-                        </TableCell>
-                        <TableCell align="center">
-                          <IconButton
-                            size="small"
-                            onClick={(e) => {
-                              e.stopPropagation();
-                              handleColourMenuOpen(e, colour.id);
-                            }}
-                          >
-                            ⋯
-                          </IconButton>
-                        </TableCell>
-                        <TableCell align="center">
-                          <Typography variant="body2" color="text.secondary">
-                            {colour.lastModified ? new Date(colour.lastModified).toLocaleDateString() : "N/A"}
-                          </Typography>
-                        </TableCell>
-                        <TableCell align="center">
-                          <Button
-                            size="small"
-                            variant="contained"
-                            onClick={(e) => {
-                              e.stopPropagation();
-                              void handleUnpublishColour(colour.id, colour.published);
-                            }}
-                            sx={{
-                              backgroundColor: colour.published ? "#d32f2f" : "#388e3c",
-                              color: "#ffffff",
-                              fontWeight: 600,
-                              textTransform: "none",
-                              "&:hover": {
-                                backgroundColor: colour.published ? "#c62828" : "#2e7d32"
-                              }
-                            }}
-                          >
-                            {colour.published ? "Unpublished" : "Publish"}
-                          </Button>
-                        </TableCell>
-                      </TableRow>
+                    {(() => {
+                      const ppColours = selectedPrinterPaper?.colours || [];
+                      const colourItems = ppColours
+                        .map((ppColour) => {
+                          const colour = tutorialState.papers
+                            .find(p => p.id === selectedPaperId)?.colours
+                            ?.find(c => c.id === ppColour.colourId);
+                          return colour ? { colour, ppColour } : null;
+                        })
+                        .filter((item): item is { colour: Colour; ppColour: PrinterPaperColour } => item !== null);
+
+                      const sorted = [...colourItems];
+                      if (coloursSortByName) {
+                        sorted.sort((a, b) => a.colour.name.localeCompare(b.colour.name));
+                      } else {
+                        sorted.sort((a, b) => {
+                          const dateA = a.colour.createdAt || a.colour.lastModified || new Date(0);
+                          const dateB = b.colour.createdAt || b.colour.lastModified || new Date(0);
+                          return new Date(dateA).getTime() - new Date(dateB).getTime();
+                        });
+                      }
+                      return sorted;
+                    })().map(({ colour, ppColour }) => (
+                        <TableRow
+                          key={ppColour.colourId}
+                          hover
+                          onClick={() => goToColourSteps(ppColour.colourId)}
+                          sx={{
+                            cursor: "pointer",
+                            borderBottom: "1px solid #e0e0e0",
+                            "&:hover": { backgroundColor: "#f5f5f5" }
+                          }}
+                        >
+                          <TableCell>
+                            <Stack direction="row" alignItems="center" spacing={1}>
+                              {colour.thumbnailDataUrl && (
+                                <Box
+                                  component="img"
+                                  src={colour.thumbnailDataUrl}
+                                  alt={colour.name}
+                                  sx={{
+                                    width: 32,
+                                    height: 32,
+                                    borderRadius: 1,
+                                    objectFit: "cover",
+                                  }}
+                                />
+                              )}
+                              {!colour.thumbnailDataUrl && (
+                                <Box
+                                  sx={{
+                                    width: 32,
+                                    height: 32,
+                                    borderRadius: 1,
+                                    backgroundColor: "action.hover",
+                                  }}
+                                />
+                              )}
+                              <Typography variant="body2">{colour.name}</Typography>
+                            </Stack>
+                          </TableCell>
+                          <TableCell align="center">
+                            <IconButton
+                              size="small"
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                handleColourMenuOpen(e, ppColour.colourId);
+                              }}
+                            >
+                              ⋯
+                            </IconButton>
+                          </TableCell>
+                          <TableCell align="center">
+                            <Typography variant="body2" color="text.secondary">
+                              {colour.lastModified ? new Date(colour.lastModified).toLocaleDateString() : "N/A"}
+                            </Typography>
+                          </TableCell>
+                          <TableCell align="center">
+                            <Button
+                              size="small"
+                              variant="contained"
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                void handleUnpublishColour(ppColour.colourId, ppColour.published);
+                              }}
+                              sx={{
+                                backgroundColor: ppColour.published ? "#d32f2f" : "#388e3c",
+                                color: "#ffffff",
+                                fontWeight: 600,
+                                textTransform: "none",
+                                "&:hover": {
+                                  backgroundColor: ppColour.published ? "#c62828" : "#2e7d32"
+                                }
+                              }}
+                            >
+                              {ppColour.published ? "Unpublished" : "Publish"}
+                            </Button>
+                          </TableCell>
+                        </TableRow>
                     ))}
                   </TableBody>
                 </Table>
@@ -2514,14 +2555,18 @@ export default function AdminPage() {
                       printer.papers.flatMap((printerPaper) => {
                         const paper = tutorialState.papers.find((p) => p.id === printerPaper.paperId);
                         if (!paper) return [];
-                        return printerPaper.colours.map((colour) => ({
-                          colour,
-                          paper,
-                          printer,
-                        }));
+                        return printerPaper.colours.map((ppColour) => {
+                          const colour = paper.colours.find((c) => c.id === ppColour.colourId);
+                          return colour ? {
+                            colour,
+                            ppColour,
+                            paper,
+                            printer,
+                          } : null;
+                        }).filter((item) => item !== null);
                       })
-                    )
-                  ).map(({ colour, paper, printer }) => (
+                    ) as Array<{ colour: Colour; ppColour: PrinterPaperColour; paper: Paper; printer: Printer }>
+                  ).map(({ colour, ppColour, paper, printer }) => (
                         <TableRow
                           key={`${printer.id}-${paper.id}-${colour.id}`}
                           hover
@@ -3515,16 +3560,14 @@ export default function AdminPage() {
         <DialogTitle sx={{ backgroundColor: "#f0f7ff", borderBottom: "2px solid #e0e0e0", fontWeight: 700, color: "#1E88E5", fontSize: "1.1rem", py: 2.5 }}>COLOUR INFO</DialogTitle>
         <DialogContent sx={{ pt: 16, backgroundColor: "#ffffff" }}>
           {infoColourId && (() => {
+            // Look up the colour from the global papers list
             let colour = null;
-            for (const printer of tutorialState.printers) {
-              for (const printerPaper of printer.papers) {
-                const found = printerPaper.colours.find((c) => c.id === infoColourId);
-                if (found) {
-                  colour = found;
-                  break;
-                }
+            for (const paper of tutorialState.papers) {
+              const found = paper.colours.find((c) => c.id === infoColourId);
+              if (found) {
+                colour = found;
+                break;
               }
-              if (colour) break;
             }
             return colour ? (
               <Stack spacing={2}>
