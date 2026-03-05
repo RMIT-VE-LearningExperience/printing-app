@@ -67,6 +67,7 @@ type Colour = {
   lastModified: Date;
   createdAt?: Date;
   steps: Step[];
+  published?: boolean; // Per-printer publish status (when part of printer.paper.colours)
 };
 
 type PrinterPaperColour = {
@@ -84,6 +85,7 @@ type Paper = {
   createdAt?: Date;
   modifiedBy: string;
   colours: Colour[];
+  published?: boolean; // Per-printer publish status (when part of printer.papers)
 };
 
 type PrinterPaper = {
@@ -389,20 +391,18 @@ export default function AdminPage() {
   );
 
   const selectedPrinterPaper = useMemo(
-    () => selectedPrinter?.papers.find((pp) => pp.paperId === selectedPaperId) ?? null,
+    () => selectedPrinter?.papers.find((pp) => pp.id === selectedPaperId) ?? null,
     [selectedPaperId, selectedPrinter]
   );
 
   const selectedColor = useMemo(
     () => {
       if (!selectedPrinterPaper || !selectedColorId) return null;
-      const ppColour = selectedPrinterPaper.colours.find((c) => c.colourId === selectedColorId);
-      if (!ppColour) return null;
-      // Look up the actual Colour object from tutorialState
-      const paper = tutorialState.papers.find((p) => p.id === selectedPaperId);
-      return paper?.colours.find((c) => c.id === selectedColorId) ?? null;
+      // selectedPrinterPaper.colours is now an array of full Colour objects, not references
+      const colour = selectedPrinterPaper.colours.find((c) => c.id === selectedColorId);
+      return colour ?? null;
     },
-    [selectedColorId, selectedPrinterPaper, selectedPaperId, tutorialState.papers]
+    [selectedColorId, selectedPrinterPaper]
   );
 
   const selectedStep = useMemo(
@@ -419,7 +419,7 @@ export default function AdminPage() {
   const getPapersInPrinter = (paperId: string): Array<{ printerId: string; printerName: string }> => {
     const results: Array<{ printerId: string; printerName: string }> = [];
     tutorialState.printers.forEach((printer) => {
-      if (printer.papers.some((pp) => pp.paperId === paperId)) {
+      if (printer.papers.some((pp) => pp.id === paperId)) {
         results.push({ printerId: printer.id, printerName: printer.name });
       }
     });
@@ -503,7 +503,6 @@ export default function AdminPage() {
 
   type ColourWithContext = {
     colour: Colour;
-    ppColour: PrinterPaperColour;
     paper: Paper;
     printer: Printer;
   };
@@ -1340,6 +1339,7 @@ export default function AdminPage() {
             <Box sx={{ display: "flex", justifyContent: "center" }}>
               <Tooltip title="Preview" placement="right">
                 <IconButton
+                  onClick={() => window.open("/", "_blank")}
                   size="large"
                   sx={{
                     width: 50,
@@ -1357,6 +1357,7 @@ export default function AdminPage() {
             </Box>
           ) : (
             <Button
+              onClick={() => window.open("/", "_blank")}
               fullWidth
               startIcon={<VisibilityIcon />}
               variant="outlined"
@@ -1831,12 +1832,12 @@ export default function AdminPage() {
                 underline="hover"
                 sx={{ color: "#009DC9", fontWeight: 500, "&:hover": { color: "#0081A8" }, cursor: "pointer" }}
               >
-                {selectedColor.name.toUpperCase()}
+                {selectedColor?.name?.toUpperCase()}
               </Link>
             )}
             {!showDeletedItems && !showFullPaperList && !showAllColoursView && selectedStepId && selectedStep && (
               <Typography color="text.primary" variant="body2" sx={{ color: "#006788", fontWeight: 500 }}>
-                {selectedStep.title.toUpperCase()}
+                {selectedStep?.title?.toUpperCase()}
               </Typography>
             )}
             {showFullPaperList && (
@@ -2027,25 +2028,19 @@ export default function AdminPage() {
                 </TableHead>
                 <TableBody>
                   {(() => {
-                    const paperItems = selectedPrinter.papers
-                      .map((printerPaper) => {
-                        const paper = tutorialState.papers.find((p) => p.id === printerPaper.paperId);
-                        return paper ? { paper, printerPaper } : null;
-                      })
-                      .filter((item): item is { paper: Paper; printerPaper: PrinterPaper } => item !== null);
-
-                    const sorted = [...paperItems];
+                    // Papers are now full Paper objects, not PrinterPaper references
+                    const sorted = [...selectedPrinter.papers];
                     if (papersSortByName) {
-                      sorted.sort((a, b) => a.paper.name.localeCompare(b.paper.name));
+                      sorted.sort((a, b) => a.name.localeCompare(b.name));
                     } else {
                       sorted.sort((a, b) => {
-                        const dateA = a.paper.createdAt || a.paper.lastModified || new Date(0);
-                        const dateB = b.paper.createdAt || b.paper.lastModified || new Date(0);
+                        const dateA = a.createdAt || a.lastModified || new Date(0);
+                        const dateB = b.createdAt || b.lastModified || new Date(0);
                         return new Date(dateA).getTime() - new Date(dateB).getTime();
                       });
                     }
                     return sorted;
-                  })().map(({ paper, printerPaper }) => (
+                  })().map((paper) => (
                       <TableRow
                         key={paper.id}
                         hover
@@ -2086,10 +2081,10 @@ export default function AdminPage() {
                         </TableCell>
                         <TableCell align="center" onClick={(e) => e.stopPropagation()}>
                           <Switch
-                            checked={printerPaper.published}
+                            checked={paper.published ?? true}
                             onChange={(e) => {
                               e.stopPropagation();
-                              void handleUnpublishPaper(paper.id, printerPaper.published);
+                              void handleUnpublishPaper(paper.id, paper.published ?? true);
                             }}
                             sx={{
                               "& .MuiSwitch-switchBase.Mui-checked": {
@@ -2167,32 +2162,24 @@ export default function AdminPage() {
                   </TableHead>
                   <TableBody>
                     {(() => {
-                      const ppColours = selectedPrinterPaper?.colours || [];
-                      const colourItems = ppColours
-                        .map((ppColour) => {
-                          const colour = tutorialState.papers
-                            .find(p => p.id === selectedPaperId)?.colours
-                            ?.find(c => c.id === ppColour.colourId);
-                          return colour ? { colour, ppColour } : null;
-                        })
-                        .filter((item): item is { colour: Colour; ppColour: PrinterPaperColour } => item !== null);
-
-                      const sorted = [...colourItems];
+                      // Colours are now full Colour objects, not PrinterPaperColour references
+                      const colours = selectedPrinterPaper?.colours || [];
+                      const sorted = [...colours];
                       if (coloursSortByName) {
-                        sorted.sort((a, b) => a.colour.name.localeCompare(b.colour.name));
+                        sorted.sort((a, b) => a.name.localeCompare(b.name));
                       } else {
                         sorted.sort((a, b) => {
-                          const dateA = a.colour.createdAt || a.colour.lastModified || new Date(0);
-                          const dateB = b.colour.createdAt || b.colour.lastModified || new Date(0);
+                          const dateA = a.createdAt || a.lastModified || new Date(0);
+                          const dateB = b.createdAt || b.lastModified || new Date(0);
                           return new Date(dateA).getTime() - new Date(dateB).getTime();
                         });
                       }
                       return sorted;
-                    })().map(({ colour, ppColour }) => (
+                    })().map((colour) => (
                         <TableRow
-                          key={ppColour.colourId}
+                          key={colour.id}
                           hover
-                          onClick={() => goToColourSteps(ppColour.colourId)}
+                          onClick={() => goToColourSteps(colour.id)}
                           sx={{
                             cursor: "pointer",
                             borderBottom: "1px solid #BDE9FF",
@@ -2232,7 +2219,7 @@ export default function AdminPage() {
                               size="small"
                               onClick={(e) => {
                                 e.stopPropagation();
-                                handleColourMenuOpen(e, ppColour.colourId);
+                                handleColourMenuOpen(e, colour.id);
                               }}
                             >
                               ⋯
@@ -2245,10 +2232,10 @@ export default function AdminPage() {
                           </TableCell>
                           <TableCell align="center" onClick={(e) => e.stopPropagation()}>
                             <Switch
-                              checked={ppColour.published}
+                              checked={colour.published ?? true}
                               onChange={(e) => {
                                 e.stopPropagation();
-                                void handleUnpublishColour(ppColour.colourId, ppColour.published);
+                                void handleUnpublishColour(colour.id, colour.published ?? true);
                               }}
                               sx={{
                                 "& .MuiSwitch-switchBase.Mui-checked": {
@@ -2560,21 +2547,16 @@ export default function AdminPage() {
                 <TableBody>
                   {sortColoursForManagement(
                     tutorialState.printers.flatMap((printer) =>
-                      printer.papers.flatMap((printerPaper) => {
-                        const paper = tutorialState.papers.find((p) => p.id === printerPaper.paperId);
-                        if (!paper) return [];
-                        return printerPaper.colours.map((ppColour) => {
-                          const colour = paper.colours.find((c) => c.id === ppColour.colourId);
-                          return colour ? {
-                            colour,
-                            ppColour,
-                            paper,
-                            printer,
-                          } : null;
-                        }).filter((item) => item !== null);
+                      printer.papers.flatMap((paper) => {
+                        // Papers now contain full Colour objects with metadata
+                        return paper.colours.map((colour) => ({
+                          colour,
+                          paper,
+                          printer,
+                        }));
                       })
-                    ) as Array<{ colour: Colour; ppColour: PrinterPaperColour; paper: Paper; printer: Printer }>
-                  ).map(({ colour, ppColour, paper, printer }) => (
+                    ) as Array<{ colour: Colour; paper: Paper; printer: Printer }>
+                  ).map(({ colour, paper, printer }) => (
                         <TableRow
                           key={`${printer.id}-${paper.id}-${colour.id}`}
                           hover

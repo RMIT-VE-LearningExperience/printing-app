@@ -2,8 +2,21 @@
 
 import Image from "next/image";
 import { type TouchEvent, useEffect, useMemo, useRef, useState } from "react";
-
-import styles from "./page.module.css";
+import {
+  Box,
+  Container,
+  Typography,
+  Card,
+  CardContent,
+  Button,
+  CircularProgress,
+  Alert,
+  Tooltip,
+  IconButton,
+  Grid,
+  Stack,
+} from "@mui/material";
+import InfoIcon from "@mui/icons-material/Info";
 
 type Step = {
   id: string;
@@ -16,22 +29,28 @@ type Step = {
 type Colour = {
   id: string;
   name: string;
+  description?: string;
   thumbnailDataUrl: string;
   steps: Step[];
+  published?: boolean;
 };
 
 type Paper = {
   id: string;
   name: string;
+  description?: string;
   thumbnailDataUrl: string;
   colours: Colour[];
+  published?: boolean;
 };
 
 type Printer = {
   id: string;
   name: string;
+  description?: string;
   thumbnailDataUrl: string;
   papers: Paper[];
+  published?: boolean;
 };
 
 type TutorialState = {
@@ -40,6 +59,17 @@ type TutorialState = {
 
 const emptyState: TutorialState = { printers: [] };
 const PROGRESS_KEY = "printing_guide_progress_v1";
+
+// Color palette
+const colors = {
+  primary: "#009DC9",
+  darkBg: "#001F2D",
+  lightBg: "#FFFFFF",
+  border: "#003549",
+  lightBorder: "#BDE9FF",
+  text: "#001F2D",
+  lightText: "#666666",
+};
 
 function stripHtml(content: string): string {
   return content.replace(/<[^>]+>/g, " ").replace(/\s+/g, " ").trim();
@@ -63,7 +93,6 @@ export default function HomePage() {
   const [selectedPaperId, setSelectedPaperId] = useState<string | null>(null);
   const [selectedColourId, setSelectedColourId] = useState<string | null>(null);
   const [activeStepIndex, setActiveStepIndex] = useState(0);
-  const [selectionView, setSelectionView] = useState<"cards" | "list">("cards");
   const touchStartXRef = useRef<number | null>(null);
 
   useEffect(() => {
@@ -96,14 +125,14 @@ export default function HomePage() {
 
       try {
         const response = await fetch("/api/tutorial", { cache: "no-store" });
-        const payload = (await response.json()) as TutorialState | { error: string };
+        const result = (await response.json()) as { state: TutorialState } | { error: string };
 
-        if (!response.ok || !("printers" in payload)) {
+        if (!response.ok || ("error" in result)) {
           setError("Could not load guide data.");
           return;
         }
 
-        setData(payload);
+        setData(result.state);
       } catch {
         setError("Could not load guide data.");
       } finally {
@@ -260,8 +289,6 @@ export default function HomePage() {
   const showingPaperSelection = !!selectedPrinter && !selectedPaper;
   const showingColourSelection = !!selectedPaper && !selectedColour;
   const showingSteps = !!selectedColour;
-  const showingSelectionLists =
-    showingPrinterSelection || showingPaperSelection || showingColourSelection;
 
   const hasPrinters = data.printers.length > 0;
   const hasPapers = (selectedPrinter?.papers.length ?? 0) > 0;
@@ -288,270 +315,814 @@ export default function HomePage() {
     return () => window.removeEventListener("keydown", onKeyDown);
   }, [showingSteps, hasSteps, steps.length]);
 
-  return (
-    <main className={styles.page}>
-      <div className={styles.shell}>
-        {showingPrinterSelection ? (
-          <header className={styles.hero}>
-            <h1 className={styles.title}>Printing Guide</h1>
-            <p className={styles.subtitle}>
+  // RENDER HOME PAGE (PRINTER SELECTION)
+  if (showingPrinterSelection) {
+    return (
+      <Box sx={{ minHeight: "100vh", bgcolor: colors.lightBg, py: { xs: 3, sm: 4, md: 6 } }}>
+        <Container maxWidth="md">
+          {/* Header */}
+          <Stack spacing={1} sx={{ mb: { xs: 4, sm: 5, md: 6 }, textAlign: "center" }}>
+            <Typography
+              variant="h1"
+              sx={{
+                fontSize: { xs: "2rem", sm: "2.5rem", md: "3rem" },
+                fontWeight: 700,
+                color: colors.text,
+                mb: 1,
+              }}
+            >
+              Printing Guide
+            </Typography>
+            <Typography
+              variant="body1"
+              sx={{
+                fontSize: { xs: "0.95rem", sm: "1.1rem" },
+                color: colors.lightText,
+                maxWidth: "500px",
+                mx: "auto",
+              }}
+            >
               A step-by-step guide to a clean print according to the paper used.
-            </p>
-            <p className={styles.prompt}>Select printer to begin:</p>
-          </header>
-        ) : (
-          <>
-            <div className={styles.topRow}>
-              <div className={styles.contextPill}>
-                <button type="button" onClick={backOneLevel} className={styles.backButton}>
-                  ←
-                </button>
-                <div className={styles.pillText}>
-                  <span className={styles.pillPrimary}>{selectedPrinter?.name}</span>
-                  {selectedPaper ? <span className={styles.pillSecondary}>{selectedPaper.name}</span> : null}
-                </div>
-              </div>
-            </div>
+            </Typography>
+          </Stack>
 
-            {showingPaperSelection ? (
-              <>
-                <h2 className={styles.sectionTitle}>Paper Selection</h2>
-                <p className={styles.sectionSub}>Choose paper type:</p>
-              </>
-            ) : null}
+          {/* Loading State */}
+          {loading && (
+            <Box sx={{ display: "flex", justifyContent: "center", py: 6 }}>
+              <CircularProgress sx={{ color: colors.primary }} />
+            </Box>
+          )}
 
-            {showingColourSelection ? (
-              <>
-                <h2 className={styles.sectionTitle}>Colour Management</h2>
-                <p className={styles.sectionSub}>I want to preserve the:</p>
-              </>
-            ) : null}
+          {/* Error State */}
+          {error && !loading && (
+            <Alert severity="error" sx={{ mb: 3 }}>
+              {error}
+            </Alert>
+          )}
 
-            {showingSteps ? (
-              <>
-                <h2 className={styles.sectionTitle}>{selectedColour?.name}</h2>
-                <div className={styles.progressWrap}>
-                  <div className={styles.stepMeta}>
-                    STEP {steps.length === 0 ? 0 : activeStepIndex + 1} OF {steps.length}
-                  </div>
-                  <div className={styles.dots}>
-                    {steps.map((step, index) => (
-                      <span key={step.id} className={index === activeStepIndex ? styles.dotActive : styles.dot} />
-                    ))}
-                  </div>
-                </div>
-              </>
-            ) : null}
-          </>
-        )}
+          {/* Empty State */}
+          {!loading && !error && !hasPrinters && (
+            <Alert severity="info">No printers available yet. Add your first printer in Admin.</Alert>
+          )}
 
-        {loading ? <div className={styles.statusBox}>Loading guide…</div> : null}
-        {error ? <div className={styles.statusBox}>{error}</div> : null}
+          {/* Printer Selection Grid */}
+          {!loading && !error && hasPrinters && (
+            <Box>
+              <Typography
+                variant="body1"
+                sx={{
+                  fontSize: { xs: "0.95rem", sm: "1.05rem" },
+                  color: colors.text,
+                  mb: { xs: 2.5, sm: 3 },
+                  fontWeight: 500,
+                  textAlign: "center",
+                }}
+              >
+                Select printer to begin:
+              </Typography>
 
-        {!loading && !error ? (
-          <section className={styles.content}>
-            {showingSelectionLists ? (
-              <div className={styles.viewToggleBar}>
-                <span className={styles.viewToggleLabel}>View</span>
-                <div className={styles.viewToggleWrap}>
-                <button
-                  type="button"
-                  className={`${styles.viewToggleButton} ${selectionView === "cards" ? styles.viewToggleButtonActive : ""}`}
-                  onClick={() => setSelectionView("cards")}
-                >
-                  Cards
-                </button>
-                <button
-                  type="button"
-                  className={`${styles.viewToggleButton} ${selectionView === "list" ? styles.viewToggleButtonActive : ""}`}
-                  onClick={() => setSelectionView("list")}
-                >
-                  List
-                </button>
-                </div>
-              </div>
-            ) : null}
+              <Grid container spacing={{ xs: 2, sm: 2.5, md: 3 }}>
+                {data.printers
+                  .filter((printer) => printer.published !== false)
+                  .map((printer) => (
+                  <Grid item xs={12} sm={6} md={4} key={printer.id}>
+                    <Card
+                      onClick={() => selectPrinter(printer.id)}
+                      sx={{
+                        cursor: "pointer",
+                        height: "100%",
+                        borderRadius: 2,
+                        border: `2px solid ${colors.lightBorder}`,
+                        transition: "all 0.2s ease",
+                        "&:hover": {
+                          borderColor: colors.primary,
+                          boxShadow: `0 0 0 3px rgba(0, 157, 201, 0.1)`,
+                        },
+                        "&:active": {
+                          transform: "scale(0.98)",
+                        },
+                      }}
+                    >
+                      {/* Image */}
+                      {printer.thumbnailDataUrl && (
+                        <Box
+                          sx={{
+                            position: "relative",
+                            width: "100%",
+                            paddingBottom: "66.67%",
+                            overflow: "hidden",
+                            bgcolor: "#f5f5f5",
+                          }}
+                        >
+                          <Image
+                            src={printer.thumbnailDataUrl}
+                            alt={printer.name}
+                            fill
+                            style={{ objectFit: "cover" }}
+                            sizes="(max-width: 600px) 100vw, (max-width: 960px) 50vw, 33vw"
+                          />
+                        </Box>
+                      )}
 
-            {showingPrinterSelection ? (
-              <div className={`${styles.cardList} ${selectionView === "list" ? styles.listView : ""}`}>
-                {data.printers.map((printer, index) => (
-                  <button
-                    key={printer.id}
-                    type="button"
-                    className={`${styles.selectCard} ${index === 0 ? styles.activeCard : ""} ${selectionView === "list" ? styles.selectListItem : ""}`}
-                    onClick={() => selectPrinter(printer.id)}
-                  >
-                    <Image
-                      src={printer.thumbnailDataUrl || "/vercel.svg"}
-                      alt={printer.name}
-                      width={280}
-                      height={190}
-                      className={styles.cardImage}
-                      sizes="(max-width: 700px) 100vw, (max-width: 980px) 50vw, 33vw"
-                      loading="lazy"
-                    />
-                    <div className={styles.cardContent}>
-                      <h3 className={styles.cardTitle}>{printer.name}</h3>
-                    </div>
-                  </button>
+                      {/* Content */}
+                      <CardContent sx={{ p: { xs: 1.5, sm: 2 } }}>
+                        <Stack direction="row" spacing={1} alignItems="flex-start">
+                          <Typography
+                            variant="h6"
+                            sx={{
+                              fontSize: { xs: "0.95rem", sm: "1.05rem" },
+                              fontWeight: 600,
+                              color: colors.text,
+                              flex: 1,
+                            }}
+                          >
+                            {printer.name}
+                          </Typography>
+                          {printer.description && (
+                            <Tooltip title={printer.description} arrow placement="top">
+                              <IconButton
+                                size="small"
+                                sx={{
+                                  color: colors.primary,
+                                  width: 24,
+                                  height: 24,
+                                  "&:hover": { bgcolor: `rgba(0, 157, 201, 0.1)` },
+                                }}
+                              >
+                                <InfoIcon sx={{ fontSize: 18 }} />
+                              </IconButton>
+                            </Tooltip>
+                          )}
+                        </Stack>
+                      </CardContent>
+                    </Card>
+                  </Grid>
                 ))}
-              </div>
-            ) : null}
-            {showingPrinterSelection && !hasPrinters ? (
-              <div className={styles.statusBox}>No printers available yet. Add your first printer in Admin.</div>
-            ) : null}
+              </Grid>
+            </Box>
+          )}
+        </Container>
+      </Box>
+    );
+  }
 
-            {showingPaperSelection ? (
-              <div className={`${styles.cardList} ${selectionView === "list" ? styles.listView : ""}`}>
-                {selectedPrinter?.papers.map((paper, index) => (
-                  <button
-                    key={paper.id}
-                    type="button"
-                    className={`${styles.selectCard} ${index === 0 ? styles.activeCard : ""} ${selectionView === "list" ? styles.selectListItem : ""}`}
+  // RENDER PAPER SELECTION PAGE
+  if (showingPaperSelection) {
+    return (
+      <Box sx={{ minHeight: "100vh", bgcolor: colors.lightBg, py: { xs: 3, sm: 4, md: 6 } }}>
+        <Container maxWidth="md">
+          {/* Top Navigation */}
+          <Stack direction="row" spacing={2} sx={{ mb: { xs: 3, sm: 4 }, alignItems: "center" }}>
+            <Button
+              onClick={backOneLevel}
+              sx={{
+                minWidth: 40,
+                width: 40,
+                height: 40,
+                p: 0,
+                color: colors.text,
+                fontSize: "1.5rem",
+                "&:hover": { bgcolor: `rgba(0, 157, 201, 0.1)` },
+              }}
+            >
+              ←
+            </Button>
+            <Button
+              onClick={resetToHome}
+              sx={{
+                minWidth: 40,
+                width: 40,
+                height: 40,
+                p: 0,
+                color: colors.text,
+                fontSize: "1.5rem",
+                "&:hover": { bgcolor: `rgba(0, 157, 201, 0.1)` },
+              }}
+            >
+              ⌂
+            </Button>
+            <Typography
+              variant="body1"
+              sx={{
+                fontSize: { xs: "0.95rem", sm: "1.05rem" },
+                fontWeight: 500,
+                color: colors.text,
+                flex: 1,
+              }}
+            >
+              {selectedPrinter?.name}
+            </Typography>
+          </Stack>
+
+          {/* Header */}
+          <Stack spacing={1} sx={{ mb: { xs: 3, sm: 4 }, textAlign: "center" }}>
+            <Typography
+              variant="h2"
+              sx={{
+                fontSize: { xs: "1.5rem", sm: "2rem", md: "2.25rem" },
+                fontWeight: 700,
+                color: colors.text,
+              }}
+            >
+              Paper Selection
+            </Typography>
+            <Typography
+              variant="body1"
+              sx={{
+                fontSize: { xs: "0.95rem", sm: "1.05rem" },
+                color: colors.lightText,
+              }}
+            >
+              Choose paper type:
+            </Typography>
+          </Stack>
+
+          {/* Loading State */}
+          {loading && (
+            <Box sx={{ display: "flex", justifyContent: "center", py: 6 }}>
+              <CircularProgress sx={{ color: colors.primary }} />
+            </Box>
+          )}
+
+          {/* Empty State */}
+          {!loading && !hasPapers && (
+            <Alert severity="info">No papers yet for this printer. Add first paper in Admin.</Alert>
+          )}
+
+          {/* Paper Selection Grid */}
+          {!loading && hasPapers && (
+            <Grid container spacing={{ xs: 2, sm: 2.5, md: 3 }}>
+              {selectedPrinter?.papers
+                .filter((paper) => paper.published !== false)
+                .map((paper) => (
+                <Grid item xs={12} sm={6} md={4} key={paper.id}>
+                  <Card
                     onClick={() => selectPaper(paper.id)}
+                    sx={{
+                      cursor: "pointer",
+                      height: "100%",
+                      borderRadius: 2,
+                      border: `2px solid ${colors.lightBorder}`,
+                      transition: "all 0.2s ease",
+                      "&:hover": {
+                        borderColor: colors.primary,
+                        boxShadow: `0 0 0 3px rgba(0, 157, 201, 0.1)`,
+                      },
+                      "&:active": {
+                        transform: "scale(0.98)",
+                      },
+                    }}
+                  >
+                    {/* Image */}
+                    {paper.thumbnailDataUrl && (
+                      <Box
+                        sx={{
+                          position: "relative",
+                          width: "100%",
+                          paddingBottom: "66.67%",
+                          overflow: "hidden",
+                          bgcolor: "#f5f5f5",
+                        }}
+                      >
+                        <Image
+                          src={paper.thumbnailDataUrl}
+                          alt={paper.name}
+                          fill
+                          style={{ objectFit: "cover" }}
+                          sizes="(max-width: 600px) 100vw, (max-width: 960px) 50vw, 33vw"
+                        />
+                      </Box>
+                    )}
+
+                    {/* Content */}
+                    <CardContent sx={{ p: { xs: 1.5, sm: 2 } }}>
+                      <Stack direction="row" spacing={1} alignItems="flex-start">
+                        <Typography
+                          variant="h6"
+                          sx={{
+                            fontSize: { xs: "0.95rem", sm: "1.05rem" },
+                            fontWeight: 600,
+                            color: colors.text,
+                            flex: 1,
+                          }}
+                        >
+                          {paper.name}
+                        </Typography>
+                        {paper.description && (
+                          <Tooltip title={paper.description} arrow placement="top">
+                            <IconButton
+                              size="small"
+                              sx={{
+                                color: colors.primary,
+                                width: 24,
+                                height: 24,
+                                "&:hover": { bgcolor: `rgba(0, 157, 201, 0.1)` },
+                              }}
+                            >
+                              <InfoIcon sx={{ fontSize: 18 }} />
+                            </IconButton>
+                          </Tooltip>
+                        )}
+                      </Stack>
+                    </CardContent>
+                  </Card>
+                </Grid>
+              ))}
+            </Grid>
+          )}
+        </Container>
+      </Box>
+    );
+  }
+
+  // RENDER COLOUR MANAGEMENT PAGE
+  if (showingColourSelection) {
+    return (
+      <Box sx={{ minHeight: "100vh", bgcolor: colors.lightBg, py: { xs: 3, sm: 4, md: 6 } }}>
+        <Container maxWidth="md">
+          {/* Top Navigation */}
+          <Stack direction="row" spacing={2} sx={{ mb: { xs: 3, sm: 4 }, alignItems: "center" }}>
+            <Button
+              onClick={backOneLevel}
+              sx={{
+                minWidth: 40,
+                width: 40,
+                height: 40,
+                p: 0,
+                color: colors.text,
+                fontSize: "1.5rem",
+                "&:hover": { bgcolor: `rgba(0, 157, 201, 0.1)` },
+              }}
+            >
+              ←
+            </Button>
+            <Button
+              onClick={resetToHome}
+              sx={{
+                minWidth: 40,
+                width: 40,
+                height: 40,
+                p: 0,
+                color: colors.text,
+                fontSize: "1.5rem",
+                "&:hover": { bgcolor: `rgba(0, 157, 201, 0.1)` },
+              }}
+            >
+              ⌂
+            </Button>
+            <Typography
+              variant="body1"
+              sx={{
+                fontSize: { xs: "0.95rem", sm: "1.05rem" },
+                fontWeight: 500,
+                color: colors.text,
+                flex: 1,
+              }}
+            >
+              {selectedPrinter?.name}
+            </Typography>
+          </Stack>
+
+          {/* Paper Name (in red) */}
+          {selectedPaper && (
+            <Box sx={{ mb: { xs: 2, sm: 3 }, textAlign: "center" }}>
+              <Typography
+                variant="body1"
+                sx={{
+                  fontSize: { xs: "1rem", sm: "1.15rem" },
+                  fontWeight: 600,
+                  color: "#d32f2f",
+                }}
+              >
+                {selectedPaper.name}
+              </Typography>
+            </Box>
+          )}
+
+          {/* Header */}
+          <Stack spacing={1} sx={{ mb: { xs: 3, sm: 4 }, textAlign: "center" }}>
+            <Typography
+              variant="h2"
+              sx={{
+                fontSize: { xs: "1.5rem", sm: "2rem", md: "2.25rem" },
+                fontWeight: 700,
+                color: colors.text,
+              }}
+            >
+              Colour Management
+            </Typography>
+            <Typography
+              variant="body1"
+              sx={{
+                fontSize: { xs: "0.95rem", sm: "1.05rem" },
+                color: colors.lightText,
+              }}
+            >
+              I want to preserve the:
+            </Typography>
+          </Stack>
+
+          {/* Loading State */}
+          {loading && (
+            <Box sx={{ display: "flex", justifyContent: "center", py: 6 }}>
+              <CircularProgress sx={{ color: colors.primary }} />
+            </Box>
+          )}
+
+          {/* Empty State */}
+          {!loading && !hasColours && (
+            <Alert severity="info">No colours yet for this paper. Add first colour in Admin.</Alert>
+          )}
+
+          {/* Colour Selection Grid */}
+          {!loading && hasColours && (
+            <Grid container spacing={{ xs: 2, sm: 2.5, md: 3 }}>
+              {selectedPaper?.colours
+                .filter((colour) => colour.published !== false)
+                .map((colour) => (
+                <Grid item xs={12} sm={6} md={4} key={colour.id}>
+                  <Card
+                    onClick={() => selectColour(colour.id)}
+                    sx={{
+                      cursor: "pointer",
+                      height: "100%",
+                      borderRadius: 2,
+                      border: `2px solid ${colors.lightBorder}`,
+                      transition: "all 0.2s ease",
+                      "&:hover": {
+                        borderColor: colors.primary,
+                        boxShadow: `0 0 0 3px rgba(0, 157, 201, 0.1)`,
+                      },
+                      "&:active": {
+                        transform: "scale(0.98)",
+                      },
+                    }}
+                  >
+                    {/* Image */}
+                    {colour.thumbnailDataUrl && (
+                      <Box
+                        sx={{
+                          position: "relative",
+                          width: "100%",
+                          paddingBottom: "66.67%",
+                          overflow: "hidden",
+                          bgcolor: "#f5f5f5",
+                        }}
+                      >
+                        <Image
+                          src={colour.thumbnailDataUrl}
+                          alt={colour.name}
+                          fill
+                          style={{ objectFit: "cover" }}
+                          sizes="(max-width: 600px) 100vw, (max-width: 960px) 50vw, 33vw"
+                        />
+                      </Box>
+                    )}
+
+                    {/* Content */}
+                    <CardContent sx={{ p: { xs: 1.5, sm: 2 } }}>
+                      <Stack spacing={1}>
+                        <Stack direction="row" spacing={1} alignItems="flex-start">
+                          <Typography
+                            variant="h6"
+                            sx={{
+                              fontSize: { xs: "0.95rem", sm: "1.05rem" },
+                              fontWeight: 600,
+                              color: colors.text,
+                              flex: 1,
+                            }}
+                          >
+                            {colour.name}
+                          </Typography>
+                          {colour.description && (
+                            <Tooltip title={colour.description} arrow placement="top">
+                              <IconButton
+                                size="small"
+                                sx={{
+                                  color: colors.primary,
+                                  width: 24,
+                                  height: 24,
+                                  "&:hover": { bgcolor: `rgba(0, 157, 201, 0.1)` },
+                                }}
+                              >
+                                <InfoIcon sx={{ fontSize: 18 }} />
+                              </IconButton>
+                            </Tooltip>
+                          )}
+                        </Stack>
+                        {colour.description && (
+                          <Typography
+                            variant="body2"
+                            sx={{
+                              fontSize: { xs: "0.85rem", sm: "0.9rem" },
+                              color: colors.lightText,
+                              lineHeight: 1.4,
+                            }}
+                          >
+                            {colour.description}
+                          </Typography>
+                        )}
+                      </Stack>
+                    </CardContent>
+                  </Card>
+                </Grid>
+              ))}
+            </Grid>
+          )}
+        </Container>
+      </Box>
+    );
+  }
+
+  // RENDER STEPS DISPLAY PAGE
+  if (showingSteps && activeStep) {
+    return (
+      <Box sx={{ minHeight: "100vh", bgcolor: colors.lightBg }}>
+        {/* Blue Border Accent at Top */}
+        <Box sx={{ height: 4, bgcolor: colors.primary }} />
+
+        <Box sx={{ py: { xs: 3, sm: 4, md: 6 } }}>
+          <Container maxWidth="md">
+            {/* Top Navigation */}
+            <Stack direction="row" spacing={2} sx={{ mb: { xs: 3, sm: 4 }, alignItems: "center" }}>
+              <Button
+                onClick={backOneLevel}
+                sx={{
+                  minWidth: 40,
+                  width: 40,
+                  height: 40,
+                  p: 0,
+                  color: colors.text,
+                  fontSize: "1.5rem",
+                  "&:hover": { bgcolor: `rgba(0, 157, 201, 0.1)` },
+                }}
+              >
+                ←
+              </Button>
+              <Button
+                onClick={resetToHome}
+                sx={{
+                  minWidth: 40,
+                  width: 40,
+                  height: 40,
+                  p: 0,
+                  color: colors.text,
+                  fontSize: "1.5rem",
+                  "&:hover": { bgcolor: `rgba(0, 157, 201, 0.1)` },
+                }}
+              >
+                ⌂
+              </Button>
+              <Stack spacing={0.5} sx={{ flex: 1 }}>
+                <Typography
+                  variant="body2"
+                  sx={{
+                    fontSize: { xs: "0.85rem", sm: "0.9rem" },
+                    color: colors.lightText,
+                    fontWeight: 500,
+                  }}
+                >
+                  {selectedPrinter?.name}
+                </Typography>
+                <Typography
+                  variant="body2"
+                  sx={{
+                    fontSize: { xs: "0.85rem", sm: "0.9rem" },
+                    color: colors.lightText,
+                    fontWeight: 500,
+                  }}
+                >
+                  {selectedPaper?.name}
+                </Typography>
+              </Stack>
+            </Stack>
+
+            {/* Colour Name as Title */}
+            <Typography
+              variant="h2"
+              sx={{
+                fontSize: { xs: "1.5rem", sm: "2rem", md: "2.25rem" },
+                fontWeight: 700,
+                color: colors.text,
+                mb: { xs: 3, sm: 4 },
+                textAlign: "center",
+              }}
+            >
+              {selectedColour?.name}
+            </Typography>
+
+            {/* Progress Indicator */}
+            <Stack
+              direction={{ xs: "column", sm: "row" }}
+              spacing={{ xs: 1.5, sm: 2 }}
+              sx={{
+                mb: { xs: 3, sm: 4 },
+                alignItems: { xs: "center", sm: "flex-start" },
+                justifyContent: { xs: "center", sm: "space-between" },
+              }}
+            >
+              <Typography
+                variant="body1"
+                sx={{
+                  fontSize: { xs: "0.9rem", sm: "1rem" },
+                  fontWeight: 600,
+                  color: colors.text,
+                  letterSpacing: "0.05em",
+                }}
+              >
+                STEP {steps.length === 0 ? 0 : activeStepIndex + 1} OF {steps.length}
+              </Typography>
+
+              {/* Progress Dots */}
+              <Stack direction="row" spacing={1} sx={{ alignItems: "center" }}>
+                {steps.map((step, index) => (
+                  <Box
+                    key={step.id}
+                    sx={{
+                      width: 8,
+                      height: 8,
+                      borderRadius: "50%",
+                      bgcolor: index === activeStepIndex ? colors.primary : colors.lightBorder,
+                      transition: "all 0.2s ease",
+                    }}
+                  />
+                ))}
+              </Stack>
+            </Stack>
+
+            {/* Step Card */}
+            <Card
+              sx={{
+                borderRadius: 2,
+                border: `2px solid ${colors.lightBorder}`,
+                mb: { xs: 3, sm: 4 },
+                overflow: "hidden",
+              }}
+              onTouchStart={handleStepTouchStart}
+              onTouchEnd={handleStepTouchEnd}
+            >
+              <CardContent sx={{ p: { xs: 2, sm: 3 } }}>
+                {/* Step Number in Box */}
+                <Box
+                  sx={{
+                    display: "inline-flex",
+                    alignItems: "center",
+                    justifyContent: "center",
+                    width: 40,
+                    height: 40,
+                    bgcolor: colors.darkBg,
+                    color: colors.lightBg,
+                    fontWeight: 700,
+                    borderRadius: 1,
+                    fontSize: "1.1rem",
+                    mb: { xs: 2, sm: 2.5 },
+                  }}
+                >
+                  {activeStepIndex + 1}
+                </Box>
+
+                {/* Step Name */}
+                <Typography
+                  variant="h5"
+                  sx={{
+                    fontSize: { xs: "1.15rem", sm: "1.35rem" },
+                    fontWeight: 700,
+                    color: colors.text,
+                    mb: { xs: 1.5, sm: 2 },
+                  }}
+                >
+                  {activeStep.name}
+                </Typography>
+
+                {/* Step Title */}
+                {activeStep.title && (
+                  <Typography
+                    variant="h6"
+                    sx={{
+                      fontSize: { xs: "1rem", sm: "1.1rem" },
+                      fontWeight: 600,
+                      color: colors.primary,
+                      mb: { xs: 1.5, sm: 2 },
+                    }}
+                  >
+                    {activeStep.title}
+                  </Typography>
+                )}
+
+                {/* Step Content */}
+                {activeStep.contentHtml && (
+                  <Box
+                    sx={{
+                      fontSize: { xs: "0.95rem", sm: "1rem" },
+                      color: colors.text,
+                      lineHeight: 1.6,
+                      mb: { xs: 2, sm: 3 },
+                      "& p": { mb: 1 },
+                      "& ul, & ol": { pl: 2, mb: 1 },
+                      "& li": { mb: 0.5 },
+                      "& strong, & b": { fontWeight: 700 },
+                      "& em, & i": { fontStyle: "italic" },
+                      "& a": {
+                        color: colors.primary,
+                        textDecoration: "underline",
+                        "&:hover": { opacity: 0.8 },
+                      },
+                    }}
+                    dangerouslySetInnerHTML={{ __html: sanitizeStepHtml(activeStep.contentHtml) }}
+                  />
+                )}
+
+                {/* Step Image */}
+                {activeStep.imageDataUrl && (
+                  <Box
+                    sx={{
+                      position: "relative",
+                      width: "100%",
+                      paddingBottom: "60%",
+                      overflow: "hidden",
+                      borderRadius: 1,
+                      bgcolor: "#f5f5f5",
+                      mb: { xs: 2, sm: 3 },
+                    }}
                   >
                     <Image
-                      src={paper.thumbnailDataUrl || "/vercel.svg"}
-                      alt={paper.name}
-                      width={280}
-                      height={220}
-                      className={styles.cardImage}
-                      sizes="(max-width: 700px) 100vw, (max-width: 980px) 50vw, 33vw"
-                      loading="lazy"
-                    />
-                    <div className={styles.cardContent}>
-                      <h3 className={styles.cardTitle}>{paper.name}</h3>
-                    </div>
-                  </button>
-                ))}
-              </div>
-            ) : null}
-            {showingPaperSelection && !hasPapers ? (
-              <div className={styles.statusBox}>No papers yet for this printer. Add first paper in Admin.</div>
-            ) : null}
-
-            {showingColourSelection ? (
-              <div className={`${styles.cardList} ${selectionView === "list" ? styles.listView : ""}`}>
-                {selectedPaper?.colours.map((colour, index) => {
-                  const firstStep = colour.steps[0];
-                  const firstStepSummary = stripHtml(firstStep?.contentHtml ?? "");
-                  return (
-                    <button
-                      key={colour.id}
-                      type="button"
-                      className={`${styles.selectCard} ${index === 0 ? styles.activeCard : ""} ${selectionView === "list" ? styles.selectListItem : ""}`}
-                      onClick={() => selectColour(colour.id)}
-                    >
-                      <Image
-                        src={colour.thumbnailDataUrl || firstStep?.imageDataUrl || "/vercel.svg"}
-                        alt={colour.name}
-                        width={280}
-                        height={220}
-                        className={styles.cardImage}
-                        sizes="(max-width: 700px) 100vw, (max-width: 980px) 50vw, 33vw"
-                        loading="lazy"
-                      />
-                      <div className={styles.cardContent}>
-                        <h3 className={styles.cardTitle}>{colour.name}</h3>
-                        {firstStepSummary.length > 0 ? (
-                          <p className={styles.cardText}>{firstStepSummary.slice(0, 120)}</p>
-                        ) : null}
-                      </div>
-                    </button>
-                  );
-                })}
-              </div>
-            ) : null}
-            {showingColourSelection && !hasColours ? (
-              <div className={styles.statusBox}>No colours yet for this paper. Add first colour in Admin.</div>
-            ) : null}
-
-            {showingSteps && activeStep ? (
-              <div className={styles.stepDesktop}>
-                <article
-                  key={activeStep.id}
-                  className={styles.stepCard}
-                  onTouchStart={handleStepTouchStart}
-                  onTouchEnd={handleStepTouchEnd}
-                >
-                  <div className={styles.stepIndex}>{activeStepIndex + 1}</div>
-                  <h3 className={styles.stepName}>{activeStep.name}</h3>
-
-                  <div className={styles.itemBlock}>
-                    <p className={styles.itemTitle}>{activeStep.title}</p>
-                    <div
-                      className={styles.itemRich}
-                      dangerouslySetInnerHTML={{ __html: sanitizeStepHtml(activeStep.contentHtml ?? "") }}
-                    />
-                    <Image
-                      src={activeStep.imageDataUrl || "/vercel.svg"}
+                      src={activeStep.imageDataUrl}
                       alt={activeStep.title || activeStep.name}
-                      width={900}
-                      height={520}
-                      className={styles.itemImage}
-                      sizes="(max-width: 980px) 100vw, 860px"
-                      loading="lazy"
+                      fill
+                      style={{ objectFit: "contain" }}
+                      sizes="(max-width: 600px) 100vw, (max-width: 960px) 90vw, 800px"
                     />
-                  </div>
+                  </Box>
+                )}
 
-                  <div className={styles.stepControls}>
-                    <button
-                      type="button"
-                      className={styles.navButton}
-                      onClick={goPrevStep}
-                      disabled={activeStepIndex === 0}
-                    >
-                      Previous
-                    </button>
-                    <button
-                      type="button"
-                      className={styles.navButton}
-                      onClick={goNextStep}
-                      disabled={activeStepIndex >= steps.length - 1}
-                    >
-                      Next
-                    </button>
-                  </div>
-                </article>
-              </div>
-            ) : null}
-            {showingSteps && !hasSteps ? (
-              <div className={styles.statusBox}>No steps yet for this colour. Add Step 1 in Admin.</div>
-            ) : null}
-          </section>
-        ) : null}
-      </div>
+                {/* Navigation Buttons */}
+                <Stack direction="row" spacing={2} sx={{ mt: { xs: 2, sm: 3 } }}>
+                  <Button
+                    onClick={goPrevStep}
+                    disabled={activeStepIndex === 0}
+                    variant="outlined"
+                    sx={{
+                      flex: 1,
+                      py: { xs: 1, sm: 1.25 },
+                      fontSize: { xs: "0.9rem", sm: "1rem" },
+                      fontWeight: 600,
+                      textTransform: "none",
+                      color: activeStepIndex === 0 ? colors.lightText : colors.text,
+                      borderColor: activeStepIndex === 0 ? colors.lightBorder : colors.border,
+                      "&:hover": {
+                        borderColor: activeStepIndex === 0 ? colors.lightBorder : colors.primary,
+                        bgcolor: activeStepIndex === 0 ? "transparent" : `rgba(0, 157, 201, 0.05)`,
+                      },
+                    }}
+                  >
+                    Previous
+                  </Button>
+                  <Button
+                    onClick={goNextStep}
+                    disabled={activeStepIndex >= steps.length - 1}
+                    variant="outlined"
+                    sx={{
+                      flex: 1,
+                      py: { xs: 1, sm: 1.25 },
+                      fontSize: { xs: "0.9rem", sm: "1rem" },
+                      fontWeight: 600,
+                      textTransform: "none",
+                      color: activeStepIndex >= steps.length - 1 ? colors.lightText : colors.text,
+                      borderColor: activeStepIndex >= steps.length - 1 ? colors.lightBorder : colors.border,
+                      "&:hover": {
+                        borderColor: activeStepIndex >= steps.length - 1 ? colors.lightBorder : colors.primary,
+                        bgcolor: activeStepIndex >= steps.length - 1 ? "transparent" : `rgba(0, 157, 201, 0.05)`,
+                      },
+                    }}
+                  >
+                    Next
+                  </Button>
+                </Stack>
+              </CardContent>
+            </Card>
 
-      {showingSteps && hasSteps ? (
-        <div className={styles.stickyStepNav}>
-          <button
-            type="button"
-            className={styles.navButton}
-            onClick={goPrevStep}
-            disabled={activeStepIndex === 0}
-          >
-            Previous
-          </button>
-          <span className={styles.stickyStepMeta}>
-            Step {activeStepIndex + 1} / {steps.length}
-          </span>
-          <button
-            type="button"
-            className={styles.navButton}
-            onClick={goNextStep}
-            disabled={activeStepIndex >= steps.length - 1}
-          >
-            Next
-          </button>
-        </div>
-      ) : null}
+            {/* Hint for Touch Gestures */}
+            <Typography
+              variant="caption"
+              sx={{
+                display: { xs: "block", sm: "none" },
+                textAlign: "center",
+                color: colors.lightText,
+                fontSize: "0.8rem",
+              }}
+            >
+              Swipe left or right to navigate steps
+            </Typography>
+          </Container>
+        </Box>
+      </Box>
+    );
+  }
 
-      {!showingPrinterSelection ? (
-        <button type="button" onClick={resetToHome} className={styles.footerHome}>
-          <span className={styles.footerHomeIcon}>⌂</span>
-          HOME
-        </button>
-      ) : null}
-    </main>
+  // PLACEHOLDER FOR EMPTY STATE
+  return (
+    <Box sx={{ minHeight: "100vh", bgcolor: colors.lightBg, display: "flex", alignItems: "center", justifyContent: "center" }}>
+      <Typography>No content to display</Typography>
+    </Box>
   );
 }

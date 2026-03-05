@@ -17,6 +17,8 @@ import {
   updateStep,
   addPaperToPrinter,
   removePaperFromPrinter,
+  updatePaperInPrinter,
+  updateColourInPrinterPaper,
   restoreDeletedItem,
   permanentlyDeleteItem,
   removeInvalidPapersFromPrinter,
@@ -66,6 +68,12 @@ type ActionPayload =
       paperId: string;
     }
   | {
+      action: "updatePaperInPrinter";
+      printerId: string;
+      paperId: string;
+      published: boolean;
+    }
+  | {
       action: "addColour";
       printerId: string;
       paperId: string;
@@ -88,6 +96,13 @@ type ActionPayload =
       printerId: string;
       paperId: string;
       colourId: string;
+    }
+  | {
+      action: "updateColourInPrinterPaper";
+      printerId: string;
+      paperId: string;
+      colourId: string;
+      published: boolean;
     }
   | {
       action: "addStep";
@@ -178,6 +193,13 @@ async function executeAction(payload: ActionPayload): Promise<TutorialState> {
     case "removePaperFromPrinter":
       return removePaperFromPrinter(payload.printerId, payload.paperId);
 
+    case "updatePaperInPrinter":
+      return updatePaperInPrinter(
+        payload.printerId,
+        payload.paperId,
+        payload.published,
+      );
+
     case "addColour":
       return addColour(
         payload.printerId,
@@ -200,6 +222,14 @@ async function executeAction(payload: ActionPayload): Promise<TutorialState> {
 
     case "deleteColour":
       return deleteColour(payload.printerId, payload.paperId, payload.colourId);
+
+    case "updateColourInPrinterPaper":
+      return updateColourInPrinterPaper(
+        payload.printerId,
+        payload.paperId,
+        payload.colourId,
+        payload.published,
+      );
 
     case "addStep":
       return addStep(
