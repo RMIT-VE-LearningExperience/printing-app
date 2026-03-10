@@ -846,38 +846,26 @@ export default function HomePage() {
           <Container maxWidth="md">
             {/* Top Navigation */}
             <Stack direction="row" spacing={1.5} sx={{ mb: { xs: 4, sm: 5 }, alignItems: "center" }}>
-              <Button
+              <IconButton
                 onClick={backOneLevel}
                 sx={{
-                  minWidth: 40,
-                  width: 40,
-                  height: 40,
-                  p: 0,
                   color: colors.text,
-                  fontSize: "1.3rem",
-                  borderRadius: "6px",
                   transition: "all 0.2s ease",
                   "&:hover": { bgcolor: colors.lightBorder },
                 }}
               >
-                ←
-              </Button>
-              <Button
+                <ArrowBackIcon />
+              </IconButton>
+              <IconButton
                 onClick={resetToHome}
                 sx={{
-                  minWidth: 40,
-                  width: 40,
-                  height: 40,
-                  p: 0,
                   color: colors.text,
-                  fontSize: "1.3rem",
-                  borderRadius: "6px",
                   transition: "all 0.2s ease",
                   "&:hover": { bgcolor: colors.lightBorder },
                 }}
               >
-                ⌂
-              </Button>
+                <HomeIcon />
+              </IconButton>
               <Stack spacing={0.25} sx={{ flex: 1 }}>
                 <Typography
                   variant="caption"
