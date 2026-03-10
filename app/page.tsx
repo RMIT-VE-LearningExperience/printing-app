@@ -488,17 +488,6 @@ export default function HomePage() {
             >
               <ArrowBackIcon />
             </IconButton>
-            <IconButton
-              onClick={resetToHome}
-              sx={{
-                color: colors.text,
-                transition: "all 0.2s ease",
-                "&:hover": { bgcolor: colors.lightBorder },
-                marginLeft: "auto",
-              }}
-            >
-              <HomeIcon />
-            </IconButton>
             <Typography
               variant="body2"
               sx={{
@@ -510,6 +499,16 @@ export default function HomePage() {
             >
               {selectedPrinter?.name}
             </Typography>
+            <IconButton
+              onClick={resetToHome}
+              sx={{
+                color: colors.text,
+                transition: "all 0.2s ease",
+                "&:hover": { bgcolor: colors.lightBorder },
+              }}
+            >
+              <HomeIcon />
+            </IconButton>
           </Stack>
 
           {/* Header */}
@@ -655,17 +654,6 @@ export default function HomePage() {
             >
               <ArrowBackIcon />
             </IconButton>
-            <IconButton
-              onClick={resetToHome}
-              sx={{
-                color: colors.text,
-                transition: "all 0.2s ease",
-                "&:hover": { bgcolor: colors.lightBorder },
-                marginLeft: "auto",
-              }}
-            >
-              <HomeIcon />
-            </IconButton>
             <Typography
               variant="body2"
               sx={{
@@ -677,6 +665,16 @@ export default function HomePage() {
             >
               {selectedPrinter?.name}
             </Typography>
+            <IconButton
+              onClick={resetToHome}
+              sx={{
+                color: colors.text,
+                transition: "all 0.2s ease",
+                "&:hover": { bgcolor: colors.lightBorder },
+              }}
+            >
+              <HomeIcon />
+            </IconButton>
           </Stack>
 
           {/* Paper Name (as secondary info) */}
@@ -858,16 +856,6 @@ export default function HomePage() {
               >
                 <ArrowBackIcon />
               </IconButton>
-              <IconButton
-                onClick={resetToHome}
-                sx={{
-                  color: colors.text,
-                  transition: "all 0.2s ease",
-                  "&:hover": { bgcolor: colors.lightBorder },
-                }}
-              >
-                <HomeIcon />
-              </IconButton>
               <Stack spacing={0.25} sx={{ flex: 1 }}>
                 <Typography
                   variant="caption"
@@ -892,6 +880,16 @@ export default function HomePage() {
                   {selectedPaper?.name}
                 </Typography>
               </Stack>
+              <IconButton
+                onClick={resetToHome}
+                sx={{
+                  color: colors.text,
+                  transition: "all 0.2s ease",
+                  "&:hover": { bgcolor: colors.lightBorder },
+                }}
+              >
+                <HomeIcon />
+              </IconButton>
             </Stack>
 
             {/* Colour Name as Title */}
