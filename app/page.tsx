@@ -341,6 +341,7 @@ export default function HomePage() {
                 mx: "auto",
                 lineHeight: 1.6,
                 textAlign: "center",
+                display: "block",
               }}
             >
               Step-by-step guidance for achieving perfect prints with every paper type.
