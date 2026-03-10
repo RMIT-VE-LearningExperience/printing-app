@@ -340,6 +340,7 @@ export default function HomePage() {
                 maxWidth: "520px",
                 mx: "auto",
                 lineHeight: 1.6,
+                textAlign: "center",
               }}
             >
               Step-by-step guidance for achieving perfect prints with every paper type.
