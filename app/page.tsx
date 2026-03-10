@@ -337,11 +337,8 @@ export default function HomePage() {
               sx={{
                 fontSize: { xs: "1rem", sm: "1.125rem" },
                 color: colors.lightText,
-                maxWidth: "520px",
-                mx: "auto",
                 lineHeight: 1.6,
                 textAlign: "center",
-                display: "block",
               }}
             >
               Step-by-step guidance for achieving perfect prints with every paper type.
