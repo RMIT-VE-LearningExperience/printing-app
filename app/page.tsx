@@ -497,6 +497,7 @@ export default function HomePage() {
                 fontWeight: 500,
                 color: colors.lightText,
                 flex: 1,
+                textAlign: "center",
               }}
             >
               {selectedPrinter?.name}
@@ -667,6 +668,7 @@ export default function HomePage() {
                 fontWeight: 500,
                 color: colors.lightText,
                 flex: 1,
+                textAlign: "center",
               }}
             >
               {selectedPrinter?.name}
@@ -864,7 +866,7 @@ export default function HomePage() {
               >
                 <ArrowBackIcon />
               </IconButton>
-              <Stack spacing={0.25} sx={{ flex: 1 }}>
+              <Stack spacing={0.25} sx={{ flex: 1, textAlign: "center" }}>
                 <Typography
                   variant="caption"
                   sx={{
