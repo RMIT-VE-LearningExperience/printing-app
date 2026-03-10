@@ -705,31 +705,6 @@ export default function HomePage() {
             </Box>
           )}
 
-          {/* Header */}
-          <Stack spacing={2} sx={{ mb: { xs: 4, sm: 5 }, textAlign: "center" }}>
-            <Typography
-              variant="h2"
-              sx={{
-                fontSize: { xs: "1.75rem", sm: "2.25rem", md: "2.5rem" },
-                fontWeight: 800,
-                letterSpacing: "-0.02em",
-                color: colors.text,
-              }}
-            >
-              Colour Selection
-            </Typography>
-            <Typography
-              variant="body1"
-              sx={{
-                fontSize: { xs: "0.95rem", sm: "1.05rem" },
-                color: colors.lightText,
-                lineHeight: 1.5,
-              }}
-            >
-              Choose the colour to preserve:
-            </Typography>
-          </Stack>
-
           {/* Loading State */}
           {loading && (
             <Box sx={{ display: "flex", justifyContent: "center", py: 6 }}>
