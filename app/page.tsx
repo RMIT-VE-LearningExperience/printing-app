@@ -482,6 +482,8 @@ export default function HomePage() {
               onClick={backOneLevel}
               sx={{
                 color: colors.text,
+                border: `1px solid ${colors.lightBorder}`,
+                borderRadius: "6px",
                 transition: "all 0.2s ease",
                 "&:hover": { bgcolor: colors.lightBorder },
               }}
@@ -503,6 +505,8 @@ export default function HomePage() {
               onClick={resetToHome}
               sx={{
                 color: colors.text,
+                border: `1px solid ${colors.lightBorder}`,
+                borderRadius: "6px",
                 transition: "all 0.2s ease",
                 "&:hover": { bgcolor: colors.lightBorder },
               }}
@@ -648,6 +652,8 @@ export default function HomePage() {
               onClick={backOneLevel}
               sx={{
                 color: colors.text,
+                border: `1px solid ${colors.lightBorder}`,
+                borderRadius: "6px",
                 transition: "all 0.2s ease",
                 "&:hover": { bgcolor: colors.lightBorder },
               }}
@@ -669,6 +675,8 @@ export default function HomePage() {
               onClick={resetToHome}
               sx={{
                 color: colors.text,
+                border: `1px solid ${colors.lightBorder}`,
+                borderRadius: "6px",
                 transition: "all 0.2s ease",
                 "&:hover": { bgcolor: colors.lightBorder },
               }}
