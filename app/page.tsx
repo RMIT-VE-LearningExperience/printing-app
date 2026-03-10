@@ -904,7 +904,7 @@ export default function HomePage() {
             <Typography
               variant="h2"
               sx={{
-                fontSize: { xs: "2rem", sm: "2.5rem", md: "2.75rem" },
+                fontSize: { xs: "1.75rem", sm: "2.25rem", md: "2.5rem" },
                 fontWeight: 800,
                 letterSpacing: "-0.02em",
                 color: colors.text,
