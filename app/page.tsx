@@ -494,6 +494,7 @@ export default function HomePage() {
                 color: colors.text,
                 transition: "all 0.2s ease",
                 "&:hover": { bgcolor: colors.lightBorder },
+                marginLeft: "auto",
               }}
             >
               <HomeIcon />
@@ -660,6 +661,7 @@ export default function HomePage() {
                 color: colors.text,
                 transition: "all 0.2s ease",
                 "&:hover": { bgcolor: colors.lightBorder },
+                marginLeft: "auto",
               }}
             >
               <HomeIcon />
