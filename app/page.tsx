@@ -60,15 +60,18 @@ type TutorialState = {
 const emptyState: TutorialState = { printers: [] };
 const PROGRESS_KEY = "printing_guide_progress_v1";
 
-// Color palette
+// Color palette - Modern minimalist aesthetic
 const colors = {
   primary: "#009DC9",
   darkBg: "#001F2D",
-  lightBg: "#FFFFFF",
+  lightBg: "#FAFBFC",
   border: "#003549",
-  lightBorder: "#BDE9FF",
+  lightBorder: "#E8EAED",
   text: "#001F2D",
-  lightText: "#666666",
+  lightText: "#6B7280",
+  cardBg: "#FFFFFF",
+  cardShadow: "0 2px 8px rgba(0, 31, 45, 0.08)",
+  cardShadowHover: "0 8px 16px rgba(0, 31, 45, 0.12)",
 };
 
 function sanitizeStepHtml(content: string): string {
@@ -314,17 +317,17 @@ export default function HomePage() {
   // RENDER HOME PAGE (PRINTER SELECTION)
   if (showingPrinterSelection) {
     return (
-      <Box sx={{ minHeight: "100vh", bgcolor: colors.lightBg, py: { xs: 3, sm: 4, md: 6 } }}>
+      <Box sx={{ minHeight: "100vh", bgcolor: colors.lightBg, py: { xs: 4, sm: 5, md: 7 } }}>
         <Container maxWidth="md">
           {/* Header */}
-          <Stack spacing={1} sx={{ mb: { xs: 4, sm: 5, md: 6 }, textAlign: "center" }}>
+          <Stack spacing={2} sx={{ mb: { xs: 5, sm: 6, md: 8 }, textAlign: "center" }}>
             <Typography
               variant="h1"
               sx={{
-                fontSize: { xs: "2rem", sm: "2.5rem", md: "3rem" },
-                fontWeight: 700,
+                fontSize: { xs: "2.25rem", sm: "2.75rem", md: "3.5rem" },
+                fontWeight: 800,
+                letterSpacing: "-0.02em",
                 color: colors.text,
-                mb: 1,
               }}
             >
               Printing Guide
@@ -332,13 +335,14 @@ export default function HomePage() {
             <Typography
               variant="body1"
               sx={{
-                fontSize: { xs: "0.95rem", sm: "1.1rem" },
+                fontSize: { xs: "1rem", sm: "1.125rem" },
                 color: colors.lightText,
-                maxWidth: "500px",
+                maxWidth: "520px",
                 mx: "auto",
+                lineHeight: 1.6,
               }}
             >
-              A step-by-step guide to a clean print according to the paper used.
+              Step-by-step guidance for achieving perfect prints with every paper type.
             </Typography>
           </Stack>
 
@@ -369,12 +373,13 @@ export default function HomePage() {
                 sx={{
                   fontSize: { xs: "0.95rem", sm: "1.05rem" },
                   color: colors.text,
-                  mb: { xs: 2.5, sm: 3 },
+                  mb: { xs: 3, sm: 4 },
                   fontWeight: 500,
                   textAlign: "center",
+                  letterSpacing: "0.01em",
                 }}
               >
-                Select printer to begin:
+                Select a printer to begin:
               </Typography>
 
               <Grid container spacing={{ xs: 2, sm: 2.5, md: 3 }}>
@@ -387,15 +392,17 @@ export default function HomePage() {
                       sx={{
                         cursor: "pointer",
                         height: "100%",
-                        borderRadius: 2,
-                        border: `2px solid ${colors.lightBorder}`,
-                        transition: "all 0.2s ease",
+                        borderRadius: "8px",
+                        border: "none",
+                        backgroundColor: colors.cardBg,
+                        boxShadow: colors.cardShadow,
+                        transition: "all 0.3s cubic-bezier(0.4, 0, 0.2, 1)",
                         "&:hover": {
-                          borderColor: colors.primary,
-                          boxShadow: `0 0 0 3px rgba(0, 157, 201, 0.1)`,
+                          boxShadow: colors.cardShadowHover,
+                          transform: "translateY(-4px)",
                         },
                         "&:active": {
-                          transform: "scale(0.98)",
+                          transform: "translateY(-2px)",
                         },
                       }}
                     >
@@ -421,15 +428,16 @@ export default function HomePage() {
                       )}
 
                       {/* Content */}
-                      <CardContent sx={{ p: { xs: 1.5, sm: 2 } }}>
+                      <CardContent sx={{ p: { xs: 2, sm: 2.5 } }}>
                         <Stack direction="row" spacing={1} alignItems="flex-start">
                           <Typography
                             variant="h6"
                             sx={{
-                              fontSize: { xs: "0.95rem", sm: "1.05rem" },
+                              fontSize: { xs: "1rem", sm: "1.1rem" },
                               fontWeight: 600,
                               color: colors.text,
                               flex: 1,
+                              lineHeight: 1.4,
                             }}
                           >
                             {printer.name}
@@ -465,10 +473,10 @@ export default function HomePage() {
   // RENDER PAPER SELECTION PAGE
   if (showingPaperSelection) {
     return (
-      <Box sx={{ minHeight: "100vh", bgcolor: colors.lightBg, py: { xs: 3, sm: 4, md: 6 } }}>
+      <Box sx={{ minHeight: "100vh", bgcolor: colors.lightBg, py: { xs: 4, sm: 5, md: 7 } }}>
         <Container maxWidth="md">
           {/* Top Navigation */}
-          <Stack direction="row" spacing={2} sx={{ mb: { xs: 3, sm: 4 }, alignItems: "center" }}>
+          <Stack direction="row" spacing={1.5} sx={{ mb: { xs: 4, sm: 5 }, alignItems: "center" }}>
             <Button
               onClick={backOneLevel}
               sx={{
@@ -477,8 +485,10 @@ export default function HomePage() {
                 height: 40,
                 p: 0,
                 color: colors.text,
-                fontSize: "1.5rem",
-                "&:hover": { bgcolor: `rgba(0, 157, 201, 0.1)` },
+                fontSize: "1.3rem",
+                borderRadius: "6px",
+                transition: "all 0.2s ease",
+                "&:hover": { bgcolor: colors.lightBorder },
               }}
             >
               ←
@@ -491,18 +501,20 @@ export default function HomePage() {
                 height: 40,
                 p: 0,
                 color: colors.text,
-                fontSize: "1.5rem",
-                "&:hover": { bgcolor: `rgba(0, 157, 201, 0.1)` },
+                fontSize: "1.3rem",
+                borderRadius: "6px",
+                transition: "all 0.2s ease",
+                "&:hover": { bgcolor: colors.lightBorder },
               }}
             >
               ⌂
             </Button>
             <Typography
-              variant="body1"
+              variant="body2"
               sx={{
-                fontSize: { xs: "0.95rem", sm: "1.05rem" },
+                fontSize: { xs: "0.85rem", sm: "0.95rem" },
                 fontWeight: 500,
-                color: colors.text,
+                color: colors.lightText,
                 flex: 1,
               }}
             >
@@ -511,12 +523,13 @@ export default function HomePage() {
           </Stack>
 
           {/* Header */}
-          <Stack spacing={1} sx={{ mb: { xs: 3, sm: 4 }, textAlign: "center" }}>
+          <Stack spacing={2} sx={{ mb: { xs: 4, sm: 5 }, textAlign: "center" }}>
             <Typography
               variant="h2"
               sx={{
-                fontSize: { xs: "1.5rem", sm: "2rem", md: "2.25rem" },
-                fontWeight: 700,
+                fontSize: { xs: "1.75rem", sm: "2.25rem", md: "2.5rem" },
+                fontWeight: 800,
+                letterSpacing: "-0.02em",
                 color: colors.text,
               }}
             >
@@ -527,9 +540,10 @@ export default function HomePage() {
               sx={{
                 fontSize: { xs: "0.95rem", sm: "1.05rem" },
                 color: colors.lightText,
+                lineHeight: 1.5,
               }}
             >
-              Choose paper type:
+              Choose your paper type to continue:
             </Typography>
           </Stack>
 
@@ -557,15 +571,17 @@ export default function HomePage() {
                     sx={{
                       cursor: "pointer",
                       height: "100%",
-                      borderRadius: 2,
-                      border: `2px solid ${colors.lightBorder}`,
-                      transition: "all 0.2s ease",
+                      borderRadius: "8px",
+                      border: "none",
+                      backgroundColor: colors.cardBg,
+                      boxShadow: colors.cardShadow,
+                      transition: "all 0.3s cubic-bezier(0.4, 0, 0.2, 1)",
                       "&:hover": {
-                        borderColor: colors.primary,
-                        boxShadow: `0 0 0 3px rgba(0, 157, 201, 0.1)`,
+                        boxShadow: colors.cardShadowHover,
+                        transform: "translateY(-4px)",
                       },
                       "&:active": {
-                        transform: "scale(0.98)",
+                        transform: "translateY(-2px)",
                       },
                     }}
                   >
@@ -591,15 +607,16 @@ export default function HomePage() {
                     )}
 
                     {/* Content */}
-                    <CardContent sx={{ p: { xs: 1.5, sm: 2 } }}>
+                    <CardContent sx={{ p: { xs: 2, sm: 2.5 } }}>
                       <Stack direction="row" spacing={1} alignItems="flex-start">
                         <Typography
                           variant="h6"
                           sx={{
-                            fontSize: { xs: "0.95rem", sm: "1.05rem" },
+                            fontSize: { xs: "1rem", sm: "1.1rem" },
                             fontWeight: 600,
                             color: colors.text,
                             flex: 1,
+                            lineHeight: 1.4,
                           }}
                         >
                           {paper.name}
@@ -634,10 +651,10 @@ export default function HomePage() {
   // RENDER COLOUR MANAGEMENT PAGE
   if (showingColourSelection) {
     return (
-      <Box sx={{ minHeight: "100vh", bgcolor: colors.lightBg, py: { xs: 3, sm: 4, md: 6 } }}>
+      <Box sx={{ minHeight: "100vh", bgcolor: colors.lightBg, py: { xs: 4, sm: 5, md: 7 } }}>
         <Container maxWidth="md">
           {/* Top Navigation */}
-          <Stack direction="row" spacing={2} sx={{ mb: { xs: 3, sm: 4 }, alignItems: "center" }}>
+          <Stack direction="row" spacing={1.5} sx={{ mb: { xs: 4, sm: 5 }, alignItems: "center" }}>
             <Button
               onClick={backOneLevel}
               sx={{
@@ -646,8 +663,10 @@ export default function HomePage() {
                 height: 40,
                 p: 0,
                 color: colors.text,
-                fontSize: "1.5rem",
-                "&:hover": { bgcolor: `rgba(0, 157, 201, 0.1)` },
+                fontSize: "1.3rem",
+                borderRadius: "6px",
+                transition: "all 0.2s ease",
+                "&:hover": { bgcolor: colors.lightBorder },
               }}
             >
               ←
@@ -660,18 +679,20 @@ export default function HomePage() {
                 height: 40,
                 p: 0,
                 color: colors.text,
-                fontSize: "1.5rem",
-                "&:hover": { bgcolor: `rgba(0, 157, 201, 0.1)` },
+                fontSize: "1.3rem",
+                borderRadius: "6px",
+                transition: "all 0.2s ease",
+                "&:hover": { bgcolor: colors.lightBorder },
               }}
             >
               ⌂
             </Button>
             <Typography
-              variant="body1"
+              variant="body2"
               sx={{
-                fontSize: { xs: "0.95rem", sm: "1.05rem" },
+                fontSize: { xs: "0.85rem", sm: "0.95rem" },
                 fontWeight: 500,
-                color: colors.text,
+                color: colors.lightText,
                 flex: 1,
               }}
             >
@@ -679,42 +700,46 @@ export default function HomePage() {
             </Typography>
           </Stack>
 
-          {/* Paper Name (in red) */}
+          {/* Paper Name (as secondary info) */}
           {selectedPaper && (
-            <Box sx={{ mb: { xs: 2, sm: 3 }, textAlign: "center" }}>
+            <Box sx={{ mb: { xs: 3, sm: 4 }, textAlign: "center" }}>
               <Typography
-                variant="body1"
+                variant="body2"
                 sx={{
-                  fontSize: { xs: "1rem", sm: "1.15rem" },
+                  fontSize: { xs: "0.9rem", sm: "0.95rem" },
                   fontWeight: 600,
-                  color: "#d32f2f",
+                  color: colors.primary,
+                  letterSpacing: "0.05em",
+                  textTransform: "uppercase",
                 }}
               >
-                {selectedPaper.name}
+                Paper: {selectedPaper.name}
               </Typography>
             </Box>
           )}
 
           {/* Header */}
-          <Stack spacing={1} sx={{ mb: { xs: 3, sm: 4 }, textAlign: "center" }}>
+          <Stack spacing={2} sx={{ mb: { xs: 4, sm: 5 }, textAlign: "center" }}>
             <Typography
               variant="h2"
               sx={{
-                fontSize: { xs: "1.5rem", sm: "2rem", md: "2.25rem" },
-                fontWeight: 700,
+                fontSize: { xs: "1.75rem", sm: "2.25rem", md: "2.5rem" },
+                fontWeight: 800,
+                letterSpacing: "-0.02em",
                 color: colors.text,
               }}
             >
-              Colour Management
+              Colour Selection
             </Typography>
             <Typography
               variant="body1"
               sx={{
                 fontSize: { xs: "0.95rem", sm: "1.05rem" },
                 color: colors.lightText,
+                lineHeight: 1.5,
               }}
             >
-              I want to preserve the:
+              Choose the colour to preserve:
             </Typography>
           </Stack>
 
@@ -742,15 +767,17 @@ export default function HomePage() {
                     sx={{
                       cursor: "pointer",
                       height: "100%",
-                      borderRadius: 2,
-                      border: `2px solid ${colors.lightBorder}`,
-                      transition: "all 0.2s ease",
+                      borderRadius: "8px",
+                      border: "none",
+                      backgroundColor: colors.cardBg,
+                      boxShadow: colors.cardShadow,
+                      transition: "all 0.3s cubic-bezier(0.4, 0, 0.2, 1)",
                       "&:hover": {
-                        borderColor: colors.primary,
-                        boxShadow: `0 0 0 3px rgba(0, 157, 201, 0.1)`,
+                        boxShadow: colors.cardShadowHover,
+                        transform: "translateY(-4px)",
                       },
                       "&:active": {
-                        transform: "scale(0.98)",
+                        transform: "translateY(-2px)",
                       },
                     }}
                   >
@@ -776,16 +803,17 @@ export default function HomePage() {
                     )}
 
                     {/* Content */}
-                    <CardContent sx={{ p: { xs: 1.5, sm: 2 } }}>
-                      <Stack spacing={1}>
+                    <CardContent sx={{ p: { xs: 2, sm: 2.5 } }}>
+                      <Stack spacing={1.5}>
                         <Stack direction="row" spacing={1} alignItems="flex-start">
                           <Typography
                             variant="h6"
                             sx={{
-                              fontSize: { xs: "0.95rem", sm: "1.05rem" },
+                              fontSize: { xs: "1rem", sm: "1.1rem" },
                               fontWeight: 600,
                               color: colors.text,
                               flex: 1,
+                              lineHeight: 1.4,
                             }}
                           >
                             {colour.name}
@@ -835,12 +863,12 @@ export default function HomePage() {
     return (
       <Box sx={{ minHeight: "100vh", bgcolor: colors.lightBg }}>
         {/* Blue Border Accent at Top */}
-        <Box sx={{ height: 4, bgcolor: colors.primary }} />
+        <Box sx={{ height: 3, bgcolor: colors.primary }} />
 
-        <Box sx={{ py: { xs: 3, sm: 4, md: 6 } }}>
+        <Box sx={{ py: { xs: 4, sm: 5, md: 7 } }}>
           <Container maxWidth="md">
             {/* Top Navigation */}
-            <Stack direction="row" spacing={2} sx={{ mb: { xs: 3, sm: 4 }, alignItems: "center" }}>
+            <Stack direction="row" spacing={1.5} sx={{ mb: { xs: 4, sm: 5 }, alignItems: "center" }}>
               <Button
                 onClick={backOneLevel}
                 sx={{
@@ -849,8 +877,10 @@ export default function HomePage() {
                   height: 40,
                   p: 0,
                   color: colors.text,
-                  fontSize: "1.5rem",
-                  "&:hover": { bgcolor: `rgba(0, 157, 201, 0.1)` },
+                  fontSize: "1.3rem",
+                  borderRadius: "6px",
+                  transition: "all 0.2s ease",
+                  "&:hover": { bgcolor: colors.lightBorder },
                 }}
               >
                 ←
@@ -863,19 +893,23 @@ export default function HomePage() {
                   height: 40,
                   p: 0,
                   color: colors.text,
-                  fontSize: "1.5rem",
-                  "&:hover": { bgcolor: `rgba(0, 157, 201, 0.1)` },
+                  fontSize: "1.3rem",
+                  borderRadius: "6px",
+                  transition: "all 0.2s ease",
+                  "&:hover": { bgcolor: colors.lightBorder },
                 }}
               >
                 ⌂
               </Button>
-              <Stack spacing={0.5} sx={{ flex: 1 }}>
+              <Stack spacing={0.25} sx={{ flex: 1 }}>
                 <Typography
-                  variant="body2"
+                  variant="caption"
                   sx={{
-                    fontSize: { xs: "0.85rem", sm: "0.9rem" },
+                    fontSize: { xs: "0.75rem", sm: "0.8rem" },
                     color: colors.lightText,
-                    fontWeight: 500,
+                    fontWeight: 600,
+                    textTransform: "uppercase",
+                    letterSpacing: "0.02em",
                   }}
                 >
                   {selectedPrinter?.name}
@@ -897,10 +931,11 @@ export default function HomePage() {
             <Typography
               variant="h2"
               sx={{
-                fontSize: { xs: "1.5rem", sm: "2rem", md: "2.25rem" },
-                fontWeight: 700,
+                fontSize: { xs: "2rem", sm: "2.5rem", md: "2.75rem" },
+                fontWeight: 800,
+                letterSpacing: "-0.02em",
                 color: colors.text,
-                mb: { xs: 3, sm: 4 },
+                mb: { xs: 4, sm: 5 },
                 textAlign: "center",
               }}
             >
@@ -949,15 +984,17 @@ export default function HomePage() {
             {/* Step Card */}
             <Card
               sx={{
-                borderRadius: 2,
-                border: `2px solid ${colors.lightBorder}`,
-                mb: { xs: 3, sm: 4 },
+                borderRadius: "8px",
+                border: "none",
+                backgroundColor: colors.cardBg,
+                boxShadow: colors.cardShadow,
+                mb: { xs: 4, sm: 5 },
                 overflow: "hidden",
               }}
               onTouchStart={handleStepTouchStart}
               onTouchEnd={handleStepTouchEnd}
             >
-              <CardContent sx={{ p: { xs: 2, sm: 3 } }}>
+              <CardContent sx={{ p: { xs: 2.5, sm: 3.5 } }}>
                 {/* Step Number in Box */}
                 <Box
                   sx={{
@@ -1052,22 +1089,30 @@ export default function HomePage() {
                 )}
 
                 {/* Navigation Buttons */}
-                <Stack direction="row" spacing={2} sx={{ mt: { xs: 2, sm: 3 } }}>
+                <Stack direction="row" spacing={2} sx={{ mt: { xs: 3, sm: 4 } }}>
                   <Button
                     onClick={goPrevStep}
                     disabled={activeStepIndex === 0}
                     variant="outlined"
                     sx={{
                       flex: 1,
-                      py: { xs: 1, sm: 1.25 },
+                      py: { xs: 1.125, sm: 1.375 },
                       fontSize: { xs: "0.9rem", sm: "1rem" },
                       fontWeight: 600,
                       textTransform: "none",
+                      borderRadius: "6px",
                       color: activeStepIndex === 0 ? colors.lightText : colors.text,
-                      borderColor: activeStepIndex === 0 ? colors.lightBorder : colors.border,
+                      borderColor: activeStepIndex === 0 ? colors.lightBorder : colors.lightBorder,
+                      transition: "all 0.2s ease",
                       "&:hover": {
                         borderColor: activeStepIndex === 0 ? colors.lightBorder : colors.primary,
-                        bgcolor: activeStepIndex === 0 ? "transparent" : `rgba(0, 157, 201, 0.05)`,
+                        bgcolor: activeStepIndex === 0 ? "transparent" : colors.primary,
+                        color: activeStepIndex === 0 ? colors.lightText : "white",
+                      },
+                      "&:disabled": {
+                        bgcolor: "transparent",
+                        borderColor: colors.lightBorder,
+                        color: colors.lightText,
                       },
                     }}
                   >
@@ -1076,18 +1121,23 @@ export default function HomePage() {
                   <Button
                     onClick={goNextStep}
                     disabled={activeStepIndex >= steps.length - 1}
-                    variant="outlined"
+                    variant="contained"
                     sx={{
                       flex: 1,
-                      py: { xs: 1, sm: 1.25 },
+                      py: { xs: 1.125, sm: 1.375 },
                       fontSize: { xs: "0.9rem", sm: "1rem" },
                       fontWeight: 600,
                       textTransform: "none",
-                      color: activeStepIndex >= steps.length - 1 ? colors.lightText : colors.text,
-                      borderColor: activeStepIndex >= steps.length - 1 ? colors.lightBorder : colors.border,
+                      borderRadius: "6px",
+                      bgcolor: activeStepIndex >= steps.length - 1 ? colors.lightBorder : colors.primary,
+                      color: "white",
+                      transition: "all 0.2s ease",
                       "&:hover": {
-                        borderColor: activeStepIndex >= steps.length - 1 ? colors.lightBorder : colors.primary,
-                        bgcolor: activeStepIndex >= steps.length - 1 ? "transparent" : `rgba(0, 157, 201, 0.05)`,
+                        bgcolor: activeStepIndex >= steps.length - 1 ? colors.lightBorder : "#0083A3",
+                      },
+                      "&:disabled": {
+                        bgcolor: colors.lightBorder,
+                        color: colors.lightText,
                       },
                     }}
                   >
