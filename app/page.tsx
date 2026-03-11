@@ -864,13 +864,11 @@ export default function HomePage() {
               </IconButton>
               <Stack spacing={0.25} sx={{ flex: 1, textAlign: "center" }}>
                 <Typography
-                  variant="caption"
+                  variant="body2"
                   sx={{
-                    fontSize: { xs: "0.75rem", sm: "0.8rem" },
+                    fontSize: { xs: "0.85rem", sm: "0.95rem" },
+                    fontWeight: 500,
                     color: colors.lightText,
-                    fontWeight: 600,
-                    textTransform: "uppercase",
-                    letterSpacing: "0.02em",
                   }}
                 >
                   {selectedPrinter?.name}
