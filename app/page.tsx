@@ -19,6 +19,8 @@ import {
 import InfoIcon from "@mui/icons-material/Info";
 import ArrowBackIcon from "@mui/icons-material/ArrowBack";
 import HomeIcon from "@mui/icons-material/Home";
+import ChevronLeftIcon from "@mui/icons-material/ChevronLeft";
+import ChevronRightIcon from "@mui/icons-material/ChevronRight";
 
 type Step = {
   id: string;
@@ -1051,21 +1053,15 @@ export default function HomePage() {
                   </Box>
                 )}
 
-                {/* Navigation Buttons */}
-                <Stack direction="row" spacing={2} sx={{ mt: { xs: 3, sm: 4 } }}>
-                  <Button
+                {/* Navigation Chevrons */}
+                <Stack direction="row" spacing={2} sx={{ mt: { xs: 3, sm: 4 }, justifyContent: "center" }}>
+                  <IconButton
                     onClick={goPrevStep}
                     disabled={activeStepIndex === 0}
-                    variant="outlined"
                     sx={{
-                      flex: 1,
-                      py: { xs: 1.125, sm: 1.375 },
-                      fontSize: { xs: "0.9rem", sm: "1rem" },
-                      fontWeight: 600,
-                      textTransform: "none",
-                      borderRadius: "6px",
                       color: activeStepIndex === 0 ? colors.lightText : colors.text,
-                      borderColor: activeStepIndex === 0 ? colors.lightBorder : colors.lightBorder,
+                      border: `1px solid ${colors.lightBorder}`,
+                      borderRadius: "6px",
                       transition: "all 0.2s ease",
                       "&:hover": {
                         borderColor: activeStepIndex === 0 ? colors.lightBorder : colors.primary,
@@ -1073,39 +1069,34 @@ export default function HomePage() {
                         color: activeStepIndex === 0 ? colors.lightText : "white",
                       },
                       "&:disabled": {
-                        bgcolor: "transparent",
-                        borderColor: colors.lightBorder,
                         color: colors.lightText,
+                        borderColor: colors.lightBorder,
                       },
                     }}
                   >
-                    Previous
-                  </Button>
-                  <Button
+                    <ChevronLeftIcon />
+                  </IconButton>
+                  <IconButton
                     onClick={goNextStep}
                     disabled={activeStepIndex >= steps.length - 1}
-                    variant="contained"
                     sx={{
-                      flex: 1,
-                      py: { xs: 1.125, sm: 1.375 },
-                      fontSize: { xs: "0.9rem", sm: "1rem" },
-                      fontWeight: 600,
-                      textTransform: "none",
+                      color: activeStepIndex >= steps.length - 1 ? colors.lightText : colors.text,
+                      border: `1px solid ${colors.lightBorder}`,
                       borderRadius: "6px",
-                      bgcolor: activeStepIndex >= steps.length - 1 ? colors.lightBorder : colors.primary,
-                      color: "white",
                       transition: "all 0.2s ease",
                       "&:hover": {
-                        bgcolor: activeStepIndex >= steps.length - 1 ? colors.lightBorder : "#0083A3",
+                        borderColor: activeStepIndex >= steps.length - 1 ? colors.lightBorder : colors.primary,
+                        bgcolor: activeStepIndex >= steps.length - 1 ? "transparent" : colors.primary,
+                        color: activeStepIndex >= steps.length - 1 ? colors.lightText : "white",
                       },
                       "&:disabled": {
-                        bgcolor: colors.lightBorder,
                         color: colors.lightText,
+                        borderColor: colors.lightBorder,
                       },
                     }}
                   >
-                    Next
-                  </Button>
+                    <ChevronRightIcon />
+                  </IconButton>
                 </Stack>
               </CardContent>
             </Card>
