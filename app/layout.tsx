@@ -17,25 +17,19 @@ export default function RootLayout({ children }: RootLayoutProps) {
 
   return (
     <html lang="en">
-      <body style={{ display: "flex", flexDirection: "column", minHeight: "100vh", margin: 0, paddingBottom: "110px" }}>
+      <body style={{ display: "flex", flexDirection: "column", minHeight: "100vh", margin: 0 }}>
         <div style={{ flex: 1 }}>
           <Providers>{children}</Providers>
         </div>
         <footer
           style={{
-            position: "fixed",
-            bottom: 0,
-            left: 0,
-            right: 0,
             padding: "20px 24px",
             textAlign: "center",
             fontSize: "14px",
             color: "#ffffff",
             backgroundColor: "#000000",
-            borderTop: "1px solid #6A1B82",
             fontWeight: 500,
             letterSpacing: "0.3px",
-            zIndex: 1000,
           }}
         >
           © {currentYear} Designed by the Digital Design & Media Team · Learning & Teaching Innovation · RMIT College of Vocational Education
