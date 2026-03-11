@@ -80,6 +80,8 @@ export type TutorialState = {
   papers: Paper[];
   printers: Printer[];
   deletedItems?: DeletedItem[];
+  homepageTitle?: string;
+  homepageDescription?: string;
 };
 
 // ============= UTILITY FUNCTIONS =============
@@ -327,11 +329,50 @@ export async function getTutorialState(): Promise<TutorialState> {
       };
     });
 
+    // Get homepage settings
+    let homepageTitle = "";
+    let homepageDescription = "";
+    try {
+      const settingsRef = db.collection("settings").doc("homepage");
+      const settingsSnapshot = await settingsRef.get();
+      if (settingsSnapshot.exists) {
+        const settingsData = settingsSnapshot.data();
+        homepageTitle = settingsData?.title || "";
+        homepageDescription = settingsData?.description || "";
+      }
+    } catch (error) {
+      console.warn("Failed to fetch homepage settings:", error);
+    }
+
     console.log("[getTutorialState] Successfully fetched all data");
-    return { papers, printers, deletedItems };
+    return { papers, printers, deletedItems, homepageTitle, homepageDescription };
   } catch (error) {
     console.error("Error getting tutorial state:", error);
     throw new Error(`Failed to load tutorial state: ${error instanceof Error ? error.message : "Unknown error"}`);
+  }
+}
+
+// ============= HOMEPAGE SETTINGS =============
+
+export async function updateHomepageSettings(title: string, description: string): Promise<void> {
+  if (!title.trim()) {
+    throw new Error("Homepage title is required");
+  }
+  if (!description.trim()) {
+    throw new Error("Homepage description is required");
+  }
+
+  try {
+    const settingsRef = db.collection("settings").doc("homepage");
+    await settingsRef.set({
+      title: title.trim(),
+      description: description.trim(),
+      updatedAt: new Date(),
+    });
+    console.log("[updateHomepageSettings] Successfully saved homepage settings");
+  } catch (error) {
+    console.error("Error updating homepage settings:", error);
+    throw new Error(`Failed to save homepage settings: ${error instanceof Error ? error.message : "Unknown error"}`);
   }
 }
 

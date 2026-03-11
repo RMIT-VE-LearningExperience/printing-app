@@ -22,6 +22,7 @@ import {
   restoreDeletedItem,
   permanentlyDeleteItem,
   removeInvalidPapersFromPrinter,
+  updateHomepageSettings,
   type TutorialState,
 } from "../../../lib/tutorial-store";
 
@@ -149,6 +150,11 @@ type ActionPayload =
   | {
       action: "removeInvalidPapersFromPrinter";
       printerId: string;
+    }
+  | {
+      action: "updateHomepageSettings";
+      title: string;
+      description: string;
     };
 
 async function executeAction(payload: ActionPayload): Promise<TutorialState> {
@@ -277,6 +283,10 @@ async function executeAction(payload: ActionPayload): Promise<TutorialState> {
 
     case "removeInvalidPapersFromPrinter":
       return removeInvalidPapersFromPrinter(payload.printerId);
+
+    case "updateHomepageSettings":
+      await updateHomepageSettings(payload.title, payload.description);
+      return getTutorialState();
 
     default:
       throw new Error(`Unknown action: ${(payload as { action: string }).action}`);

@@ -47,6 +47,7 @@ import {
   ChevronRight as ChevronRightIcon,
   Add as AddIcon,
   Info as InfoIcon,
+  Check as CheckIcon,
 } from "@mui/icons-material";
 import { type ChangeEvent, useEffect, useMemo, useRef, useState } from "react";
 
@@ -346,6 +347,13 @@ export default function AdminPage() {
         }
 
         setTutorialState(data.state);
+        // Set homepage settings from tutorial state
+        if (data.state.homepageTitle) {
+          setHomePageTitle(data.state.homepageTitle);
+        }
+        if (data.state.homepageDescription) {
+          setHomePageDescription(data.state.homepageDescription);
+        }
       } catch {
         setError("Could not load tutorial data.");
       } finally {
@@ -559,6 +567,28 @@ export default function AdminPage() {
     if (!file) return;
     setEditStepImageName(file.name);
     setEditStepImage(await toDataUrl(file));
+  };
+
+  // Homepage settings handler
+  const handleSaveHomepageSettings = async () => {
+    if (!homePageTitle.trim()) {
+      setError("Homepage header is required");
+      return;
+    }
+    if (!homePageDescription.trim()) {
+      setError("Homepage description is required");
+      return;
+    }
+
+    try {
+      await runAction("updateHomepageSettings", {
+        title: homePageTitle,
+        description: homePageDescription,
+      });
+      setError(null);
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Failed to save homepage settings");
+    }
   };
 
   // Printer handlers
@@ -1355,44 +1385,61 @@ export default function AdminPage() {
             {/* Homepage Customization - Only on HOME page */}
             {!showFullPaperList && !showAllColoursView && !selectedPrinterId && !showDeletedItems && (
               <Stack spacing={2} sx={{ mb: 2, pb: 2 }}>
-                <TextField
-                  label="Homepage Header"
-                  size="small"
-                  fullWidth
-                  value={homePageTitle}
-                  onChange={(e) => setHomePageTitle(e.target.value)}
-                  placeholder="e.g., PRINTER GUIDE"
-                  sx={{
-                    "& .MuiInputBase-input": {
-                      color: "#ffffff",
-                    },
-                    "& .MuiInputBase-input::placeholder": {
-                      color: "rgba(255, 255, 255, 0.5)",
-                      opacity: 1,
-                    },
-                    "& .MuiOutlinedInput-root": {
-                      "& fieldset": {
-                        borderColor: "rgba(255, 255, 255, 0.2)",
+                <Stack direction="row" spacing={1} sx={{ alignItems: "flex-end" }}>
+                  <TextField
+                    label="Homepage Header"
+                    size="small"
+                    fullWidth
+                    required
+                    value={homePageTitle}
+                    onChange={(e) => setHomePageTitle(e.target.value)}
+                    placeholder="e.g., PRINTER GUIDE"
+                    sx={{
+                      "& .MuiInputBase-input": {
+                        color: "#ffffff",
                       },
-                      "&:hover fieldset": {
-                        borderColor: "rgba(255, 255, 255, 0.3)",
+                      "& .MuiInputBase-input::placeholder": {
+                        color: "rgba(255, 255, 255, 0.5)",
+                        opacity: 1,
                       },
-                      "&.Mui-focused fieldset": {
-                        borderColor: "#009DC9",
+                      "& .MuiOutlinedInput-root": {
+                        "& fieldset": {
+                          borderColor: "rgba(255, 255, 255, 0.2)",
+                        },
+                        "&:hover fieldset": {
+                          borderColor: "rgba(255, 255, 255, 0.3)",
+                        },
+                        "&.Mui-focused fieldset": {
+                          borderColor: "#009DC9",
+                        },
                       },
-                    },
-                    "& .MuiInputLabel-root": {
-                      color: "rgba(255, 255, 255, 0.7)",
-                      "&.Mui-focused": {
-                        color: "#009DC9",
+                      "& .MuiInputLabel-root": {
+                        color: "rgba(255, 255, 255, 0.7)",
+                        "&.Mui-focused": {
+                          color: "#009DC9",
+                        },
                       },
-                    },
-                  }}
-                />
+                    }}
+                  />
+                  <IconButton
+                    onClick={handleSaveHomepageSettings}
+                    size="small"
+                    sx={{
+                      color: "#009DC9",
+                      "&:hover": {
+                        bgcolor: "rgba(0, 157, 201, 0.1)",
+                      },
+                    }}
+                    title="Save homepage settings"
+                  >
+                    <CheckIcon />
+                  </IconButton>
+                </Stack>
                 <TextField
                   label="Homepage Description"
                   size="small"
                   fullWidth
+                  required
                   multiline
                   rows={3}
                   value={homePageDescription}

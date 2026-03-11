@@ -336,7 +336,7 @@ export default function HomePage() {
                 color: colors.text,
               }}
             >
-              Printing Guide
+              {data.homepageTitle || "Printing Guide"}
             </Typography>
             <Typography
               variant="body1"
@@ -347,7 +347,7 @@ export default function HomePage() {
                 textAlign: "center",
               }}
             >
-              Step-by-step guidance for achieving perfect prints with every paper type.
+              {data.homepageDescription || "Step-by-step guidance for achieving perfect prints with every paper type."}
             </Typography>
           </Stack>
 
