@@ -1017,6 +1017,8 @@ export default function HomePage() {
                       color: colors.text,
                       lineHeight: 1.6,
                       mb: { xs: 2, sm: 3 },
+                      whiteSpace: "pre-wrap",
+                      wordBreak: "break-word",
                       "& p": { mb: 1 },
                       "& ul, & ol": { pl: 2, mb: 1 },
                       "& li": { mb: 0.5 },
