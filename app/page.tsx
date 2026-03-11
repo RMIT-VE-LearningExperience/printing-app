@@ -661,18 +661,32 @@ export default function HomePage() {
             >
               <ArrowBackIcon />
             </IconButton>
-            <Typography
-              variant="body2"
-              sx={{
-                fontSize: { xs: "0.85rem", sm: "0.95rem" },
-                fontWeight: 500,
-                color: colors.lightText,
-                flex: 1,
-                textAlign: "center",
-              }}
-            >
-              {selectedPrinter?.name}
-            </Typography>
+            <Stack spacing={0.25} sx={{ flex: 1, textAlign: "center" }}>
+              <Typography
+                variant="body2"
+                sx={{
+                  fontSize: { xs: "0.85rem", sm: "0.95rem" },
+                  fontWeight: 500,
+                  color: colors.lightText,
+                }}
+              >
+                {selectedPrinter?.name}
+              </Typography>
+              {selectedPaper && (
+                <Typography
+                  variant="caption"
+                  sx={{
+                    fontSize: { xs: "0.75rem", sm: "0.8rem" },
+                    fontWeight: 600,
+                    color: colors.primary,
+                    letterSpacing: "0.05em",
+                    textTransform: "uppercase",
+                  }}
+                >
+                  Paper: {selectedPaper.name}
+                </Typography>
+              )}
+            </Stack>
             <IconButton
               onClick={resetToHome}
               sx={{
@@ -686,24 +700,6 @@ export default function HomePage() {
               <HomeIcon />
             </IconButton>
           </Stack>
-
-          {/* Paper Name (as secondary info) */}
-          {selectedPaper && (
-            <Box sx={{ mb: { xs: 3, sm: 4 }, textAlign: "center" }}>
-              <Typography
-                variant="body2"
-                sx={{
-                  fontSize: { xs: "0.9rem", sm: "0.95rem" },
-                  fontWeight: 600,
-                  color: colors.primary,
-                  letterSpacing: "0.05em",
-                  textTransform: "uppercase",
-                }}
-              >
-                Paper: {selectedPaper.name}
-              </Typography>
-            </Box>
-          )}
 
           {/* Header */}
           <Stack spacing={2} sx={{ mb: { xs: 4, sm: 5 }, textAlign: "center" }}>
@@ -726,7 +722,7 @@ export default function HomePage() {
                 lineHeight: 1.5,
               }}
             >
-              Choose the colour to preserve:
+              I want to preserve:
             </Typography>
           </Stack>
 
