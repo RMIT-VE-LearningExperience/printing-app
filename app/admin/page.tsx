@@ -2752,7 +2752,7 @@ export default function AdminPage() {
       >
         <DialogTitle sx={{ backgroundColor: "#F4FAFF", borderBottom: "2px solid #BDE9FF", fontWeight: 700, color: "#009DC9", fontSize: "1.1rem", py: 2.5 }}>NEW PRINTER</DialogTitle>
         <DialogContent sx={{ pt: 16, backgroundColor: "#ffffff" }}>
-          <Stack spacing={2}>
+          <Stack spacing={2} sx={{ pt: 2 }}>
             <Box sx={{ mt: 8 }}>
               <Stack direction="row" alignItems="center" spacing={0.5} sx={{ mb: 1 }}>
                 <Typography variant="body2" fontWeight={500}>
@@ -2870,7 +2870,7 @@ export default function AdminPage() {
       >
         <DialogTitle sx={{ backgroundColor: "#F4FAFF", borderBottom: "2px solid #BDE9FF", fontWeight: 700, color: "#009DC9", fontSize: "1.1rem", py: 2.5 }}>EDIT PRINTER</DialogTitle>
         <DialogContent sx={{ pt: 16, backgroundColor: "#ffffff" }}>
-          <Stack spacing={2}>
+          <Stack spacing={2} sx={{ pt: 2 }}>
             <Box sx={{ mt: 8 }}>
               <Stack direction="row" alignItems="center" spacing={0.5} sx={{ mb: 1 }}>
                 <Typography variant="body2" fontWeight={500}>
@@ -2992,7 +2992,7 @@ export default function AdminPage() {
       >
         <DialogTitle sx={{ backgroundColor: "#F4FAFF", borderBottom: "2px solid #BDE9FF", fontWeight: 700, color: "#009DC9", fontSize: "1.1rem", py: 2.5 }}>NEW PAPER</DialogTitle>
         <DialogContent sx={{ pt: 16, backgroundColor: "#ffffff" }}>
-          <Stack spacing={0}>
+          <Stack spacing={0} sx={{ pt: 2 }}>
             {/* Accordion-style sections */}
 
             {/* Search Existing Papers Section */}
@@ -3340,7 +3340,7 @@ export default function AdminPage() {
       >
         <DialogTitle sx={{ backgroundColor: "#F4FAFF", borderBottom: "2px solid #BDE9FF", fontWeight: 700, color: "#009DC9", fontSize: "1.1rem", py: 2.5 }}>EDIT PAPER</DialogTitle>
         <DialogContent sx={{ pt: 16, backgroundColor: "#ffffff" }}>
-          <Stack spacing={2}>
+          <Stack spacing={2} sx={{ pt: 2 }}>
             <Box sx={{ mt: 8 }}>
               <Stack direction="row" alignItems="center" spacing={0.5} sx={{ mb: 1 }}>
                 <Typography variant="body2" fontWeight={500}>
@@ -3660,7 +3660,7 @@ export default function AdminPage() {
       >
         <DialogTitle sx={{ backgroundColor: "#F4FAFF", borderBottom: "2px solid #BDE9FF", fontWeight: 700, color: "#009DC9", fontSize: "1.1rem", py: 2.5 }}>NEW COLOUR</DialogTitle>
         <DialogContent sx={{ pt: 16, backgroundColor: "#ffffff" }}>
-          <Stack spacing={2}>
+          <Stack spacing={2} sx={{ pt: 2 }}>
             <Box sx={{ mt: 8 }}>
               <Stack direction="row" alignItems="center" spacing={0.5} sx={{ mb: 1 }}>
                 <Typography variant="body2" fontWeight={500}>
@@ -3777,7 +3777,7 @@ export default function AdminPage() {
       >
         <DialogTitle sx={{ backgroundColor: "#F4FAFF", borderBottom: "2px solid #BDE9FF", fontWeight: 700, color: "#009DC9", fontSize: "1.1rem", py: 2.5 }}>EDIT COLOUR</DialogTitle>
         <DialogContent sx={{ pt: 16, backgroundColor: "#ffffff" }}>
-          <Stack spacing={2}>
+          <Stack spacing={2} sx={{ pt: 2 }}>
             <Box sx={{ mt: 8 }}>
               <Stack direction="row" alignItems="center" spacing={0.5} sx={{ mb: 1 }}>
                 <Typography variant="body2" fontWeight={500}>
