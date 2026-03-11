@@ -398,11 +398,62 @@ When testing after any changes:
   - Removed #6A1B82 border outline from footer
   - Footer now sits at the bottom of the page after all content
   - Updated in `app/layout.tsx` - footer styling
+  - Git commit: `004dd39` - Update footer: remove fixed position and border
+
 - **Added icon borders to Steps page**
   - Added outline borders (1px solid lightBorder with 6px border-radius) to back arrow and home icons in Steps page
   - Now consistent with icon styling across all other pages (Printer, Paper, Colour selection pages)
   - Updated in `app/page.tsx` - icon button styling
   - Git commit: `645e55e` - Add outline borders to Steps page icons
+
+- **Reorganized Steps page card layout**
+  - Moved step title next to step number on the same horizontal line using Stack
+  - Removed separate h5 element displaying step name
+  - Layout now displays as: [1] Select your Printer on one line
+  - Git commit: `4fbe2dd` - Reorganize Steps page card layout
+
+- **Centered progress indicator and stacked text**
+  - Changed progress indicator from responsive row/column layout to always column direction
+  - Center-aligned entire progress indicator element (alignItems: "center", justifyContent: "center")
+  - "STEP X OF Y" text now displays above the progress dots
+  - Git commit: `cd6b1db` - Center-align progress indicator and stack text above dots
+
+- **Replaced Previous/Next buttons with Material Design 3 chevron icons**
+  - Added ChevronLeftIcon and ChevronRightIcon imports from @mui/icons-material
+  - Replaced Previous/Next buttons with IconButton components using chevron icons
+  - Navigation now uses left chevron (previous) and right chevron (next) icons
+  - Maintained border styling, hover effects, and disabled state styling
+  - Git commit: `991dd2c` - Replace Previous/Next buttons with Material Design 3 chevron icons
+
+- **Added image enlargement modal to Steps page**
+  - Made step image clickable with cursor pointer and hover shadow effect
+  - Clicking image opens full-screen modal with enlarged image
+  - Clicking/tapping outside image closes the modal
+  - Modal features dark overlay (rgba 0,0,0 0.7) and responsive sizing
+  - Git commit: `42ec096` - Add image enlargement modal to Steps page
+
+- **Preserved line breaks in step content text**
+  - Added whiteSpace: "pre-wrap" to display text exactly as it appears in CMS
+  - Added wordBreak: "break-word" for proper text wrapping on longer lines
+  - Line breaks (return/enter characters) now display as new lines in user-facing view
+  - Git commit: `cb61df3` - Preserve line breaks in step content text
+
+- **Synced homepage header and description from CMS to user-facing view**
+  - Added homepageTitle and homepageDescription to TutorialState type
+  - Created updateHomepageSettings() function in tutorial-store.ts to save settings to Firestore
+  - Updated getTutorialState() to fetch homepage settings from settings/homepage document
+  - Added updateHomepageSettings action type and case handler in API route
+  - Made Homepage Header and Homepage Description fields required in CMS admin
+  - Added check/save icon button next to Homepage Header field
+  - Added validation for both fields before saving
+  - Updated user-facing homepage to display values from CMS (with fallbacks)
+  - Git commit: `7b8dcc4` - Sync homepage header and description from CMS to user-facing view
+
+- **Added top padding to modal Stack elements**
+  - Added pt: 2 (padding-top) to Stack components in all CMS modal dialogs
+  - Updated modals: Add Printer, Edit Printer, New Paper, Edit Paper, New Colour, Edit Colour
+  - Improves spacing and visual hierarchy within modal content areas
+  - Git commit: `8beb1d3` - Add top padding to modal Stack elements
 
 ### Previous Session (March 5-9, 2026)
 - Fixed duplicate case statements in API route
