@@ -1,6 +1,6 @@
 # Print App CMS - Progress Log
 
-**Last Updated:** March 5, 2026
+**Last Updated:** March 11, 2026
 **Project:** Print App CMS System
 **User:** Arielle Lee (arielle.lee@rmit.edu.au)
 
@@ -392,7 +392,19 @@ When testing after any changes:
 
 ## Session History
 
-### Current Session (March 5-9, 2026)
+### Current Session (March 11, 2026)
+- **Updated footer styling**
+  - Changed footer from center-aligned with fixed positioning to static positioning
+  - Removed #6A1B82 border outline from footer
+  - Footer now sits at the bottom of the page after all content
+  - Updated in `app/layout.tsx` - footer styling
+- **Added icon borders to Steps page**
+  - Added outline borders (1px solid lightBorder with 6px border-radius) to back arrow and home icons in Steps page
+  - Now consistent with icon styling across all other pages (Printer, Paper, Colour selection pages)
+  - Updated in `app/page.tsx` - icon button styling
+  - Git commit: `645e55e` - Add outline borders to Steps page icons
+
+### Previous Session (March 5-9, 2026)
 - Fixed duplicate case statements in API route
 - Verified all three toggle types (Printers, Papers, Colours) are working
 - **Fixed toggle visibility** - Red toggles now hide items from user-facing view
