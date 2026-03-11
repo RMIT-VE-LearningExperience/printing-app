@@ -919,12 +919,12 @@ export default function HomePage() {
 
             {/* Progress Indicator */}
             <Stack
-              direction={{ xs: "column", sm: "row" }}
+              direction="column"
               spacing={{ xs: 1.5, sm: 2 }}
               sx={{
                 mb: { xs: 3, sm: 4 },
-                alignItems: { xs: "center", sm: "flex-start" },
-                justifyContent: { xs: "center", sm: "space-between" },
+                alignItems: "center",
+                justifyContent: "center",
               }}
             >
               <Typography
