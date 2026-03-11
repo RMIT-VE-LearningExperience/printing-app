@@ -970,52 +970,40 @@ export default function HomePage() {
               onTouchEnd={handleStepTouchEnd}
             >
               <CardContent sx={{ p: { xs: 2.5, sm: 3.5 } }}>
-                {/* Step Number in Box */}
-                <Box
-                  sx={{
-                    display: "inline-flex",
-                    alignItems: "center",
-                    justifyContent: "center",
-                    width: 40,
-                    height: 40,
-                    bgcolor: colors.darkBg,
-                    color: colors.lightBg,
-                    fontWeight: 700,
-                    borderRadius: 1,
-                    fontSize: "1.1rem",
-                    mb: { xs: 2, sm: 2.5 },
-                  }}
-                >
-                  {activeStepIndex + 1}
-                </Box>
-
-                {/* Step Name */}
-                <Typography
-                  variant="h5"
-                  sx={{
-                    fontSize: { xs: "1.15rem", sm: "1.35rem" },
-                    fontWeight: 700,
-                    color: colors.text,
-                    mb: { xs: 1.5, sm: 2 },
-                  }}
-                >
-                  {activeStep.name}
-                </Typography>
-
-                {/* Step Title */}
-                {activeStep.title && (
-                  <Typography
-                    variant="h6"
+                {/* Step Number and Title */}
+                <Stack direction="row" spacing={1.5} alignItems="center" sx={{ mb: { xs: 2, sm: 2.5 } }}>
+                  <Box
                     sx={{
-                      fontSize: { xs: "1rem", sm: "1.1rem" },
-                      fontWeight: 600,
-                      color: colors.primary,
-                      mb: { xs: 1.5, sm: 2 },
+                      display: "inline-flex",
+                      alignItems: "center",
+                      justifyContent: "center",
+                      width: 40,
+                      height: 40,
+                      bgcolor: colors.darkBg,
+                      color: colors.lightBg,
+                      fontWeight: 700,
+                      borderRadius: 1,
+                      fontSize: "1.1rem",
+                      flexShrink: 0,
                     }}
                   >
-                    {activeStep.title}
-                  </Typography>
-                )}
+                    {activeStepIndex + 1}
+                  </Box>
+
+                  {/* Step Title */}
+                  {activeStep.title && (
+                    <Typography
+                      variant="h6"
+                      sx={{
+                        fontSize: { xs: "1rem", sm: "1.1rem" },
+                        fontWeight: 600,
+                        color: colors.primary,
+                      }}
+                    >
+                      {activeStep.title}
+                    </Typography>
+                  )}
+                </Stack>
 
                 {/* Step Content */}
                 {activeStep.contentHtml && (
