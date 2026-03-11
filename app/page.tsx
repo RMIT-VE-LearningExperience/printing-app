@@ -15,6 +15,7 @@ import {
   IconButton,
   Grid,
   Stack,
+  Modal,
 } from "@mui/material";
 import InfoIcon from "@mui/icons-material/Info";
 import ArrowBackIcon from "@mui/icons-material/ArrowBack";
@@ -96,6 +97,7 @@ export default function HomePage() {
   const [selectedPaperId, setSelectedPaperId] = useState<string | null>(null);
   const [selectedColourId, setSelectedColourId] = useState<string | null>(null);
   const [activeStepIndex, setActiveStepIndex] = useState(0);
+  const [isImageEnlarged, setIsImageEnlarged] = useState(false);
   const touchStartXRef = useRef<number | null>(null);
 
   useEffect(() => {
@@ -1032,25 +1034,68 @@ export default function HomePage() {
 
                 {/* Step Image */}
                 {activeStep.imageDataUrl && (
-                  <Box
-                    sx={{
-                      position: "relative",
-                      width: "100%",
-                      paddingBottom: "60%",
-                      overflow: "hidden",
-                      borderRadius: 1,
-                      bgcolor: "#f5f5f5",
-                      mb: { xs: 2, sm: 3 },
-                    }}
-                  >
-                    <Image
-                      src={activeStep.imageDataUrl}
-                      alt={activeStep.title || activeStep.name}
-                      fill
-                      style={{ objectFit: "contain" }}
-                      sizes="(max-width: 600px) 100vw, (max-width: 960px) 90vw, 800px"
-                    />
-                  </Box>
+                  <>
+                    <Box
+                      onClick={() => setIsImageEnlarged(true)}
+                      sx={{
+                        position: "relative",
+                        width: "100%",
+                        paddingBottom: "60%",
+                        overflow: "hidden",
+                        borderRadius: 1,
+                        bgcolor: "#f5f5f5",
+                        mb: { xs: 2, sm: 3 },
+                        cursor: "pointer",
+                        transition: "all 0.2s ease",
+                        "&:hover": {
+                          boxShadow: colors.cardShadowHover,
+                        },
+                      }}
+                    >
+                      <Image
+                        src={activeStep.imageDataUrl}
+                        alt={activeStep.title || activeStep.name}
+                        fill
+                        style={{ objectFit: "contain" }}
+                        sizes="(max-width: 600px) 100vw, (max-width: 960px) 90vw, 800px"
+                      />
+                    </Box>
+
+                    {/* Image Modal */}
+                    <Modal
+                      open={isImageEnlarged}
+                      onClose={() => setIsImageEnlarged(false)}
+                      sx={{
+                        display: "flex",
+                        alignItems: "center",
+                        justifyContent: "center",
+                        bgcolor: "rgba(0, 0, 0, 0.7)",
+                      }}
+                    >
+                      <Box
+                        sx={{
+                          position: "relative",
+                          width: { xs: "90%", sm: "80%", md: "70%" },
+                          maxWidth: "900px",
+                          maxHeight: "90vh",
+                          borderRadius: "8px",
+                          overflow: "hidden",
+                        }}
+                      >
+                        <Image
+                          src={activeStep.imageDataUrl}
+                          alt={activeStep.title || activeStep.name}
+                          width={900}
+                          height={600}
+                          style={{
+                            width: "100%",
+                            height: "auto",
+                            objectFit: "contain",
+                          }}
+                        />
+                      </Box>
+                    </Modal>
+                  </>
                 )}
 
                 {/* Navigation Chevrons */}
