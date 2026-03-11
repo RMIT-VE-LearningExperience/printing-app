@@ -683,7 +683,7 @@ export default function HomePage() {
                     textTransform: "uppercase",
                   }}
                 >
-                  Paper: {selectedPaper.name}
+                  {selectedPaper.name}
                 </Typography>
               )}
             </Stack>
@@ -712,7 +712,7 @@ export default function HomePage() {
                 color: colors.text,
               }}
             >
-              Colour Selection
+              Colour Management
             </Typography>
             <Typography
               variant="body1"
@@ -876,11 +876,13 @@ export default function HomePage() {
                   {selectedPrinter?.name}
                 </Typography>
                 <Typography
-                  variant="body2"
+                  variant="caption"
                   sx={{
-                    fontSize: { xs: "0.85rem", sm: "0.9rem" },
-                    color: colors.lightText,
-                    fontWeight: 500,
+                    fontSize: { xs: "0.75rem", sm: "0.8rem" },
+                    fontWeight: 600,
+                    color: colors.primary,
+                    letterSpacing: "0.05em",
+                    textTransform: "uppercase",
                   }}
                 >
                   {selectedPaper?.name}
