@@ -48,6 +48,12 @@ import {
   Add as AddIcon,
   Info as InfoIcon,
   Check as CheckIcon,
+  FormatBold as FormatBoldIcon,
+  FormatItalic as FormatItalicIcon,
+  FormatUnderlined as FormatUnderlinedIcon,
+  List as ListIcon,
+  Link as LinkIcon,
+  LinkOff as LinkOffIcon,
 } from "@mui/icons-material";
 import { type ChangeEvent, useEffect, useMemo, useRef, useState } from "react";
 
@@ -152,25 +158,55 @@ function RichHtmlEditor({ label, value, onChange }: RichHtmlEditorProps) {
       <Typography variant="body2" fontWeight={500} sx={{ mb: 1 }}>
         {label}
       </Typography>
-      <Stack direction="row" spacing={1} sx={{ mb: 1, flexWrap: "wrap" }}>
-        <Button size="small" variant="outlined" onMouseDown={(e) => { e.preventDefault(); runCommand("formatBlock", "h3"); }}>
-          Heading
-        </Button>
-        <Button size="small" variant="outlined" onMouseDown={(e) => { e.preventDefault(); runCommand("bold"); }}>
-          Bold
-        </Button>
-        <Button size="small" variant="outlined" onMouseDown={(e) => { e.preventDefault(); runCommand("italic"); }}>
-          Italic
-        </Button>
-        <Button size="small" variant="outlined" onMouseDown={(e) => { e.preventDefault(); runCommand("insertUnorderedList"); }}>
-          Bullets
-        </Button>
-        <Button size="small" variant="outlined" onMouseDown={(e) => { e.preventDefault(); insertLink(); }}>
-          Insert link
-        </Button>
-        <Button size="small" variant="outlined" onMouseDown={(e) => { e.preventDefault(); runCommand("unlink"); }}>
-          Remove link
-        </Button>
+      <Stack direction="row" spacing={0.5} sx={{ mb: 1, flexWrap: "wrap" }}>
+        <IconButton
+          size="small"
+          onMouseDown={(e) => { e.preventDefault(); runCommand("bold"); }}
+          title="Bold"
+          sx={{ color: "#009DC9" }}
+        >
+          <FormatBoldIcon />
+        </IconButton>
+        <IconButton
+          size="small"
+          onMouseDown={(e) => { e.preventDefault(); runCommand("italic"); }}
+          title="Italic"
+          sx={{ color: "#009DC9" }}
+        >
+          <FormatItalicIcon />
+        </IconButton>
+        <IconButton
+          size="small"
+          onMouseDown={(e) => { e.preventDefault(); runCommand("underline"); }}
+          title="Underline"
+          sx={{ color: "#009DC9" }}
+        >
+          <FormatUnderlinedIcon />
+        </IconButton>
+        <IconButton
+          size="small"
+          onMouseDown={(e) => { e.preventDefault(); runCommand("insertUnorderedList"); }}
+          title="Bullets"
+          sx={{ color: "#009DC9" }}
+        >
+          <ListIcon />
+        </IconButton>
+        <IconButton
+          size="small"
+          onMouseDown={(e) => { e.preventDefault(); insertLink(); }}
+          title="Insert link"
+          sx={{ color: "#009DC9" }}
+        >
+          <LinkIcon />
+        </IconButton>
+        <IconButton
+          size="small"
+          onMouseDown={(e) => { e.preventDefault(); runCommand("unlink"); }}
+          title="Remove link"
+          sx={{ color: "#009DC9" }}
+        >
+          <LinkOffIcon />
+        </IconButton>
       </Stack>
       <Box
         ref={editorRef}
