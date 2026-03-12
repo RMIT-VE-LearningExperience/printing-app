@@ -320,6 +320,14 @@ export default function AdminPage() {
   const [expandedSteps, setExpandedSteps] = useState<string | null>(null);
   const [enlargedStepImageUrl, setEnlargedStepImageUrl] = useState<string | null>(null);
 
+  // Image crop state
+  const [cropModalOpen, setCropModalOpen] = useState(false);
+  const [cropImage, setCropImage] = useState<string>("");
+  const [cropMode, setCropMode] = useState<"printer" | "paper" | "color" | "step" | null>(null);
+  const [cropData, setCropData] = useState({ x: 0, y: 0, width: 0, height: 0 });
+  const canvasRef = useRef<HTMLCanvasElement | null>(null);
+  const cropCanvasRef = useRef<HTMLCanvasElement | null>(null);
+
   // Context menu states
   const [printerMenuAnchor, setPrinterMenuAnchor] = useState<HTMLElement | null>(null);
   const [selectedPrinterForMenu, setSelectedPrinterForMenu] = useState<string | null>(null);
@@ -1284,6 +1292,79 @@ export default function AdminPage() {
     setShowFullPaperList(false);
     setShowAllColoursView(false);
     setShowDeletedItems(false);
+  };
+
+  // Image crop handlers
+  const openCropModal = (imageDataUrl: string, mode: "printer" | "paper" | "color" | "step") => {
+    setCropImage(imageDataUrl);
+    setCropMode(mode);
+    setCropModalOpen(true);
+  };
+
+  const applyCrop = () => {
+    if (!cropImage || !canvasRef.current || !cropCanvasRef.current) return;
+
+    const img = new Image();
+    img.onload = () => {
+      const canvas = canvasRef.current!;
+      canvas.width = img.width;
+      canvas.height = img.height;
+      const ctx = canvas.getContext("2d");
+      if (!ctx) return;
+      ctx.drawImage(img, 0, 0);
+
+      // Calculate 16:9 aspect ratio crop dimensions
+      const maxWidth = img.width;
+      const maxHeight = maxWidth * (9 / 16); // 16:9 aspect ratio
+
+      const cropX = (img.width - maxWidth) / 2;
+      const cropY = (img.height - maxHeight) / 2;
+      const cropWidth = maxWidth;
+      const cropHeight = maxHeight;
+
+      // Create cropped image
+      const cropCanvas = cropCanvasRef.current!;
+      cropCanvas.width = 400; // Output size
+      cropCanvas.height = Math.round(400 * (9 / 16)); // 16:9 ratio
+      const cropCtx = cropCanvas.getContext("2d");
+      if (!cropCtx) return;
+
+      cropCtx.drawImage(
+        img,
+        cropX,
+        cropY,
+        cropWidth,
+        cropHeight,
+        0,
+        0,
+        cropCanvas.width,
+        cropCanvas.height
+      );
+
+      const croppedImageUrl = cropCanvas.toDataURL("image/jpeg", 0.9);
+
+      // Apply cropped image to the appropriate form field
+      if (cropMode === "printer") {
+        setNewPrinterThumbnail(croppedImageUrl);
+      } else if (cropMode === "paper") {
+        setNewPaperThumbnail(croppedImageUrl);
+      } else if (cropMode === "color") {
+        setNewColourThumbnail(croppedImageUrl);
+      } else if (cropMode === "step") {
+        setNewStepImage(croppedImageUrl);
+      }
+
+      setCropModalOpen(false);
+      setCropImage("");
+      setCropMode(null);
+    };
+    img.src = cropImage;
+  };
+
+  const closeCropModal = () => {
+    setCropModalOpen(false);
+    setCropImage("");
+    setCropMode(null);
   };
 
   // Render
@@ -2813,37 +2894,54 @@ export default function AdminPage() {
                 </Typography>
               )}
               {newPrinterThumbnail && (
-                <Box sx={{ position: "relative", display: "inline-block", mt: 1 }}>
-                  <Box
-                    component="img"
-                    src={newPrinterThumbnail}
-                    alt="Thumbnail preview"
-                    sx={{
-                      width: 220,
-                      maxWidth: "100%",
-                      aspectRatio: "4 / 3",
-                      objectFit: "cover",
-                      borderRadius: 1,
-                      border: "1px solid",
-                      borderColor: "divider",
-                    }}
-                  />
-                  <IconButton
-                    size="small"
-                    onClick={() => {
-                      setNewPrinterThumbnail("");
-                      setNewPrinterThumbnailName("");
-                    }}
-                    sx={{
-                      position: "absolute",
-                      top: 0,
-                      right: 0,
-                      bgcolor: "rgba(255, 255, 255, 0.9)",
-                      "&:hover": { bgcolor: "rgba(255, 255, 255, 1)" },
-                    }}
-                  >
-                    ✕
-                  </IconButton>
+                <Box sx={{ mt: 2, display: "flex", gap: 2, alignItems: "flex-start" }}>
+                  <Box sx={{ position: "relative", display: "inline-block" }}>
+                    <Box
+                      component="img"
+                      src={newPrinterThumbnail}
+                      alt="Thumbnail preview"
+                      sx={{
+                        width: 220,
+                        maxWidth: "100%",
+                        aspectRatio: "4 / 3",
+                        objectFit: "cover",
+                        borderRadius: 1,
+                        border: "1px solid",
+                        borderColor: "divider",
+                      }}
+                    />
+                    <IconButton
+                      size="small"
+                      onClick={() => {
+                        setNewPrinterThumbnail("");
+                        setNewPrinterThumbnailName("");
+                      }}
+                      sx={{
+                        position: "absolute",
+                        top: 0,
+                        right: 0,
+                        bgcolor: "rgba(255, 255, 255, 0.9)",
+                        "&:hover": { bgcolor: "rgba(255, 255, 255, 1)" },
+                      }}
+                    >
+                      ✕
+                    </IconButton>
+                  </Box>
+                  <Box sx={{ display: "flex", flexDirection: "column", gap: 1, mt: 1 }}>
+                    <Button
+                      size="small"
+                      variant="outlined"
+                      onClick={() => openCropModal(newPrinterThumbnail, "printer")}
+                      sx={{
+                        color: "#009DC9",
+                        borderColor: "#009DC9",
+                        textTransform: "none",
+                        fontWeight: 600,
+                      }}
+                    >
+                      Crop Image
+                    </Button>
+                  </Box>
                 </Box>
               )}
             </Box>
@@ -3232,37 +3330,54 @@ export default function AdminPage() {
                     </Typography>
                   )}
                   {newPaperThumbnail && (
-                    <Box sx={{ position: "relative", display: "inline-block", mt: 1 }}>
-                      <Box
-                        component="img"
-                        src={newPaperThumbnail}
-                        alt="Thumbnail preview"
-                        sx={{
-                          width: 220,
-                          maxWidth: "100%",
-                          aspectRatio: "4 / 3",
-                          objectFit: "cover",
-                          borderRadius: 1,
-                          border: "1px solid",
-                          borderColor: "divider",
-                        }}
-                      />
-                      <IconButton
-                        size="small"
-                        onClick={() => {
-                          setNewPaperThumbnail("");
-                          setNewPaperThumbnailName("");
-                        }}
-                        sx={{
-                          position: "absolute",
-                          top: 0,
-                          right: 0,
-                          bgcolor: "rgba(255, 255, 255, 0.9)",
-                          "&:hover": { bgcolor: "rgba(255, 255, 255, 1)" },
-                        }}
-                      >
-                        ✕
-                      </IconButton>
+                    <Box sx={{ mt: 2, display: "flex", gap: 2, alignItems: "flex-start" }}>
+                      <Box sx={{ position: "relative", display: "inline-block" }}>
+                        <Box
+                          component="img"
+                          src={newPaperThumbnail}
+                          alt="Thumbnail preview"
+                          sx={{
+                            width: 220,
+                            maxWidth: "100%",
+                            aspectRatio: "4 / 3",
+                            objectFit: "cover",
+                            borderRadius: 1,
+                            border: "1px solid",
+                            borderColor: "divider",
+                          }}
+                        />
+                        <IconButton
+                          size="small"
+                          onClick={() => {
+                            setNewPaperThumbnail("");
+                            setNewPaperThumbnailName("");
+                          }}
+                          sx={{
+                            position: "absolute",
+                            top: 0,
+                            right: 0,
+                            bgcolor: "rgba(255, 255, 255, 0.9)",
+                            "&:hover": { bgcolor: "rgba(255, 255, 255, 1)" },
+                          }}
+                        >
+                          ✕
+                        </IconButton>
+                      </Box>
+                      <Box sx={{ display: "flex", flexDirection: "column", gap: 1, mt: 1 }}>
+                        <Button
+                          size="small"
+                          variant="outlined"
+                          onClick={() => openCropModal(newPaperThumbnail, "paper")}
+                          sx={{
+                            color: "#009DC9",
+                            borderColor: "#009DC9",
+                            textTransform: "none",
+                            fontWeight: 600,
+                          }}
+                        >
+                          Crop Image
+                        </Button>
+                      </Box>
                     </Box>
                   )}
                 </Box>
@@ -3721,37 +3836,54 @@ export default function AdminPage() {
                 </Typography>
               )}
               {newColourThumbnail && (
-                <Box sx={{ position: "relative", display: "inline-block", mt: 1 }}>
-                  <Box
-                    component="img"
-                    src={newColourThumbnail}
-                    alt="Thumbnail preview"
-                    sx={{
-                      width: 220,
-                      maxWidth: "100%",
-                      aspectRatio: "4 / 3",
-                      objectFit: "cover",
-                      borderRadius: 1,
-                      border: "1px solid",
-                      borderColor: "divider",
-                    }}
-                  />
-                  <IconButton
-                    size="small"
-                    onClick={() => {
-                      setNewColourThumbnail("");
-                      setNewColourThumbnailName("");
-                    }}
-                    sx={{
-                      position: "absolute",
-                      top: 0,
-                      right: 0,
-                      bgcolor: "rgba(255, 255, 255, 0.9)",
-                      "&:hover": { bgcolor: "rgba(255, 255, 255, 1)" },
-                    }}
-                  >
-                    ✕
-                  </IconButton>
+                <Box sx={{ mt: 2, display: "flex", gap: 2, alignItems: "flex-start" }}>
+                  <Box sx={{ position: "relative", display: "inline-block" }}>
+                    <Box
+                      component="img"
+                      src={newColourThumbnail}
+                      alt="Thumbnail preview"
+                      sx={{
+                        width: 220,
+                        maxWidth: "100%",
+                        aspectRatio: "4 / 3",
+                        objectFit: "cover",
+                        borderRadius: 1,
+                        border: "1px solid",
+                        borderColor: "divider",
+                      }}
+                    />
+                    <IconButton
+                      size="small"
+                      onClick={() => {
+                        setNewColourThumbnail("");
+                        setNewColourThumbnailName("");
+                      }}
+                      sx={{
+                        position: "absolute",
+                        top: 0,
+                        right: 0,
+                        bgcolor: "rgba(255, 255, 255, 0.9)",
+                        "&:hover": { bgcolor: "rgba(255, 255, 255, 1)" },
+                      }}
+                    >
+                      ✕
+                    </IconButton>
+                  </Box>
+                  <Box sx={{ display: "flex", flexDirection: "column", gap: 1, mt: 1 }}>
+                    <Button
+                      size="small"
+                      variant="outlined"
+                      onClick={() => openCropModal(newColourThumbnail, "color")}
+                      sx={{
+                        color: "#009DC9",
+                        borderColor: "#009DC9",
+                        textTransform: "none",
+                        fontWeight: 600,
+                      }}
+                    >
+                      Crop Image
+                    </Button>
+                  </Box>
                 </Box>
               )}
             </Box>
@@ -3967,37 +4099,54 @@ export default function AdminPage() {
                 </Typography>
               )}
               {newStepImage && (
-                <Box sx={{ position: "relative", display: "inline-block", mt: 1 }}>
-                  <Box
-                    component="img"
-                    src={newStepImage}
-                    alt="Step image preview"
-                    sx={{
-                      width: 220,
-                      maxWidth: "100%",
-                      maxHeight: 300,
-                      objectFit: "cover",
-                      borderRadius: 1,
-                      border: "1px solid",
-                      borderColor: "divider",
-                    }}
-                  />
-                  <IconButton
-                    size="small"
-                    onClick={() => {
-                      setNewStepImage("");
-                      setNewStepImageName("");
-                    }}
-                    sx={{
-                      position: "absolute",
-                      top: 0,
-                      right: 0,
-                      bgcolor: "rgba(255, 255, 255, 0.9)",
-                      "&:hover": { bgcolor: "rgba(255, 255, 255, 1)" },
-                    }}
-                  >
-                    ✕
-                  </IconButton>
+                <Box sx={{ mt: 2, display: "flex", gap: 2, alignItems: "flex-start" }}>
+                  <Box sx={{ position: "relative", display: "inline-block" }}>
+                    <Box
+                      component="img"
+                      src={newStepImage}
+                      alt="Step image preview"
+                      sx={{
+                        width: 220,
+                        maxWidth: "100%",
+                        maxHeight: 300,
+                        objectFit: "cover",
+                        borderRadius: 1,
+                        border: "1px solid",
+                        borderColor: "divider",
+                      }}
+                    />
+                    <IconButton
+                      size="small"
+                      onClick={() => {
+                        setNewStepImage("");
+                        setNewStepImageName("");
+                      }}
+                      sx={{
+                        position: "absolute",
+                        top: 0,
+                        right: 0,
+                        bgcolor: "rgba(255, 255, 255, 0.9)",
+                        "&:hover": { bgcolor: "rgba(255, 255, 255, 1)" },
+                      }}
+                    >
+                      ✕
+                    </IconButton>
+                  </Box>
+                  <Box sx={{ display: "flex", flexDirection: "column", gap: 1, mt: 1 }}>
+                    <Button
+                      size="small"
+                      variant="outlined"
+                      onClick={() => openCropModal(newStepImage, "step")}
+                      sx={{
+                        color: "#009DC9",
+                        borderColor: "#009DC9",
+                        textTransform: "none",
+                        fontWeight: 600,
+                      }}
+                    >
+                      Crop Image
+                    </Button>
+                  </Box>
                 </Box>
               )}
             </Box>
@@ -4167,6 +4316,87 @@ export default function AdminPage() {
           )}
         </Box>
       </Modal>
+
+      {/* Image Crop Modal */}
+      <Dialog
+        open={cropModalOpen}
+        onClose={closeCropModal}
+        maxWidth="sm"
+        fullWidth
+        PaperProps={{
+          sx={{
+            borderRadius: 2,
+            overflow: "visible",
+          },
+        }}
+      >
+        <DialogTitle sx={{ backgroundColor: "#F4FAFF", borderBottom: "2px solid #BDE9FF", fontWeight: 700, color: "#009DC9", fontSize: "1.1rem", py: 2.5 }}>
+          Crop Image (16:9)
+        </DialogTitle>
+        <DialogContent sx={{ pt: 3, pb: 3, backgroundColor: "#ffffff" }}>
+          <Box sx={{ mb: 3 }}>
+            {cropImage && (
+              <Box
+                sx={{
+                  position: "relative",
+                  width: "100%",
+                  maxHeight: 300,
+                  overflow: "hidden",
+                  borderRadius: 1,
+                  border: "1px solid #BDE9FF",
+                  display: "flex",
+                  alignItems: "center",
+                  justifyContent: "center",
+                  backgroundColor: "#f5f5f5",
+                }}
+              >
+                <img
+                  src={cropImage}
+                  alt="Crop preview"
+                  style={{
+                    maxWidth: "100%",
+                    maxHeight: "100%",
+                    objectFit: "contain",
+                  }}
+                />
+              </Box>
+            )}
+          </Box>
+          <Typography variant="body2" color="text.secondary" sx={{ mb: 2 }}>
+            The image will be automatically cropped to 16:9 aspect ratio and optimized for display.
+          </Typography>
+        </DialogContent>
+        <DialogActions sx={{ borderTop: "1px solid #BDE9FF", pt: 2, pb: 2, px: 3, backgroundColor: "#F4FAFF" }}>
+          <Button
+            onClick={closeCropModal}
+            sx={{
+              color: "#009DC9",
+              borderColor: "#009DC9",
+              textTransform: "none",
+              fontWeight: 600,
+            }}
+          >
+            Cancel
+          </Button>
+          <Button
+            onClick={applyCrop}
+            variant="contained"
+            sx={{
+              backgroundColor: "#009DC9",
+              color: "#ffffff",
+              textTransform: "none",
+              fontWeight: 600,
+              "&:hover": { backgroundColor: "#0081A8" },
+            }}
+          >
+            Apply Crop
+          </Button>
+        </DialogActions>
+      </Dialog>
+
+      {/* Canvas elements for image processing (hidden) */}
+      <canvas ref={canvasRef} style={{ display: "none" }} />
+      <canvas ref={cropCanvasRef} style={{ display: "none" }} />
 
       {/* Context Menus */}
       <Menu
