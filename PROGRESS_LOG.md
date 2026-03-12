@@ -483,6 +483,22 @@ When testing after any changes:
   - Consistent with image enlargement feature already in user-facing view
   - Git commit: `bf23474` - Add image enlargement modal to Steps section in CMS admin
 
+- **Added image cropping functionality to all image uploads in CMS admin**
+  - Implemented optional image cropping with 16:9 aspect ratio for all image types
+  - Added "Crop Image" button to:
+    - Printer thumbnails
+    - Paper thumbnails
+    - Color thumbnails
+    - Step images
+  - Uses HTML5 Canvas API for client-side image processing (no external dependencies)
+  - Cropping is completely optional - users can skip and upload original image
+  - Crop modal dialog with preview and automatic aspect ratio cropping
+  - Output: 400px width JPEG with 0.9 quality for optimal size/quality balance
+  - State variables: cropModalOpen, cropImage, cropMode, cropData, canvasRef, cropCanvasRef
+  - Functions: openCropModal(), applyCrop(), closeCropModal() for crop workflow
+  - Crop buttons positioned next to delete buttons in image preview sections
+  - Git commit: `e1c8ec0` - Add image cropping functionality to CMS admin for all image uploads
+
 ### Previous Session (March 5-9, 2026)
 - Fixed duplicate case statements in API route
 - Verified all three toggle types (Printers, Papers, Colours) are working
