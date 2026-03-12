@@ -3897,7 +3897,7 @@ export default function AdminPage() {
         <DialogContent sx={{ pt: 16, backgroundColor: "#ffffff" }}>
           <Stack spacing={2} sx={{ pt: 2 }}>
             <TextField
-              label="e.g. Select your Printer"
+              label="Title"
               value={newStepTitle}
               onChange={(e) => setNewStepTitle(e.target.value)}
               required
