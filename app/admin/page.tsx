@@ -1316,16 +1316,11 @@ export default function AdminPage() {
       setCropImageWidth(img.width);
       setCropImageHeight(img.height);
 
-      // Initialize crop box to center with 16:9 aspect ratio
-      const maxWidth = Math.min(img.width, img.height * (16 / 9));
-      const maxHeight = maxWidth * (9 / 16);
-      const initialX = (img.width - maxWidth) / 2;
-      const initialY = (img.height - maxHeight) / 2;
-
-      setCropBoxX(initialX);
-      setCropBoxY(initialY);
-      setCropBoxWidth(maxWidth);
-      setCropBoxHeight(maxHeight);
+      // Initialize crop box to full image size
+      setCropBoxX(0);
+      setCropBoxY(0);
+      setCropBoxWidth(img.width);
+      setCropBoxHeight(img.height);
     };
     img.src = imageDataUrl;
 
@@ -1335,15 +1330,11 @@ export default function AdminPage() {
   const resetCropBox = () => {
     if (cropImageWidth === 0 || cropImageHeight === 0) return;
 
-    const maxWidth = Math.min(cropImageWidth, cropImageHeight * (16 / 9));
-    const maxHeight = maxWidth * (9 / 16);
-    const initialX = (cropImageWidth - maxWidth) / 2;
-    const initialY = (cropImageHeight - maxHeight) / 2;
-
-    setCropBoxX(initialX);
-    setCropBoxY(initialY);
-    setCropBoxWidth(maxWidth);
-    setCropBoxHeight(maxHeight);
+    // Reset crop box to full image size
+    setCropBoxX(0);
+    setCropBoxY(0);
+    setCropBoxWidth(cropImageWidth);
+    setCropBoxHeight(cropImageHeight);
   };
 
   const handleCropMouseDown = (e: React.MouseEvent, corner?: string) => {
