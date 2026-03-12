@@ -1373,7 +1373,7 @@ export default function AdminPage() {
       setCropBoxY(newY);
     } else if (resizingCorner) {
       let newWidth = cropBoxWidth + deltaX;
-      let newHeight = newWidth * (9 / 16);
+      let newHeight = cropBoxHeight + deltaY;
 
       if (newWidth > 50 && newHeight > 50 && cropBoxX + newWidth <= cropImageWidth && cropBoxY + newHeight <= cropImageHeight) {
         setCropBoxWidth(newWidth);
@@ -4500,8 +4500,8 @@ export default function AdminPage() {
                 sx={{
                   position: "relative",
                   width: "100%",
-                  maxHeight: 350,
-                  overflow: "hidden",
+                  aspectRatio: "4 / 3",
+                  overflow: "auto",
                   borderRadius: 1,
                   border: "1px solid #BDE9FF",
                   display: "flex",
@@ -4517,9 +4517,8 @@ export default function AdminPage() {
                   src={cropImage}
                   alt="Crop preview"
                   sx={{
-                    maxWidth: "100%",
-                    maxHeight: "100%",
-                    objectFit: "contain",
+                    width: "100%",
+                    height: "auto",
                     display: "block",
                   }}
                 />
