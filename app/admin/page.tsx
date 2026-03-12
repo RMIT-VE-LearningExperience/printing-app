@@ -21,6 +21,7 @@ import {
   ListItemText,
   Menu,
   MenuItem,
+  Modal,
   Paper,
   Stack,
   Switch,
@@ -317,6 +318,7 @@ export default function AdminPage() {
   // Sidebar state
   const [expandedPrinterList, setExpandedPrinterList] = useState(true);
   const [expandedSteps, setExpandedSteps] = useState<string | null>(null);
+  const [enlargedStepImageUrl, setEnlargedStepImageUrl] = useState<string | null>(null);
 
   // Context menu states
   const [printerMenuAnchor, setPrinterMenuAnchor] = useState<HTMLElement | null>(null);
@@ -2406,6 +2408,7 @@ export default function AdminPage() {
                                 component="img"
                                 src={step.imageDataUrl}
                                 alt="Step image"
+                                onClick={() => setEnlargedStepImageUrl(step.imageDataUrl)}
                                 sx={{
                                   width: "100%",
                                   maxWidth: 400,
@@ -2413,6 +2416,11 @@ export default function AdminPage() {
                                   objectFit: "cover",
                                   borderRadius: 1,
                                   mt: 1,
+                                  cursor: "pointer",
+                                  transition: "transform 200ms ease",
+                                  "&:hover": {
+                                    transform: "scale(1.02)",
+                                  },
                                 }}
                               />
                             )}
@@ -4124,6 +4132,41 @@ export default function AdminPage() {
           </Button>
         </DialogActions>
       </Dialog>
+
+      {/* Step Image Enlargement Modal */}
+      <Modal
+        open={enlargedStepImageUrl !== null}
+        onClose={() => setEnlargedStepImageUrl(null)}
+        sx={{
+          display: "flex",
+          alignItems: "center",
+          justifyContent: "center",
+          bgcolor: "rgba(0, 0, 0, 0.7)",
+        }}
+      >
+        <Box
+          sx={{
+            position: "relative",
+            width: { xs: "90%", sm: "80%", md: "70%" },
+            maxWidth: "900px",
+            maxHeight: "90vh",
+            borderRadius: "8px",
+            overflow: "hidden",
+          }}
+        >
+          {enlargedStepImageUrl && (
+            <img
+              src={enlargedStepImageUrl}
+              alt="Enlarged step image"
+              style={{
+                width: "100%",
+                height: "auto",
+                objectFit: "contain",
+              }}
+            />
+          )}
+        </Box>
+      </Modal>
 
       {/* Context Menus */}
       <Menu
