@@ -472,6 +472,17 @@ When testing after any changes:
   - Applies to both Add Step and Edit Step modals (RichHtmlEditor component)
   - Git commit: `8303a84` - Modernize RichHtmlEditor toolbar with Material Design 3 icons
 
+- **Added image enlargement modal to Steps section in CMS admin**
+  - Made step images clickable with cursor pointer and hover scale effect (1.02x)
+  - Clicking image opens full-screen modal with enlarged image
+  - Modal features dark overlay (rgba 0,0,0 0.7) and responsive sizing
+  - Clicking/tapping outside image closes the modal
+  - Added enlargedStepImageUrl state variable to track which image is enlarged
+  - Added Modal component to MUI imports
+  - Styling: responsive width (90% xs, 80% sm, 70% md), maxWidth 900px, maxHeight 90vh
+  - Consistent with image enlargement feature already in user-facing view
+  - Git commit: `bf23474` - Add image enlargement modal to Steps section in CMS admin
+
 ### Previous Session (March 5-9, 2026)
 - Fixed duplicate case statements in API route
 - Verified all three toggle types (Printers, Papers, Colours) are working
