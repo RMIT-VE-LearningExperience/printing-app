@@ -4324,10 +4324,10 @@ export default function AdminPage() {
         maxWidth="sm"
         fullWidth
         PaperProps={{
-          sx={{
+          sx: {
             borderRadius: 2,
             overflow: "visible",
-          },
+          }
         }}
       >
         <DialogTitle sx={{ backgroundColor: "#F4FAFF", borderBottom: "2px solid #BDE9FF", fontWeight: 700, color: "#009DC9", fontSize: "1.1rem", py: 2.5 }}>
