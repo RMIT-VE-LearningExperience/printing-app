@@ -1,6 +1,6 @@
 # Print App CMS - Progress Log
 
-**Last Updated:** March 11, 2026
+**Last Updated:** March 12, 2026
 **Project:** Print App CMS System
 **User:** Arielle Lee (arielle.lee@rmit.edu.au)
 
@@ -454,6 +454,23 @@ When testing after any changes:
   - Updated modals: Add Printer, Edit Printer, New Paper, Edit Paper, New Colour, Edit Colour
   - Improves spacing and visual hierarchy within modal content areas
   - Git commit: `8beb1d3` - Add top padding to modal Stack elements
+
+- **Modernized RichHtmlEditor toolbar with Material Design 3 icons**
+  - Replaced text-based toolbar buttons with Material Design 3 icons from @mui/icons-material
+  - Icon updates:
+    - 'Bold' button → FormatBoldIcon
+    - 'Italic' button → FormatItalicIcon
+    - 'Underline' button → FormatUnderlinedIcon (new feature added)
+    - 'Bullets' button → ListIcon
+    - 'Insert link' button → LinkIcon
+    - 'Remove link' button → LinkOffIcon
+  - Removed 'Heading' button for cleaner toolbar
+  - Converted Button components to IconButton for consistency with Material Design 3
+  - Reduced toolbar spacing from 1 to 0.5 for more compact layout
+  - Added title attributes to IconButtons for accessibility
+  - Styled all icons with #009DC9 brand color
+  - Applies to both Add Step and Edit Step modals (RichHtmlEditor component)
+  - Git commit: `8303a84` - Modernize RichHtmlEditor toolbar with Material Design 3 icons
 
 ### Previous Session (March 5-9, 2026)
 - Fixed duplicate case statements in API route
