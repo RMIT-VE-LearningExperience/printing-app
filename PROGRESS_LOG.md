@@ -483,21 +483,35 @@ When testing after any changes:
   - Consistent with image enlargement feature already in user-facing view
   - Git commit: `bf23474` - Add image enlargement modal to Steps section in CMS admin
 
-- **Added image cropping functionality to all image uploads in CMS admin**
-  - Implemented optional image cropping with 16:9 aspect ratio for all image types
-  - Added "Crop Image" button to:
-    - Printer thumbnails
-    - Paper thumbnails
-    - Color thumbnails
-    - Step images
+- **Implemented interactive image cropping with draggable and resizable crop box**
+  - Admin users can freely position and resize crop area in real-time
+  - **Interactive Crop Features:**
+    - Drag the 16:9 aspect ratio crop box anywhere on the image
+    - Resize using bottom-right handle (aspect ratio maintained automatically)
+    - Visual overlay shows dark areas outside crop box for clarity
+    - Reset button with Refresh icon to reset to default centered position
+    - Real-time preview as user adjusts crop position and size
+  - **Crop Buttons Available Everywhere:**
+    - Added crop buttons with CropIcon to all Add modals (Printer, Paper, Color, Step)
+    - Added crop buttons with CropIcon to all Edit modals (Printer, Paper, Color, Step)
+    - Users can crop images at any time, not just during initial upload
   - Uses HTML5 Canvas API for client-side image processing (no external dependencies)
   - Cropping is completely optional - users can skip and upload original image
-  - Crop modal dialog with preview and automatic aspect ratio cropping
   - Output: 400px width JPEG with 0.9 quality for optimal size/quality balance
-  - State variables: cropModalOpen, cropImage, cropMode, cropData, canvasRef, cropCanvasRef
-  - Functions: openCropModal(), applyCrop(), closeCropModal() for crop workflow
-  - Crop buttons positioned next to delete buttons in image preview sections
+  - **State Management:**
+    - Crop box dimensions: cropBoxX, cropBoxY, cropBoxWidth, cropBoxHeight
+    - Image dimensions: cropImageWidth, cropImageHeight
+    - Interaction state: isDraggingCrop, resizingCorner, dragStartX, dragStartY
+  - **Event Handlers:**
+    - handleCropMouseDown() for initiating drag and resize
+    - handleCropMouseMove() for updating crop box position/size with boundary checking
+    - handleCropMouseUp() for ending drag and resize
+  - **Styling:**
+    - Cyan border (#009DC9) for crop box with semi-transparent fill
+    - Resize handle indicator at bottom-right corner
+    - Dark overlay outside crop area for visual feedback
   - Git commit: `e1c8ec0` - Add image cropping functionality to CMS admin for all image uploads
+  - Git commit: `e2192ef` - Implement interactive image cropping with draggable and resizable crop box
 
 ### Previous Session (March 5-9, 2026)
 - Fixed duplicate case statements in API route
