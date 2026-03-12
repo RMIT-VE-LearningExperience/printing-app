@@ -3895,7 +3895,7 @@ export default function AdminPage() {
       >
         <DialogTitle sx={{ backgroundColor: "#F4FAFF", borderBottom: "2px solid #BDE9FF", fontWeight: 700, color: "#009DC9", fontSize: "1.1rem", py: 2.5 }}>NEW STEP</DialogTitle>
         <DialogContent sx={{ pt: 16, backgroundColor: "#ffffff" }}>
-          <Stack spacing={2}>
+          <Stack spacing={2} sx={{ pt: 2 }}>
             <TextField
               label="Step Title"
               value={newStepTitle}
@@ -3998,7 +3998,7 @@ export default function AdminPage() {
       >
         <DialogTitle sx={{ backgroundColor: "#F4FAFF", borderBottom: "2px solid #BDE9FF", fontWeight: 700, color: "#009DC9", fontSize: "1.1rem", py: 2.5 }}>EDIT STEP</DialogTitle>
         <DialogContent sx={{ pt: 16, backgroundColor: "#ffffff" }}>
-          <Stack spacing={2}>
+          <Stack spacing={2} sx={{ pt: 2 }}>
             <TextField
               label="Step Title"
               value={editStepTitle}
