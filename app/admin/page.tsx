@@ -3897,7 +3897,7 @@ export default function AdminPage() {
         <DialogContent sx={{ pt: 16, backgroundColor: "#ffffff" }}>
           <Stack spacing={2} sx={{ pt: 2 }}>
             <TextField
-              label="Title (i.e Select your Printer)"
+              label="e.g. Select your Printer"
               value={newStepTitle}
               onChange={(e) => setNewStepTitle(e.target.value)}
               required
@@ -3907,7 +3907,7 @@ export default function AdminPage() {
             />
 
             <RichHtmlEditor
-              label="Content (i.e. Printer = EPSON P800)"
+              label="Content"
               value={newStepContent}
               onChange={setNewStepContent}
             />
@@ -4002,7 +4002,7 @@ export default function AdminPage() {
         <DialogContent sx={{ pt: 16, backgroundColor: "#ffffff" }}>
           <Stack spacing={2} sx={{ pt: 2 }}>
             <TextField
-              label="Title (i.e Select your Printer)"
+              label="Title"
               value={editStepTitle}
               onChange={(e) => setEditStepTitle(e.target.value)}
               required
@@ -4012,7 +4012,7 @@ export default function AdminPage() {
             />
 
             <RichHtmlEditor
-              label="Content (i.e. Printer = EPSON P800)"
+              label="Content"
               value={editStepContent}
               onChange={setEditStepContent}
             />
