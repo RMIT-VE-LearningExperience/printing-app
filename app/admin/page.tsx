@@ -1357,8 +1357,9 @@ export default function AdminPage() {
       let newX = cropBoxX + deltaX;
       let newY = cropBoxY + deltaY;
 
-      newX = Math.max(0, Math.min(newX, cropImageWidth - cropBoxWidth));
-      newY = Math.max(0, Math.min(newY, cropImageHeight - cropBoxHeight));
+      // Allow movement within image bounds - crop box must stay within image
+      newX = Math.max(0, Math.min(newX, Math.max(0, cropImageWidth - cropBoxWidth)));
+      newY = Math.max(0, Math.min(newY, Math.max(0, cropImageHeight - cropBoxHeight)));
 
       setCropBoxX(newX);
       setCropBoxY(newY);
@@ -1366,8 +1367,14 @@ export default function AdminPage() {
       let newWidth = cropBoxWidth + deltaX;
       let newHeight = cropBoxHeight + deltaY;
 
-      if (newWidth > 50 && newHeight > 50 && cropBoxX + newWidth <= cropImageWidth && cropBoxY + newHeight <= cropImageHeight) {
+      // Allow free-form resizing with boundaries
+      const maxAllowedWidth = cropImageWidth - cropBoxX;
+      const maxAllowedHeight = cropImageHeight - cropBoxY;
+
+      if (newWidth > 50 && newWidth <= maxAllowedWidth) {
         setCropBoxWidth(newWidth);
+      }
+      if (newHeight > 50 && newHeight <= maxAllowedHeight) {
         setCropBoxHeight(newHeight);
       }
     }
