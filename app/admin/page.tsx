@@ -4527,6 +4527,7 @@ export default function AdminPage() {
                 {/* Crop Box Overlay */}
                 {cropImageWidth > 0 && cropImageHeight > 0 && (
                   <Box
+                    onMouseDown={(e: React.MouseEvent) => handleCropMouseDown(e)}
                     sx={{
                       position: "absolute",
                       left: `${(cropBoxX / cropImageWidth) * 100}%`,
@@ -4537,9 +4538,7 @@ export default function AdminPage() {
                       backgroundColor: "rgba(0, 157, 201, 0.1)",
                       cursor: isDraggingCrop ? "grabbing" : "grab",
                       boxSizing: "border-box",
-                      onMouseDown: handleCropMouseDown,
-                    } as any}
-                    onMouseDown={() => handleCropMouseDown({} as React.MouseEvent)}
+                    }}
                   >
                     {/* Corner resize handles */}
                     <Box
