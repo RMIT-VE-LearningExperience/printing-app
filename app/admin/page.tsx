@@ -3893,26 +3893,28 @@ export default function AdminPage() {
         fullWidth
         PaperProps={{ sx: { borderRadius: 2, boxShadow: "0 8px 32px rgba(0, 0, 0, 0.12)" } }}
       >
-        <DialogTitle sx={{ backgroundColor: "#F4FAFF", borderBottom: "2px solid #BDE9FF", fontWeight: 700, color: "#009DC9", fontSize: "1.1rem", py: 2.5 }}>NEW STEP</DialogTitle>
+        <DialogTitle sx={{ backgroundColor: "#F4FAFF", borderBottom: "2px solid #BDE9FF", fontWeight: 700, color: "#009DC9", fontSize: "1.1rem", py: 2.5 }}>Step {selectedColor?.steps.length + 1 || 1}</DialogTitle>
         <DialogContent sx={{ pt: 16, backgroundColor: "#ffffff" }}>
           <Stack spacing={2} sx={{ pt: 2 }}>
             <TextField
-              label="Step Title"
+              label="Title (i.e Select your Printer)"
               value={newStepTitle}
               onChange={(e) => setNewStepTitle(e.target.value)}
               required
               fullWidth
+              variant="outlined"
+              size="small"
             />
 
             <RichHtmlEditor
-              label="Step Content"
+              label="Content (i.e. Printer = EPSON P800)"
               value={newStepContent}
               onChange={setNewStepContent}
             />
 
             <Box>
               <Typography variant="body2" fontWeight={500} sx={{ mb: 1 }}>
-                Step Image
+                Image
               </Typography>
               <Box component="input" type="file" accept="image/*" onChange={(e: ChangeEvent<HTMLInputElement>) => { void handleNewStepImageUpload(e); }} />
               {newStepImageName && (
@@ -3996,26 +3998,28 @@ export default function AdminPage() {
         fullWidth
         PaperProps={{ sx: { borderRadius: 2, boxShadow: "0 8px 32px rgba(0, 0, 0, 0.12)" } }}
       >
-        <DialogTitle sx={{ backgroundColor: "#F4FAFF", borderBottom: "2px solid #BDE9FF", fontWeight: 700, color: "#009DC9", fontSize: "1.1rem", py: 2.5 }}>EDIT STEP</DialogTitle>
+        <DialogTitle sx={{ backgroundColor: "#F4FAFF", borderBottom: "2px solid #BDE9FF", fontWeight: 700, color: "#009DC9", fontSize: "1.1rem", py: 2.5 }}>Step {editStepIndex + 1}</DialogTitle>
         <DialogContent sx={{ pt: 16, backgroundColor: "#ffffff" }}>
           <Stack spacing={2} sx={{ pt: 2 }}>
             <TextField
-              label="Step Title"
+              label="Title (i.e Select your Printer)"
               value={editStepTitle}
               onChange={(e) => setEditStepTitle(e.target.value)}
               required
               fullWidth
+              variant="outlined"
+              size="small"
             />
 
             <RichHtmlEditor
-              label="Step Content"
+              label="Content (i.e. Printer = EPSON P800)"
               value={editStepContent}
               onChange={setEditStepContent}
             />
 
             <Box>
               <Typography variant="body2" fontWeight={500} sx={{ mb: 1 }}>
-                Step Image
+                Image
               </Typography>
               <Box component="input" type="file" accept="image/*" onChange={(e: ChangeEvent<HTMLInputElement>) => { void handleEditStepImageUpload(e); }} />
               {editStepImageName && (
