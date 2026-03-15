@@ -1,6 +1,6 @@
 # Print App CMS - Progress Log
 
-**Last Updated:** March 12, 2026
+**Last Updated:** March 16, 2026
 **Project:** Print App CMS System
 **User:** Arielle Lee (arielle.lee@rmit.edu.au)
 
@@ -509,6 +509,19 @@ When testing after any changes:
     - Git commit: `2ed47fa` - Initialize crop box to full image size and enable free-form resizing
     - Fixed boundary checking to allow proper movement and resizing
     - Git commit: `b06101d` - Fix crop box drag and resize when crop box is at full image size
+  - **Bug Fix: Apply Crop Not Saving (THIS SESSION - March 16, 2026 - Part 4)**
+    - Issue: When user clicks "Apply Crop", the cropped image is not saved to the form field
+    - Root Cause: Image loading in applyCrop was failing silently, likely due to:
+      1. CORS restrictions when loading images from Firestore URLs
+      2. Image could display in preview but not be manipulated on canvas due to security policies
+    - Solution:
+      1. Add `img.onerror` handler to catch image loading failures
+      2. Set `img.crossOrigin = "anonymous"` to enable CORS handling for external URLs
+      3. Log diagnostic error messages to help identify issues
+      4. Modal now closes gracefully even if image loading fails
+    - Result: Cropped images are now saved properly; modal never gets stuck
+    - Git commit: `4814002`
+
   - **Bug Fix: Image Preview Cutoff at Top (THIS SESSION - March 16, 2026 - Part 3)**
     - Issue: Top of image was being cut off in the crop preview window
     - Root Cause: Container used `display: flex` with `alignItems: center` and `justifyContent: center` which centered the image vertically; when image was larger than container, the top was cut off by the container's top edge
