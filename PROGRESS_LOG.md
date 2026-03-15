@@ -509,7 +509,21 @@ When testing after any changes:
     - Git commit: `2ed47fa` - Initialize crop box to full image size and enable free-form resizing
     - Fixed boundary checking to allow proper movement and resizing
     - Git commit: `b06101d` - Fix crop box drag and resize when crop box is at full image size
-  - **Bug Fix: Coordinate System Mismatch (THIS SESSION - March 16, 2026)**
+  - **Bug Fix: Scrollable Preview and Resize Handle Accessibility (THIS SESSION - March 16, 2026 - Part 2)**
+    - Issue 1: Resize handle at bottom-right corner was inaccessible because crop box starts at full image size
+    - Issue 2: Large images were not fully visible in the 400px max-height preview area
+    - Root Cause: Container had `overflow: "hidden"` which prevented scrolling
+    - Solution:
+      1. Changed container `overflow: "hidden"` to `overflow: "auto"` for scrollable preview
+      2. Updated offset calculations to account for scroll position:
+         - `imgOffsetX = imgRect.left - containerRect.left + cropContainerRef.current.scrollLeft`
+         - `imgOffsetY = imgRect.top - containerRect.top + cropContainerRef.current.scrollTop`
+      3. Crop box positioning now works correctly with scrollable container
+      4. Resize handle becomes accessible by scrolling down to reach bottom-right corner
+    - Result: Users can scroll to see full image and access resize handle at bottom-right
+    - Git commit: `e223004`
+
+  - **Bug Fix: Coordinate System Mismatch (THIS SESSION - March 16, 2026 - Part 1)**
     - Issue: Crop box did not move when dragging and would not resize from bottom-right handle
     - Root Cause: Two coordinate system mismatch:
       1. Mouse events (`e.clientX`, `e.clientY`) were in viewport coordinates
@@ -527,7 +541,7 @@ When testing after any changes:
          - Calculate crop box pixels: `cropBoxPixelX = imgOffsetX + cropBoxX * scaleX`
          - Position overlay with `left: "${cropBoxPixelX}px"` instead of percentages
       4. **Dark Overlay**: Updated all four overlay sections to use pixel-based positioning for accuracy
-    - Git commit: (pending - not yet committed)
+    - Git commit: `6daca85`
   - **Current Crop Features:**
     - Crop box initializes covering full image
     - Free-form resizing (any size, no aspect ratio constraint)
@@ -535,21 +549,22 @@ When testing after any changes:
     - Resize from bottom-right handle (both width and height resize independently)
     - Reset button returns crop box to full image size
     - Output: 400px width JPEG with 0.9 quality for optimal size/quality balance
-    - **Full image now visible in crop modal** ✅
+    - **Full image now visible and scrollable in crop modal** ✅
     - **Drag and resize functionality fixed with coordinate system conversion** ✅
+    - **Resize handle accessible via scrolling** ✅
   - **State Management:**
     - Crop box dimensions: cropBoxX, cropBoxY, cropBoxWidth, cropBoxHeight
     - Image dimensions: cropImageWidth, cropImageHeight
     - Interaction state: isDraggingCrop, resizingCorner, dragStartX, dragStartY
   - **Event Handlers:**
     - handleCropMouseDown() for initiating drag and resize (with proper event propagation stop)
-    - handleCropMouseMove() for updating crop box position/size with coordinate system conversion
+    - handleCropMouseMove() for updating crop box position/size with coordinate system conversion and scroll support
     - handleCropMouseUp() for ending drag and resize
   - **Styling:**
     - Cyan border (#009DC9) for crop box with semi-transparent fill
     - Resize handle indicator (12px circle) at bottom-right corner
     - Dark overlay outside crop area for visual feedback (now with pixel-based positioning)
-    - Container uses `maxHeight: "400px"` with `overflow: "hidden"` for flexible display
+    - Container uses `maxHeight: "400px"` with `overflow: "auto"` for scrollable display on large images
   - **Crop Buttons:**
     - Available in all Add modals (Printer, Paper, Color, Step)
     - Available in all Edit modals (Printer, Paper, Color, Step)
