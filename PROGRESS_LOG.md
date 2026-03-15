@@ -509,6 +509,25 @@ When testing after any changes:
     - Git commit: `2ed47fa` - Initialize crop box to full image size and enable free-form resizing
     - Fixed boundary checking to allow proper movement and resizing
     - Git commit: `b06101d` - Fix crop box drag and resize when crop box is at full image size
+  - **Bug Fix: Coordinate System Mismatch (THIS SESSION - March 16, 2026)**
+    - Issue: Crop box did not move when dragging and would not resize from bottom-right handle
+    - Root Cause: Two coordinate system mismatch:
+      1. Mouse events (`e.clientX`, `e.clientY`) were in viewport coordinates
+      2. Crop box dimensions (`cropBoxX`, `cropBoxY`, etc.) were in image coordinate space
+      3. Container had fixed 4:3 aspect ratio but image could have any aspect ratio, causing misalignment
+    - Solution:
+      1. **Coordinate Conversion**: Added scale factor calculation to convert viewport delta to image coordinates
+         - Calculate scale: `scaleX = cropImageWidth / displayedImageWidth`, `scaleY = cropImageHeight / displayedImageHeight`
+         - Convert delta: `deltaX = (e.clientX - dragStartX) * scaleX`, `deltaY = (e.clientY - dragStartY) * scaleY`
+      2. **Image Position Tracking**: Get actual displayed image position and size within container
+         - Removed fixed `aspectRatio: "4 / 3"` constraint from container (changed to `maxHeight: "400px"`)
+         - Use `getBoundingClientRect()` on image element to get actual display dimensions
+      3. **Crop Box Positioning**: Changed from percentage-based to pixel-based positioning
+         - Calculate offset: `imgOffsetX = imgRect.left - containerRect.left`
+         - Calculate crop box pixels: `cropBoxPixelX = imgOffsetX + cropBoxX * scaleX`
+         - Position overlay with `left: "${cropBoxPixelX}px"` instead of percentages
+      4. **Dark Overlay**: Updated all four overlay sections to use pixel-based positioning for accuracy
+    - Git commit: (pending - not yet committed)
   - **Current Crop Features:**
     - Crop box initializes covering full image
     - Free-form resizing (any size, no aspect ratio constraint)
@@ -516,19 +535,21 @@ When testing after any changes:
     - Resize from bottom-right handle (both width and height resize independently)
     - Reset button returns crop box to full image size
     - Output: 400px width JPEG with 0.9 quality for optimal size/quality balance
+    - **Full image now visible in crop modal** ✅
+    - **Drag and resize functionality fixed with coordinate system conversion** ✅
   - **State Management:**
     - Crop box dimensions: cropBoxX, cropBoxY, cropBoxWidth, cropBoxHeight
     - Image dimensions: cropImageWidth, cropImageHeight
     - Interaction state: isDraggingCrop, resizingCorner, dragStartX, dragStartY
   - **Event Handlers:**
-    - handleCropMouseDown() for initiating drag and resize
-    - handleCropMouseMove() for updating crop box position/size with proper boundary checking
+    - handleCropMouseDown() for initiating drag and resize (with proper event propagation stop)
+    - handleCropMouseMove() for updating crop box position/size with coordinate system conversion
     - handleCropMouseUp() for ending drag and resize
   - **Styling:**
     - Cyan border (#009DC9) for crop box with semi-transparent fill
     - Resize handle indicator (12px circle) at bottom-right corner
-    - Dark overlay outside crop area for visual feedback
-    - Container uses aspectRatio: "4 / 3" with overflow: "auto" for flexible display
+    - Dark overlay outside crop area for visual feedback (now with pixel-based positioning)
+    - Container uses `maxHeight: "400px"` with `overflow: "hidden"` for flexible display
   - **Crop Buttons:**
     - Available in all Add modals (Printer, Paper, Color, Step)
     - Available in all Edit modals (Printer, Paper, Color, Step)

@@ -1338,6 +1338,7 @@ export default function AdminPage() {
   };
 
   const handleCropMouseDown = (e: React.MouseEvent, corner?: string) => {
+    e.stopPropagation();
     if (corner) {
       setResizingCorner(corner);
     } else {
@@ -1349,9 +1350,34 @@ export default function AdminPage() {
 
   const handleCropMouseMove = (e: React.MouseEvent) => {
     if (!isDraggingCrop && !resizingCorner) return;
+    if (!cropContainerRef.current) return;
 
-    const deltaX = e.clientX - dragStartX;
-    const deltaY = e.clientY - dragStartY;
+    // Get the image element
+    const imgElements = cropContainerRef.current.querySelectorAll('img');
+    if (imgElements.length === 0) return;
+    const imgElement = imgElements[0] as HTMLImageElement;
+
+    // Get bounding rects
+    const containerRect = cropContainerRef.current.getBoundingClientRect();
+    const imgRect = imgElement.getBoundingClientRect();
+
+    // Calculate actual displayed image dimensions
+    const displayedImageWidth = imgRect.width;
+    const displayedImageHeight = imgRect.height;
+
+    if (displayedImageWidth === 0 || displayedImageHeight === 0) return;
+
+    // Calculate scale from displayed pixels to original image pixels
+    const scaleX = cropImageWidth / displayedImageWidth;
+    const scaleY = cropImageHeight / displayedImageHeight;
+
+    // Calculate image offset within container
+    const imgOffsetX = imgRect.left - containerRect.left;
+    const imgOffsetY = imgRect.top - containerRect.top;
+
+    // Convert viewport mouse delta to image coordinates
+    const deltaX = (e.clientX - dragStartX) * scaleX;
+    const deltaY = (e.clientY - dragStartY) * scaleY;
 
     if (isDraggingCrop) {
       let newX = cropBoxX + deltaX;
@@ -4498,8 +4524,8 @@ export default function AdminPage() {
                 sx={{
                   position: "relative",
                   width: "100%",
-                  aspectRatio: "4 / 3",
-                  overflow: "auto",
+                  maxHeight: "400px",
+                  overflow: "hidden",
                   borderRadius: 1,
                   border: "1px solid #BDE9FF",
                   display: "flex",
@@ -4514,56 +4540,78 @@ export default function AdminPage() {
                   component="img"
                   src={cropImage}
                   alt="Crop preview"
+                  ref={canvasRef as any}
                   sx={{
-                    width: "100%",
-                    height: "auto",
+                    maxWidth: "100%",
+                    maxHeight: "100%",
                     display: "block",
                   }}
                 />
 
                 {/* Crop Box Overlay */}
-                {cropImageWidth > 0 && cropImageHeight > 0 && (
-                  <Box
-                    onMouseDown={(e: React.MouseEvent) => handleCropMouseDown(e)}
-                    sx={{
-                      position: "absolute",
-                      left: `${(cropBoxX / cropImageWidth) * 100}%`,
-                      top: `${(cropBoxY / cropImageHeight) * 100}%`,
-                      width: `${(cropBoxWidth / cropImageWidth) * 100}%`,
-                      height: `${(cropBoxHeight / cropImageHeight) * 100}%`,
-                      border: "2px solid #009DC9",
-                      backgroundColor: "rgba(0, 157, 201, 0.1)",
-                      cursor: isDraggingCrop ? "grabbing" : "grab",
-                      boxSizing: "border-box",
-                    }}
-                  >
-                    {/* Corner resize handles */}
-                    <Box
-                      sx={{
-                        position: "absolute",
-                        width: 12,
-                        height: 12,
-                        backgroundColor: "#009DC9",
-                        borderRadius: "50%",
-                        bottom: -6,
-                        right: -6,
-                        cursor: "se-resize",
-                        zIndex: 10,
-                      }}
-                      onMouseDown={(e) => handleCropMouseDown(e as any, "se")}
-                    />
-                  </Box>
-                )}
+                {cropImageWidth > 0 && cropImageHeight > 0 && (() => {
+                  const imgElements = cropContainerRef.current?.querySelectorAll('img');
+                  if (!imgElements || imgElements.length === 0) return null;
+                  const imgElement = imgElements[0] as HTMLImageElement;
+                  const containerRect = cropContainerRef.current?.getBoundingClientRect();
+                  const imgRect = imgElement.getBoundingClientRect();
 
-                {/* Dark overlay outside crop area */}
-                {cropImageWidth > 0 && cropImageHeight > 0 && (
-                  <>
-                    <Box sx={{ position: "absolute", top: 0, left: 0, right: 0, bottom: `calc(100% - ${(cropBoxY / cropImageHeight) * 100}%)`, backgroundColor: "rgba(0, 0, 0, 0.5)", pointerEvents: "none" }} />
-                    <Box sx={{ position: "absolute", top: `${(cropBoxY / cropImageHeight) * 100}%`, left: 0, width: `${(cropBoxX / cropImageWidth) * 100}%`, height: `${(cropBoxHeight / cropImageHeight) * 100}%`, backgroundColor: "rgba(0, 0, 0, 0.5)", pointerEvents: "none" }} />
-                    <Box sx={{ position: "absolute", top: `${(cropBoxY / cropImageHeight) * 100}%`, right: 0, width: `calc(100% - ${(cropBoxX / cropImageWidth) * 100}% - ${(cropBoxWidth / cropImageWidth) * 100}%)`, height: `${(cropBoxHeight / cropImageHeight) * 100}%`, backgroundColor: "rgba(0, 0, 0, 0.5)", pointerEvents: "none" }} />
-                    <Box sx={{ position: "absolute", top: `calc(100% - ${(cropImageHeight - cropBoxY - cropBoxHeight) / cropImageHeight * 100}%)`, left: 0, right: 0, bottom: 0, backgroundColor: "rgba(0, 0, 0, 0.5)", pointerEvents: "none" }} />
-                  </>
-                )}
+                  if (!containerRect || !imgRect) return null;
+
+                  const displayedImageWidth = imgRect.width;
+                  const displayedImageHeight = imgRect.height;
+                  const imgOffsetX = imgRect.left - containerRect.left;
+                  const imgOffsetY = imgRect.top - containerRect.top;
+
+                  const scaleX = displayedImageWidth / cropImageWidth;
+                  const scaleY = displayedImageHeight / cropImageHeight;
+
+                  const cropBoxPixelX = imgOffsetX + cropBoxX * scaleX;
+                  const cropBoxPixelY = imgOffsetY + cropBoxY * scaleY;
+                  const cropBoxPixelWidth = cropBoxWidth * scaleX;
+                  const cropBoxPixelHeight = cropBoxHeight * scaleY;
+
+                  return (
+                    <>
+                      <Box
+                        onMouseDown={(e: React.MouseEvent) => handleCropMouseDown(e)}
+                        sx={{
+                          position: "absolute",
+                          left: `${cropBoxPixelX}px`,
+                          top: `${cropBoxPixelY}px`,
+                          width: `${cropBoxPixelWidth}px`,
+                          height: `${cropBoxPixelHeight}px`,
+                          border: "2px solid #009DC9",
+                          backgroundColor: "rgba(0, 157, 201, 0.1)",
+                          cursor: isDraggingCrop ? "grabbing" : "grab",
+                          boxSizing: "border-box",
+                        }}
+                      >
+                        {/* Corner resize handles */}
+                        <Box
+                          sx={{
+                            position: "absolute",
+                            width: 12,
+                            height: 12,
+                            backgroundColor: "#009DC9",
+                            borderRadius: "50%",
+                            bottom: -6,
+                            right: -6,
+                            cursor: "se-resize",
+                            zIndex: 10,
+                          }}
+                          onMouseDown={(e) => handleCropMouseDown(e as any, "se")}
+                        />
+                      </Box>
+
+                      {/* Dark overlay outside crop area */}
+                      <Box sx={{ position: "absolute", top: 0, left: 0, right: 0, height: `${cropBoxPixelY}px`, backgroundColor: "rgba(0, 0, 0, 0.5)", pointerEvents: "none" }} />
+                      <Box sx={{ position: "absolute", top: `${cropBoxPixelY}px`, left: 0, width: `${cropBoxPixelX}px`, height: `${cropBoxPixelHeight}px`, backgroundColor: "rgba(0, 0, 0, 0.5)", pointerEvents: "none" }} />
+                      <Box sx={{ position: "absolute", top: `${cropBoxPixelY}px`, left: `${cropBoxPixelX + cropBoxPixelWidth}px`, right: 0, height: `${cropBoxPixelHeight}px`, backgroundColor: "rgba(0, 0, 0, 0.5)", pointerEvents: "none" }} />
+                      <Box sx={{ position: "absolute", top: `${cropBoxPixelY + cropBoxPixelHeight}px`, left: 0, right: 0, bottom: 0, backgroundColor: "rgba(0, 0, 0, 0.5)", pointerEvents: "none" }} />
+                    </>
+                  );
+                })()}
               </Box>
             )}
           </Box>
