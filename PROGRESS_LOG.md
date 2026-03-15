@@ -509,6 +509,16 @@ When testing after any changes:
     - Git commit: `2ed47fa` - Initialize crop box to full image size and enable free-form resizing
     - Fixed boundary checking to allow proper movement and resizing
     - Git commit: `b06101d` - Fix crop box drag and resize when crop box is at full image size
+  - **Bug Fix: Image Preview Cutoff at Top (THIS SESSION - March 16, 2026 - Part 3)**
+    - Issue: Top of image was being cut off in the crop preview window
+    - Root Cause: Container used `display: flex` with `alignItems: center` and `justifyContent: center` which centered the image vertically; when image was larger than container, the top was cut off by the container's top edge
+    - Solution:
+      1. Replaced `maxHeight: "400px"` with `aspectRatio: "4 / 3"` for fixed 4:3 aspect ratio
+      2. Removed `display: flex`, `alignItems: center`, and `justifyContent: center`
+      3. Image now aligns naturally at top-left and scrolls if larger than 4:3 preview
+    - Result: Entire image is visible; top is no longer cut off; 4:3 preview ratio maintained
+    - Git commit: `b6b69f8`
+
   - **Bug Fix: Scrollable Preview and Resize Handle Accessibility (THIS SESSION - March 16, 2026 - Part 2)**
     - Issue 1: Resize handle at bottom-right corner was inaccessible because crop box starts at full image size
     - Issue 2: Large images were not fully visible in the 400px max-height preview area
@@ -564,7 +574,9 @@ When testing after any changes:
     - Cyan border (#009DC9) for crop box with semi-transparent fill
     - Resize handle indicator (12px circle) at bottom-right corner
     - Dark overlay outside crop area for visual feedback (now with pixel-based positioning)
-    - Container uses `maxHeight: "400px"` with `overflow: "auto"` for scrollable display on large images
+    - Container uses fixed `aspectRatio: "4 / 3"` with `overflow: "auto"` for scrollable display
+    - Image aligns at top-left (not centered) to prevent cutoff when scrolling
+    - Full image is accessible - nothing is hidden or cut off
   - **Crop Buttons:**
     - Available in all Add modals (Printer, Paper, Color, Step)
     - Available in all Edit modals (Printer, Paper, Color, Step)
