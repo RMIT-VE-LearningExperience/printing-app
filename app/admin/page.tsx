@@ -4540,7 +4540,6 @@ export default function AdminPage() {
                   component="img"
                   src={cropImage}
                   alt="Crop preview"
-                  ref={canvasRef as any}
                   sx={{
                     maxWidth: "100%",
                     maxHeight: "100%",
