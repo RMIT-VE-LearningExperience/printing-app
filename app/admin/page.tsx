@@ -1462,6 +1462,11 @@ export default function AdminPage() {
       setCropImage("");
       setCropMode(null);
     };
+    img.onerror = () => {
+      console.error("Failed to load image in applyCrop. Image URL may have CORS restrictions or be invalid.");
+      setCropModalOpen(false);
+    };
+    img.crossOrigin = "anonymous";
     img.src = cropImage;
   };
 
