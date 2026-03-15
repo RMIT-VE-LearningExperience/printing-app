@@ -4511,7 +4511,7 @@ export default function AdminPage() {
         }}
       >
         <DialogTitle sx={{ backgroundColor: "#F4FAFF", borderBottom: "2px solid #BDE9FF", fontWeight: 700, color: "#009DC9", fontSize: "1.1rem", py: 2.5 }}>
-          Crop (16:9)
+          Crop Image
         </DialogTitle>
         <DialogContent sx={{ pt: 3, pb: 3, backgroundColor: "#ffffff" }}>
           <Box sx={{ mb: 3 }}>
@@ -4616,7 +4616,7 @@ export default function AdminPage() {
             )}
           </Box>
           <Typography variant="body2" color="text.secondary" sx={{ mb: 2 }}>
-            Drag the crop box to reposition it. Click and drag the bottom-right handle to resize (16:9 aspect ratio maintained).
+            Drag the crop box to reposition it. Click and drag the bottom-right handle to resize freely (no aspect ratio constraint).
           </Typography>
         </DialogContent>
         <DialogActions sx={{ borderTop: "1px solid #BDE9FF", pt: 2, pb: 2, px: 3, backgroundColor: "#F4FAFF", display: "flex", justifyContent: "space-between" }}>
