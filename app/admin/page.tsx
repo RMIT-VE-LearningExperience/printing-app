@@ -1371,9 +1371,9 @@ export default function AdminPage() {
     const scaleX = cropImageWidth / displayedImageWidth;
     const scaleY = cropImageHeight / displayedImageHeight;
 
-    // Calculate image offset within container
-    const imgOffsetX = imgRect.left - containerRect.left;
-    const imgOffsetY = imgRect.top - containerRect.top;
+    // Calculate image offset within container (account for scroll position)
+    const imgOffsetX = imgRect.left - containerRect.left + cropContainerRef.current.scrollLeft;
+    const imgOffsetY = imgRect.top - containerRect.top + cropContainerRef.current.scrollTop;
 
     // Convert viewport mouse delta to image coordinates
     const deltaX = (e.clientX - dragStartX) * scaleX;
@@ -4525,7 +4525,7 @@ export default function AdminPage() {
                   position: "relative",
                   width: "100%",
                   maxHeight: "400px",
-                  overflow: "hidden",
+                  overflow: "auto",
                   borderRadius: 1,
                   border: "1px solid #BDE9FF",
                   display: "flex",
@@ -4560,8 +4560,8 @@ export default function AdminPage() {
 
                   const displayedImageWidth = imgRect.width;
                   const displayedImageHeight = imgRect.height;
-                  const imgOffsetX = imgRect.left - containerRect.left;
-                  const imgOffsetY = imgRect.top - containerRect.top;
+                  const imgOffsetX = imgRect.left - containerRect.left + (cropContainerRef.current?.scrollLeft || 0);
+                  const imgOffsetY = imgRect.top - containerRect.top + (cropContainerRef.current?.scrollTop || 0);
 
                   const scaleX = displayedImageWidth / cropImageWidth;
                   const scaleY = displayedImageHeight / cropImageHeight;
