@@ -1420,8 +1420,8 @@ export default function AdminPage() {
     const img = new Image();
     img.onload = () => {
       const canvas = canvasRef.current!;
-      canvas.width = img.width;
-      canvas.height = img.height;
+      canvas.width = cropImageWidth;
+      canvas.height = cropImageHeight;
       const ctx = canvas.getContext("2d");
       if (!ctx) return;
       ctx.drawImage(img, 0, 0);
