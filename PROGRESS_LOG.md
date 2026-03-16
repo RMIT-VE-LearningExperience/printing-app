@@ -397,16 +397,23 @@ When testing after any changes:
   - ✅ Added `originalCropImage` state variable to store the original image when modal opens
   - ✅ Enhanced `resetCropBox()` function to restore the original image (not just crop box position)
   - ✅ Updated `openCropModal()` to capture and store the original image data URL
-  - ✅ Updated `closeCropModal()` to clear the original image when modal closes
-  - ✅ Updated error handlers in `applyCrop()` to clear the original image
+  - **Bug Fix**: Reset button wasn't restoring original image across modal sessions
+    - Root cause: `originalCropImage` was being cleared when the modal closed, so reopening the modal would store the cropped image as the new "original"
+    - Solution: Preserve `originalCropImage` across modal open/close cycles by removing the clear statements
+    - Removed `setOriginalCropImage("")` from `applyCrop()` success and error handlers
+    - Removed `setOriginalCropImage("")` from `closeCropModal()` function
+    - Now the true original image persists across multiple editing sessions
   - **Feature**: Users can now click the reset button (refresh icon) in the crop modal to:
-    1. Restore the original full image (undoing any crops)
+    1. Restore the original full image (undoing any crops made in any session)
     2. Reset crop box to cover full original image
     3. Apply to save the original (effectively reverting a previous crop)
+  - **Workflow**: Upload → Open crop → Crop → Apply → Close → Open crop again → Click reset → See original uncropped image
   - **Benefit**: Users no longer need to delete and re-upload images to undo crops
-  - Files Modified: app/admin/page.tsx (lines 342, 1316, 1340-1362, 1501, 1508, 1517)
-  - Git commit: `ff9bc04` - Add reset-to-original functionality for image crops
-  - Status: ✅ COMPLETED
+  - Files Modified: app/admin/page.tsx (lines 342, 1316, 1340-1362)
+  - Git commits:
+    - `ff9bc04` - Add reset-to-original functionality for image crops
+    - `cdeb5ae` - Fix reset-to-original crop feature: preserve original across modal sessions
+  - Status: ✅ FIXED AND WORKING
 
 ### Current Session (March 16, 2026 - Part 5)
 - **Fixed ALL TypeScript errors - Ready for deployment**
