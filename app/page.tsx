@@ -59,6 +59,8 @@ type Printer = {
 
 type TutorialState = {
   printers: Printer[];
+  homepageTitle?: string;
+  homepageDescription?: string;
 };
 
 const emptyState: TutorialState = { printers: [] };

@@ -59,7 +59,6 @@ import {
   Crop as CropIcon,
 } from "@mui/icons-material";
 import { type ChangeEvent, useEffect, useMemo, useRef, useState } from "react";
-import { type TutorialState } from "../lib/tutorial-store";
 
 type Step = {
   id: string;
@@ -117,6 +116,8 @@ type TutorialState = {
   papers: Paper[];
   printers: Printer[];
   deletedItems?: DeletedItem[];
+  homepageTitle?: string;
+  homepageDescription?: string;
 };
 
 type Direction = "up" | "down";
@@ -4258,7 +4259,7 @@ export default function AdminPage() {
         fullWidth
         PaperProps={{ sx: { borderRadius: 2, boxShadow: "0 8px 32px rgba(0, 0, 0, 0.12)" } }}
       >
-        <DialogTitle sx={{ backgroundColor: "#F4FAFF", borderBottom: "2px solid #BDE9FF", fontWeight: 700, color: "#009DC9", fontSize: "1.1rem", py: 2.5 }}>Step {selectedColor?.steps.length + 1 || 1}</DialogTitle>
+        <DialogTitle sx={{ backgroundColor: "#F4FAFF", borderBottom: "2px solid #BDE9FF", fontWeight: 700, color: "#009DC9", fontSize: "1.1rem", py: 2.5 }}>Step {(selectedColor?.steps?.length ?? 0) + 1}</DialogTitle>
         <DialogContent sx={{ pt: 16, backgroundColor: "#ffffff" }}>
           <Stack spacing={2} sx={{ pt: 2 }}>
             <TextField
@@ -4381,7 +4382,7 @@ export default function AdminPage() {
         fullWidth
         PaperProps={{ sx: { borderRadius: 2, boxShadow: "0 8px 32px rgba(0, 0, 0, 0.12)" } }}
       >
-        <DialogTitle sx={{ backgroundColor: "#F4FAFF", borderBottom: "2px solid #BDE9FF", fontWeight: 700, color: "#009DC9", fontSize: "1.1rem", py: 2.5 }}>Step {selectedColor?.steps.findIndex((s) => s.id === editStepId) + 1 || 1}</DialogTitle>
+        <DialogTitle sx={{ backgroundColor: "#F4FAFF", borderBottom: "2px solid #BDE9FF", fontWeight: 700, color: "#009DC9", fontSize: "1.1rem", py: 2.5 }}>Step {Math.max(1, (selectedColor?.steps?.findIndex((s) => s.id === editStepId) ?? -1) + 1)}</DialogTitle>
         <DialogContent sx={{ pt: 16, backgroundColor: "#ffffff" }}>
           <Stack spacing={2} sx={{ pt: 2 }}>
             <TextField
