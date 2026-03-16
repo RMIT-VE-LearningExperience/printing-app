@@ -537,7 +537,8 @@ When testing after any changes:
       5. Reset cropIsEdit in both closeCropModal and applyCrop error handler
     - Result: Cropped images now save to the correct state variable (Edit or Add) and display immediately
     - Files Modified: app/admin/page.tsx (lines 339, 1311-1314, 1458-1482, 1487, 1492, 1501, 3205, 3711, 4184, 4454)
-    - Git commit: PENDING
+    - Git commit: `406e243` - Fix crop functionality: add Edit modal mode tracking and preserve crop aspect ratio
+    - Status: ✅ FIXED - Crop now works in both Add and Edit modals
 
   - **Bug Fix: Distorted Crop Output (THIS SESSION - March 16, 2026 - Part 6)**
     - Issue: Cropped images appear distorted/stretched in the thumbnail preview
@@ -553,7 +554,8 @@ When testing after any changes:
       ```
     - Result: Cropped output now maintains the exact aspect ratio of the user's crop selection; no distortion
     - Files Modified: app/admin/page.tsx (lines 1438-1441)
-    - Git commit: PENDING
+    - Git commit: `406e243` - Fix crop functionality: add Edit modal mode tracking and preserve crop aspect ratio
+    - Status: ✅ FIXED - Output aspect ratio now preserved, no more stretching
 
   - **Bug Fix: Apply Crop Not Saving - Previous CORS Issue (THIS SESSION - March 16, 2026 - Part 4)**
     - Issue: When user clicks "Apply Crop", the cropped image is not saved to the form field
@@ -611,6 +613,10 @@ When testing after any changes:
          - Position overlay with `left: "${cropBoxPixelX}px"` instead of percentages
       4. **Dark Overlay**: Updated all four overlay sections to use pixel-based positioning for accuracy
     - Git commit: `6daca85`
+  - **API Route Note:**
+    - After modifying crop-related code, the dev server requires a full restart (not just hot-reload) for API routes to properly reload
+    - `npm run dev` must be restarted for changes to take effect
+    - Browser hard refresh (Ctrl+Shift+R) is also recommended after restart
   - **Current Crop Features:**
     - Crop box initializes covering full image
     - Free-form resizing (any size, no aspect ratio constraint)
@@ -618,9 +624,13 @@ When testing after any changes:
     - Resize from bottom-right handle (both width and height resize independently)
     - Reset button returns crop box to full image size
     - Output: 400px width JPEG with 0.9 quality for optimal size/quality balance
+    - Output aspect ratio preserved based on user's crop selection (not forced to 16:9)
     - **Full image now visible and scrollable in crop modal** ✅
     - **Drag and resize functionality fixed with coordinate system conversion** ✅
     - **Resize handle accessible via scrolling** ✅
+    - **Crop works in both Add and Edit modals** ✅
+    - **Distortion fixed - aspect ratio preserved** ✅
+    - **Save functionality working** ✅
   - **State Management:**
     - Crop box dimensions: cropBoxX, cropBoxY, cropBoxWidth, cropBoxHeight
     - Image dimensions: cropImageWidth, cropImageHeight
