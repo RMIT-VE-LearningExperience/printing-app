@@ -1377,10 +1377,6 @@ export default function AdminPage() {
     const scaleX = cropImageWidth / displayedImageWidth;
     const scaleY = cropImageHeight / displayedImageHeight;
 
-    // Calculate image offset within container (account for scroll position)
-    const imgOffsetX = imgRect.left - containerRect.left + cropContainerRef.current.scrollLeft;
-    const imgOffsetY = imgRect.top - containerRect.top + cropContainerRef.current.scrollTop;
-
     // Convert viewport mouse delta to image coordinates
     const deltaX = (e.clientX - dragStartX) * scaleX;
     const deltaY = (e.clientY - dragStartY) * scaleY;
@@ -1396,8 +1392,8 @@ export default function AdminPage() {
       setCropBoxX(newX);
       setCropBoxY(newY);
     } else if (resizingCorner) {
-      let newWidth = cropBoxWidth + deltaX;
-      let newHeight = cropBoxHeight + deltaY;
+      const newWidth = cropBoxWidth + deltaX;
+      const newHeight = cropBoxHeight + deltaY;
 
       // Allow free-form resizing with boundaries
       const maxAllowedWidth = cropImageWidth - cropBoxX;
@@ -4631,7 +4627,7 @@ export default function AdminPage() {
                             cursor: "se-resize",
                             zIndex: 10,
                           }}
-                          onMouseDown={(e) => handleCropMouseDown(e as any, "se")}
+                          onMouseDown={(e: React.MouseEvent<HTMLDivElement>) => handleCropMouseDown(e as React.MouseEvent, "se")}
                         />
                       </Box>
 
