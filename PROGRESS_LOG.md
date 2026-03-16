@@ -397,12 +397,21 @@ When testing after any changes:
   - ✅ Added `originalCropImage` state variable to store the original image when modal opens
   - ✅ Enhanced `resetCropBox()` function to restore the original image (not just crop box position)
   - ✅ Updated `openCropModal()` to capture and store the original image data URL
-  - **Bug Fix**: Reset button wasn't restoring original image across modal sessions
+  - **Bug Fix #1**: Reset button wasn't restoring original image across modal sessions
     - Root cause: `originalCropImage` was being cleared when the modal closed, so reopening the modal would store the cropped image as the new "original"
     - Solution: Preserve `originalCropImage` across modal open/close cycles by removing the clear statements
     - Removed `setOriginalCropImage("")` from `applyCrop()` success and error handlers
     - Removed `setOriginalCropImage("")` from `closeCropModal()` function
-    - Now the true original image persists across multiple editing sessions
+    - Git commit: `cdeb5ae`
+
+  - **Bug Fix #2**: Original image still being overwritten on modal reopen
+    - Root cause: `openCropModal()` was unconditionally setting `setOriginalCropImage(imageDataUrl)` every time the modal opened
+    - When reopening with the cropped image, it would overwrite the stored original with the cropped version
+    - Solution: Only set `originalCropImage` if it's not already set using `if (!originalCropImage) setOriginalCropImage(imageDataUrl)`
+    - This preserves the true original image across crop/apply/close/reopen cycles
+    - Git commit: `ff6139a`
+
+  - Now the true original image persists correctly across all modal operations
   - **Feature**: Users can now click the reset button (refresh icon) in the crop modal to:
     1. Restore the original full image (undoing any crops made in any session)
     2. Reset crop box to cover full original image
@@ -413,7 +422,8 @@ When testing after any changes:
   - Git commits:
     - `ff9bc04` - Add reset-to-original functionality for image crops
     - `cdeb5ae` - Fix reset-to-original crop feature: preserve original across modal sessions
-  - Status: ✅ FIXED AND WORKING
+    - `ff6139a` - Fix: only set originalCropImage on first modal open
+  - Status: ✅ FULLY FIXED AND TESTED
 
 ### Current Session (March 16, 2026 - Part 5)
 - **Fixed ALL TypeScript errors - Ready for deployment**
