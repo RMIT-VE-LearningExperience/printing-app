@@ -340,6 +340,7 @@ export default function AdminPage() {
   const [dragStartY, setDragStartY] = useState(0);
   const [cropIsEdit, setCropIsEdit] = useState(false);
   const [originalCropImage, setOriginalCropImage] = useState<string>("");
+  const [originalCropContext, setOriginalCropContext] = useState<{ mode: string; isEdit: boolean } | null>(null);
   const canvasRef = useRef<HTMLCanvasElement | null>(null);
   const cropCanvasRef = useRef<HTMLCanvasElement | null>(null);
   const cropContainerRef = useRef<HTMLDivElement | null>(null);
@@ -1313,11 +1314,16 @@ export default function AdminPage() {
   // Image crop handlers
   const openCropModal = (imageDataUrl: string, mode: "printer" | "paper" | "color" | "step", isEdit: boolean = false) => {
     setCropImage(imageDataUrl);
-    // Only store as original if this is the first time (originalCropImage is empty)
-    // This preserves the true original across crop/close/reopen cycles
-    if (!originalCropImage) {
+
+    // Check if editing a different item (different mode or edit context)
+    const isDifferentItem = originalCropContext && (originalCropContext.mode !== mode || originalCropContext.isEdit !== isEdit);
+
+    // Store original only if: first time ever, or switching to a different item
+    if (!originalCropImage || isDifferentItem) {
       setOriginalCropImage(imageDataUrl);
+      setOriginalCropContext({ mode, isEdit });
     }
+
     setCropMode(mode);
     setCropIsEdit(isEdit);
 
