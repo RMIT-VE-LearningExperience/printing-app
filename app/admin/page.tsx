@@ -1498,14 +1498,12 @@ export default function AdminPage() {
 
       setCropModalOpen(false);
       setCropImage("");
-      setOriginalCropImage("");
       setCropMode(null);
       setCropIsEdit(false);
     };
     img.onerror = () => {
       console.error("Failed to load image in applyCrop. Image URL may have CORS restrictions or be invalid.");
       setCropModalOpen(false);
-      setOriginalCropImage("");
       setCropIsEdit(false);
     };
     img.src = cropImage;
@@ -1514,7 +1512,6 @@ export default function AdminPage() {
   const closeCropModal = () => {
     setCropModalOpen(false);
     setCropImage("");
-    setOriginalCropImage("");
     setCropMode(null);
     setCropIsEdit(false);
   };
