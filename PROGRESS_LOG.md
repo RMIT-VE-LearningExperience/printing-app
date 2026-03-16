@@ -392,6 +392,22 @@ When testing after any changes:
 
 ## Session History
 
+### Current Session (March 16, 2026 - Part 7)
+- **Added reset-to-original functionality for image crops**
+  - ✅ Added `originalCropImage` state variable to store the original image when modal opens
+  - ✅ Enhanced `resetCropBox()` function to restore the original image (not just crop box position)
+  - ✅ Updated `openCropModal()` to capture and store the original image data URL
+  - ✅ Updated `closeCropModal()` to clear the original image when modal closes
+  - ✅ Updated error handlers in `applyCrop()` to clear the original image
+  - **Feature**: Users can now click the reset button (refresh icon) in the crop modal to:
+    1. Restore the original full image (undoing any crops)
+    2. Reset crop box to cover full original image
+    3. Apply to save the original (effectively reverting a previous crop)
+  - **Benefit**: Users no longer need to delete and re-upload images to undo crops
+  - Files Modified: app/admin/page.tsx (lines 342, 1316, 1340-1362, 1501, 1508, 1517)
+  - Git commit: `ff9bc04` - Add reset-to-original functionality for image crops
+  - Status: ✅ COMPLETED
+
 ### Current Session (March 16, 2026 - Part 5)
 - **Fixed ALL TypeScript errors - Ready for deployment**
   - ✅ Updated TutorialState type in app/admin/page.tsx to include homepageTitle and homepageDescription
