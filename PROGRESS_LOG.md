@@ -429,7 +429,18 @@ When testing after any changes:
     - If imageUrl differs, it's a different item (even if same type), so reset originalCropImage
     - Git commit: `a712fc4`
 
-  - Now originalCropImage is correctly scoped per-item across both item types and multiple items of the same type
+  - **Bug Fix #5**: Reset didn't restore original image size
+    - Root cause: When reopening crop modal after applying a crop, the form field has the cropped image (different URL)
+    - The logic treated this as "different item" and reset originalCropImage to the cropped version
+    - Lost the true original image and its dimensions
+    - Solution: Track BOTH originalImageUrl and currentImageUrl separately
+    - originalImageUrl: the image URL when first opened (before any crops)
+    - currentImageUrl: the current image URL in the form field
+    - When reopening, check if imageDataUrl matches either originalImageUrl OR currentImageUrl
+    - If yes, preserve originalCropImage; if no, it's a different item, so reset
+    - Git commit: `4853b86`
+
+  - Now originalCropImage is correctly scoped per-item AND the original dimensions are preserved across crop/apply/reopen cycles
   - **Feature**: Users can now click the reset button (refresh icon) in the crop modal to:
     1. Restore the original full image (undoing any crops for the current item)
     2. Reset crop box to cover full original image
@@ -444,7 +455,8 @@ When testing after any changes:
     - `ff6139a` - Fix: only set originalCropImage on first modal open
     - `9e6d531` - Fix: detect when editing different items and reset originalCropImage
     - `a712fc4` - Fix: detect item changes by comparing imageUrl in addition to context
-  - Status: ✅ FULLY FIXED - WORKS ACROSS ALL ITEMS
+    - `4853b86` - Fix: preserve original image size by tracking original vs current imageUrl
+  - Status: ✅ FULLY FIXED - CORRECT IMAGE AND DIMENSIONS
 
 ### Current Session (March 16, 2026 - Part 5)
 - **Fixed ALL TypeScript errors - Ready for deployment**
