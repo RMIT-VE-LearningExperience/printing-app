@@ -1418,6 +1418,7 @@ export default function AdminPage() {
     if (!cropImage || !canvasRef.current || !cropCanvasRef.current) return;
 
     const img = new Image();
+    img.crossOrigin = "anonymous";
     img.onload = () => {
       const canvas = canvasRef.current!;
       canvas.width = cropImageWidth;
@@ -1466,7 +1467,6 @@ export default function AdminPage() {
       console.error("Failed to load image in applyCrop. Image URL may have CORS restrictions or be invalid.");
       setCropModalOpen(false);
     };
-    img.crossOrigin = "anonymous";
     img.src = cropImage;
   };
 
