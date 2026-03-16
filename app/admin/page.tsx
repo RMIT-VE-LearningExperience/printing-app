@@ -59,6 +59,7 @@ import {
   Crop as CropIcon,
 } from "@mui/icons-material";
 import { type ChangeEvent, useEffect, useMemo, useRef, useState } from "react";
+import { type TutorialState } from "../lib/tutorial-store";
 
 type Step = {
   id: string;
