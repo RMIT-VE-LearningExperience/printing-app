@@ -1312,6 +1312,7 @@ export default function AdminPage() {
     setCropMode(mode);
 
     const img = new Image();
+    img.crossOrigin = "anonymous";
     img.onload = () => {
       setCropImageWidth(img.width);
       setCropImageHeight(img.height);
@@ -1321,6 +1322,9 @@ export default function AdminPage() {
       setCropBoxY(0);
       setCropBoxWidth(img.width);
       setCropBoxHeight(img.height);
+    };
+    img.onerror = () => {
+      console.error("Failed to load image in openCropModal. Image may not be accessible.");
     };
     img.src = imageDataUrl;
 
