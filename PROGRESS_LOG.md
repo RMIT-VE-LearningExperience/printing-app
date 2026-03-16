@@ -440,15 +440,32 @@ When testing after any changes:
     - If yes, preserve originalCropImage; if no, it's a different item, so reset
     - Git commit: `4853b86`
 
-  - Now originalCropImage is correctly scoped per-item AND the original dimensions are preserved across crop/apply/reopen cycles
-  - **Feature**: Users can now click the reset button (refresh icon) in the crop modal to:
-    1. Restore the original full image (undoing any crops for the current item)
-    2. Reset crop box to cover full original image
-    3. Apply to save the original (effectively reverting a previous crop)
-  - **Workflow**: Upload → Open crop → Crop → Apply → Close → Open crop again → Click reset → See original uncropped image
-  - **Works Across Items**: Edit Item A (crop/apply) → Edit Item B (open crop) → Reset shows Item B's original (not Item A's)
-  - **Benefit**: Users no longer need to delete and re-upload images to undo crops
-  - Files Modified: app/admin/page.tsx (lines 342-343, 1318-1327)
+  - **Implementation Progress**:
+    - ✅ Bug Fix #1: Fixed clearance of originalCropImage on modal close
+    - ✅ Bug Fix #2: Fixed unconditional overwriting of originalCropImage on modal reopen
+    - ✅ Bug Fix #3: Implemented context tracking to detect different items
+    - ✅ Bug Fix #4: Added imageUrl comparison to detect same-type items
+    - ✅ Bug Fix #5: Implemented dual imageUrl tracking (original vs current)
+    - ⚠️ **Issue Remaining**: Despite 5 bug fixes, the reset button still displays cropped image instead of original size
+
+  - **Current Behavior**:
+    - ✅ Reset button now shows the correct image (fixed the "different photo replaces it" bug)
+    - ✅ Works correctly across different items (no longer shows images from other items)
+    - ❌ Image displayed at cropped size (not original size) - ROOT CAUSE UNKNOWN, REQUIRES FURTHER INVESTIGATION
+
+  - **Investigation Needed**:
+    - The originalCropImage state appears to be storing the image correctly
+    - The resetCropBox function is being called (verified in previous debugging)
+    - The Image object loads with correct dimensions
+    - But the modal display still shows cropped dimensions
+    - Possible areas: image rendering, crop box overlay calculations, or display state not updating
+
+  - **Benefit Achieved So Far**:
+    - Users can reset to the correct original image from the current item
+    - No more confusion with images from different items being shown
+    - Reset functionality partially working (just not at original size yet)
+
+  - Files Modified: app/admin/page.tsx (lines 342-343, 1314-1337)
   - Git commits:
     - `ff9bc04` - Add reset-to-original functionality for image crops
     - `cdeb5ae` - Fix reset-to-original crop feature: preserve original across modal sessions
@@ -456,7 +473,9 @@ When testing after any changes:
     - `9e6d531` - Fix: detect when editing different items and reset originalCropImage
     - `a712fc4` - Fix: detect item changes by comparing imageUrl in addition to context
     - `4853b86` - Fix: preserve original image size by tracking original vs current imageUrl
-  - Status: ✅ FULLY FIXED - CORRECT IMAGE AND DIMENSIONS
+    - `943085d` - Update progress log: document Bug Fix #5
+
+  - Status: ⚠️ PARTIALLY WORKING - Correct image restored, but at cropped dimensions (needs debugging)
 
 ### Current Session (March 16, 2026 - Part 5)
 - **Fixed ALL TypeScript errors - Ready for deployment**
