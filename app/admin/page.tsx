@@ -339,6 +339,7 @@ export default function AdminPage() {
   const [dragStartX, setDragStartX] = useState(0);
   const [dragStartY, setDragStartY] = useState(0);
   const [cropIsEdit, setCropIsEdit] = useState(false);
+  const [originalCropImage, setOriginalCropImage] = useState<string>("");
   const canvasRef = useRef<HTMLCanvasElement | null>(null);
   const cropCanvasRef = useRef<HTMLCanvasElement | null>(null);
   const cropContainerRef = useRef<HTMLDivElement | null>(null);
@@ -1312,6 +1313,7 @@ export default function AdminPage() {
   // Image crop handlers
   const openCropModal = (imageDataUrl: string, mode: "printer" | "paper" | "color" | "step", isEdit: boolean = false) => {
     setCropImage(imageDataUrl);
+    setOriginalCropImage(imageDataUrl);
     setCropMode(mode);
     setCropIsEdit(isEdit);
 
@@ -1336,13 +1338,27 @@ export default function AdminPage() {
   };
 
   const resetCropBox = () => {
-    if (cropImageWidth === 0 || cropImageHeight === 0) return;
+    // Restore original image to undo any crops
+    if (!originalCropImage) return;
 
-    // Reset crop box to full image size
-    setCropBoxX(0);
-    setCropBoxY(0);
-    setCropBoxWidth(cropImageWidth);
-    setCropBoxHeight(cropImageHeight);
+    setCropImage(originalCropImage);
+
+    const img = new Image();
+    img.crossOrigin = "anonymous";
+    img.onload = () => {
+      setCropImageWidth(img.width);
+      setCropImageHeight(img.height);
+
+      // Initialize crop box to full image size
+      setCropBoxX(0);
+      setCropBoxY(0);
+      setCropBoxWidth(img.width);
+      setCropBoxHeight(img.height);
+    };
+    img.onerror = () => {
+      console.error("Failed to load original image in resetCropBox.");
+    };
+    img.src = originalCropImage;
   };
 
   const handleCropMouseDown = (e: React.MouseEvent, corner?: string) => {
@@ -1482,12 +1498,14 @@ export default function AdminPage() {
 
       setCropModalOpen(false);
       setCropImage("");
+      setOriginalCropImage("");
       setCropMode(null);
       setCropIsEdit(false);
     };
     img.onerror = () => {
       console.error("Failed to load image in applyCrop. Image URL may have CORS restrictions or be invalid.");
       setCropModalOpen(false);
+      setOriginalCropImage("");
       setCropIsEdit(false);
     };
     img.src = cropImage;
@@ -1496,6 +1514,7 @@ export default function AdminPage() {
   const closeCropModal = () => {
     setCropModalOpen(false);
     setCropImage("");
+    setOriginalCropImage("");
     setCropMode(null);
     setCropIsEdit(false);
   };
