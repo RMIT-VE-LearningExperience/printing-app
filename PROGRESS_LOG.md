@@ -509,9 +509,55 @@ When testing after any changes:
     - Git commit: `2ed47fa` - Initialize crop box to full image size and enable free-form resizing
     - Fixed boundary checking to allow proper movement and resizing
     - Git commit: `b06101d` - Fix crop box drag and resize when crop box is at full image size
-  - **Bug Fix: Apply Crop Not Saving (THIS SESSION - March 16, 2026 - Part 4)**
+  - **Bug Fix: Apply Crop Not Saving - Edit Modal Issue (THIS SESSION - March 16, 2026 - Part 5)**
+    - Issue: Cropped images not being saved/displayed in form fields; modal closes but nothing changes
+    - Root Cause: CRITICAL STATE MANAGEMENT BUG
+      1. When cropping in **Edit modals**, user calls `openCropModal(editPrinterThumbnail, "printer")`
+      2. applyCrop function was always calling `setNewPrinterThumbnail(croppedImageUrl)` - the ADD modal state variable
+      3. Edit modal displays `editPrinterThumbnail`, but applyCrop saves to `newPrinterThumbnail`
+      4. Result: Cropped image saves to wrong state variable; Edit modal appears unchanged
+    - Solution: Implemented mode tracking system
+      1. Added new state variable: `const [cropIsEdit, setCropIsEdit] = useState(false);`
+      2. Modified openCropModal signature: `openCropModal(imageDataUrl, mode, isEdit: boolean = false)`
+      3. Updated applyCrop to check cropIsEdit flag:
+         ```typescript
+         if (cropMode === "printer") {
+           if (cropIsEdit) {
+             setEditPrinterThumbnail(croppedImageUrl);  // Edit modal
+           } else {
+             setNewPrinterThumbnail(croppedImageUrl);   // Add modal
+           }
+         }
+         ```
+      4. Updated all Edit modal crop buttons to pass `isEdit={true}`:
+         - Line 3205: `openCropModal(editPrinterThumbnail, "printer", true)`
+         - Line 3711: `openCropModal(editPaperThumbnail, "paper", true)`
+         - Line 4184: `openCropModal(editColourThumbnail, "color", true)`
+         - Line 4454: `openCropModal(editStepImage, "step", true)`
+      5. Reset cropIsEdit in both closeCropModal and applyCrop error handler
+    - Result: Cropped images now save to the correct state variable (Edit or Add) and display immediately
+    - Files Modified: app/admin/page.tsx (lines 339, 1311-1314, 1458-1482, 1487, 1492, 1501, 3205, 3711, 4184, 4454)
+    - Git commit: PENDING
+
+  - **Bug Fix: Distorted Crop Output (THIS SESSION - March 16, 2026 - Part 6)**
+    - Issue: Cropped images appear distorted/stretched in the thumbnail preview
+    - Root Cause: Crop output was forced to 16:9 aspect ratio regardless of user's crop selection
+      - Code: `cropCanvas.height = Math.round(400 * (9 / 16))` forced all outputs to 16:9
+      - If user selected a 2:1 crop, it would be stretched to fit 16:9, causing distortion
+    - Solution: Preserve the user's crop selection aspect ratio in the output
+      ```typescript
+      const outputWidth = 400; // Output width
+      const outputHeight = Math.round(outputWidth * (cropBoxHeight / cropBoxWidth)); // Preserve crop aspect ratio
+      cropCanvas.width = outputWidth;
+      cropCanvas.height = outputHeight;
+      ```
+    - Result: Cropped output now maintains the exact aspect ratio of the user's crop selection; no distortion
+    - Files Modified: app/admin/page.tsx (lines 1438-1441)
+    - Git commit: PENDING
+
+  - **Bug Fix: Apply Crop Not Saving - Previous CORS Issue (THIS SESSION - March 16, 2026 - Part 4)**
     - Issue: When user clicks "Apply Crop", the cropped image is not saved to the form field
-    - Root Cause: Image loading in applyCrop was failing silently, likely due to:
+    - Root Cause (Partial): Image loading in applyCrop was failing silently, likely due to:
       1. CORS restrictions when loading images from Firestore URLs
       2. Image could display in preview but not be manipulated on canvas due to security policies
     - Solution:
@@ -519,7 +565,7 @@ When testing after any changes:
       2. Set `img.crossOrigin = "anonymous"` to enable CORS handling for external URLs
       3. Log diagnostic error messages to help identify issues
       4. Modal now closes gracefully even if image loading fails
-    - Result: Cropped images are now saved properly; modal never gets stuck
+    - Result: Helped identify that this was not the main issue (CORS was handled); revealed the state management bug instead
     - Git commit: `4814002`
 
   - **Bug Fix: Image Preview Cutoff at Top (THIS SESSION - March 16, 2026 - Part 3)**

@@ -336,6 +336,7 @@ export default function AdminPage() {
   const [resizingCorner, setResizingCorner] = useState<string | null>(null);
   const [dragStartX, setDragStartX] = useState(0);
   const [dragStartY, setDragStartY] = useState(0);
+  const [cropIsEdit, setCropIsEdit] = useState(false);
   const canvasRef = useRef<HTMLCanvasElement | null>(null);
   const cropCanvasRef = useRef<HTMLCanvasElement | null>(null);
   const cropContainerRef = useRef<HTMLDivElement | null>(null);
@@ -1307,9 +1308,10 @@ export default function AdminPage() {
   };
 
   // Image crop handlers
-  const openCropModal = (imageDataUrl: string, mode: "printer" | "paper" | "color" | "step") => {
+  const openCropModal = (imageDataUrl: string, mode: "printer" | "paper" | "color" | "step", isEdit: boolean = false) => {
     setCropImage(imageDataUrl);
     setCropMode(mode);
+    setCropIsEdit(isEdit);
 
     const img = new Image();
     img.crossOrigin = "anonymous";
@@ -1433,8 +1435,10 @@ export default function AdminPage() {
 
       // Use the user-selected crop box
       const cropCanvas = cropCanvasRef.current!;
-      cropCanvas.width = 400; // Output size
-      cropCanvas.height = Math.round(400 * (9 / 16)); // 16:9 ratio
+      const outputWidth = 400; // Output width
+      const outputHeight = Math.round(outputWidth * (cropBoxHeight / cropBoxWidth)); // Preserve crop aspect ratio
+      cropCanvas.width = outputWidth;
+      cropCanvas.height = outputHeight;
       const cropCtx = cropCanvas.getContext("2d");
       if (!cropCtx) return;
 
@@ -1454,22 +1458,40 @@ export default function AdminPage() {
 
       // Apply cropped image to the appropriate form field
       if (cropMode === "printer") {
-        setNewPrinterThumbnail(croppedImageUrl);
+        if (cropIsEdit) {
+          setEditPrinterThumbnail(croppedImageUrl);
+        } else {
+          setNewPrinterThumbnail(croppedImageUrl);
+        }
       } else if (cropMode === "paper") {
-        setNewPaperThumbnail(croppedImageUrl);
+        if (cropIsEdit) {
+          setEditPaperThumbnail(croppedImageUrl);
+        } else {
+          setNewPaperThumbnail(croppedImageUrl);
+        }
       } else if (cropMode === "color") {
-        setNewColourThumbnail(croppedImageUrl);
+        if (cropIsEdit) {
+          setEditColourThumbnail(croppedImageUrl);
+        } else {
+          setNewColourThumbnail(croppedImageUrl);
+        }
       } else if (cropMode === "step") {
-        setNewStepImage(croppedImageUrl);
+        if (cropIsEdit) {
+          setEditStepImage(croppedImageUrl);
+        } else {
+          setNewStepImage(croppedImageUrl);
+        }
       }
 
       setCropModalOpen(false);
       setCropImage("");
       setCropMode(null);
+      setCropIsEdit(false);
     };
     img.onerror = () => {
       console.error("Failed to load image in applyCrop. Image URL may have CORS restrictions or be invalid.");
       setCropModalOpen(false);
+      setCropIsEdit(false);
     };
     img.src = cropImage;
   };
@@ -1478,6 +1500,7 @@ export default function AdminPage() {
     setCropModalOpen(false);
     setCropImage("");
     setCropMode(null);
+    setCropIsEdit(false);
   };
 
   // Render
@@ -3181,7 +3204,7 @@ export default function AdminPage() {
                       size="small"
                       variant="outlined"
                       startIcon={<CropIcon />}
-                      onClick={() => openCropModal(editPrinterThumbnail, "printer")}
+                      onClick={() => openCropModal(editPrinterThumbnail, "printer", true)}
                       sx={{
                         color: "#009DC9",
                         borderColor: "#009DC9",
@@ -3687,7 +3710,7 @@ export default function AdminPage() {
                       size="small"
                       variant="outlined"
                       startIcon={<CropIcon />}
-                      onClick={() => openCropModal(editPaperThumbnail, "paper")}
+                      onClick={() => openCropModal(editPaperThumbnail, "paper", true)}
                       sx={{
                         color: "#009DC9",
                         borderColor: "#009DC9",
@@ -4160,7 +4183,7 @@ export default function AdminPage() {
                       size="small"
                       variant="outlined"
                       startIcon={<CropIcon />}
-                      onClick={() => openCropModal(editColourThumbnail, "color")}
+                      onClick={() => openCropModal(editColourThumbnail, "color", true)}
                       sx={{
                         color: "#009DC9",
                         borderColor: "#009DC9",
@@ -4430,7 +4453,7 @@ export default function AdminPage() {
                       size="small"
                       variant="outlined"
                       startIcon={<CropIcon />}
-                      onClick={() => openCropModal(editStepImage, "step")}
+                      onClick={() => openCropModal(editStepImage, "step", true)}
                       sx={{
                         color: "#009DC9",
                         borderColor: "#009DC9",
