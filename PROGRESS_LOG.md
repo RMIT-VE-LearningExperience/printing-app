@@ -411,19 +411,30 @@ When testing after any changes:
     - This preserves the true original image across crop/apply/close/reopen cycles
     - Git commit: `ff6139a`
 
-  - Now the true original image persists correctly across all modal operations
+  - **Bug Fix #3**: Reset button showed wrong image when editing different items
+    - Root cause: `originalCropImage` was preserved globally across the entire session, causing it to persist when editing different items
+    - When editing Item A then Item B, reset would show Item A's original instead of Item B's
+    - Solution: Track context (mode + isEdit state) along with original image
+    - Added new state: `originalCropContext = { mode: string, isEdit: boolean }`
+    - In `openCropModal()`, detect when mode or isEdit flag differs from stored context
+    - If different item detected, reset both `originalCropImage` and `originalCropContext`
+    - Git commit: `9e6d531`
+
+  - Now originalCropImage is correctly scoped per-item, not globally across the session
   - **Feature**: Users can now click the reset button (refresh icon) in the crop modal to:
-    1. Restore the original full image (undoing any crops made in any session)
+    1. Restore the original full image (undoing any crops for the current item)
     2. Reset crop box to cover full original image
     3. Apply to save the original (effectively reverting a previous crop)
   - **Workflow**: Upload → Open crop → Crop → Apply → Close → Open crop again → Click reset → See original uncropped image
+  - **Works Across Items**: Edit Item A (crop/apply) → Edit Item B (open crop) → Reset shows Item B's original (not Item A's)
   - **Benefit**: Users no longer need to delete and re-upload images to undo crops
-  - Files Modified: app/admin/page.tsx (lines 342, 1316, 1340-1362)
+  - Files Modified: app/admin/page.tsx (lines 342-343, 1318-1327)
   - Git commits:
     - `ff9bc04` - Add reset-to-original functionality for image crops
     - `cdeb5ae` - Fix reset-to-original crop feature: preserve original across modal sessions
     - `ff6139a` - Fix: only set originalCropImage on first modal open
-  - Status: ✅ FULLY FIXED AND TESTED
+    - `9e6d531` - Fix: detect when editing different items and reset originalCropImage
+  - Status: ✅ FULLY FIXED - WORKS PER-ITEM
 
 ### Current Session (March 16, 2026 - Part 5)
 - **Fixed ALL TypeScript errors - Ready for deployment**
