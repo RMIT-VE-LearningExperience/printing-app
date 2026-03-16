@@ -1364,7 +1364,6 @@ export default function AdminPage() {
     const imgElement = imgElements[0] as HTMLImageElement;
 
     // Get bounding rects
-    const containerRect = cropContainerRef.current.getBoundingClientRect();
     const imgRect = imgElement.getBoundingClientRect();
 
     // Calculate actual displayed image dimensions
