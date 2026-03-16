@@ -420,7 +420,16 @@ When testing after any changes:
     - If different item detected, reset both `originalCropImage` and `originalCropContext`
     - Git commit: `9e6d531`
 
-  - Now originalCropImage is correctly scoped per-item, not globally across the session
+  - **Bug Fix #4**: Still showed wrong image when editing different items of SAME TYPE
+    - Root cause: When editing multiple items of the same type (e.g., two Printers, two Colours), mode and isEdit stay the same
+    - The context check didn't detect the item change, so originalCropImage persisted from first item to second
+    - Solution: Add imageUrl comparison to the isDifferentItem check
+    - Updated originalCropContext to store imageUrl: `{ mode, isEdit, imageUrl }`
+    - Now detects item changes based on: mode OR isEdit OR imageUrl
+    - If imageUrl differs, it's a different item (even if same type), so reset originalCropImage
+    - Git commit: `a712fc4`
+
+  - Now originalCropImage is correctly scoped per-item across both item types and multiple items of the same type
   - **Feature**: Users can now click the reset button (refresh icon) in the crop modal to:
     1. Restore the original full image (undoing any crops for the current item)
     2. Reset crop box to cover full original image
@@ -434,7 +443,8 @@ When testing after any changes:
     - `cdeb5ae` - Fix reset-to-original crop feature: preserve original across modal sessions
     - `ff6139a` - Fix: only set originalCropImage on first modal open
     - `9e6d531` - Fix: detect when editing different items and reset originalCropImage
-  - Status: ✅ FULLY FIXED - WORKS PER-ITEM
+    - `a712fc4` - Fix: detect item changes by comparing imageUrl in addition to context
+  - Status: ✅ FULLY FIXED - WORKS ACROSS ALL ITEMS
 
 ### Current Session (March 16, 2026 - Part 5)
 - **Fixed ALL TypeScript errors - Ready for deployment**
