@@ -1313,7 +1313,11 @@ export default function AdminPage() {
   // Image crop handlers
   const openCropModal = (imageDataUrl: string, mode: "printer" | "paper" | "color" | "step", isEdit: boolean = false) => {
     setCropImage(imageDataUrl);
-    setOriginalCropImage(imageDataUrl);
+    // Only store as original if this is the first time (originalCropImage is empty)
+    // This preserves the true original across crop/close/reopen cycles
+    if (!originalCropImage) {
+      setOriginalCropImage(imageDataUrl);
+    }
     setCropMode(mode);
     setCropIsEdit(isEdit);
 
