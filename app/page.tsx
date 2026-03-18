@@ -21,6 +21,7 @@ import ArrowBackIcon from "@mui/icons-material/ArrowBack";
 import HomeIcon from "@mui/icons-material/Home";
 import ChevronLeftIcon from "@mui/icons-material/ChevronLeft";
 import ChevronRightIcon from "@mui/icons-material/ChevronRight";
+import ImageIcon from "@mui/icons-material/Image";
 
 type Step = {
   id: string;
@@ -93,6 +94,7 @@ export default function HomePage() {
   const [data, setData] = useState<TutorialState>(emptyState);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [isPreviewMode, setIsPreviewMode] = useState(false);
 
   const [selectedPrinterId, setSelectedPrinterId] = useState<string | null>(null);
   const [selectedPaperId, setSelectedPaperId] = useState<string | null>(null);
@@ -130,8 +132,18 @@ export default function HomePage() {
       setError(null);
 
       try {
-        const response = await fetch("/api/tutorial", { cache: "no-store" });
-        const result = (await response.json()) as { state: TutorialState } | { error: string };
+        const params = new URLSearchParams(window.location.search);
+        const previewToken = params.get("previewToken");
+        const urlPrinterId = params.get("printerId");
+        const urlPaperId = params.get("paperId");
+        const urlColourId = params.get("colourId");
+
+        const url = previewToken
+          ? `/api/tutorial?previewToken=${encodeURIComponent(previewToken)}`
+          : "/api/tutorial";
+
+        const response = await fetch(url, { cache: "no-store" });
+        const result = (await response.json()) as { state: TutorialState; isPreviewMode?: boolean } | { error: string };
 
         if (!response.ok || ("error" in result)) {
           setError("Could not load guide data.");
@@ -139,6 +151,13 @@ export default function HomePage() {
         }
 
         setData(result.state);
+
+        if ("isPreviewMode" in result && result.isPreviewMode) {
+          setIsPreviewMode(true);
+          if (urlPrinterId) setSelectedPrinterId(urlPrinterId);
+          if (urlPaperId) setSelectedPaperId(urlPaperId);
+          if (urlColourId) setSelectedColourId(urlColourId);
+        }
       } catch {
         setError("Could not load guide data.");
       } finally {
@@ -204,6 +223,7 @@ export default function HomePage() {
   ]);
 
   useEffect(() => {
+    if (isPreviewMode) return;
     window.localStorage.setItem(
       PROGRESS_KEY,
       JSON.stringify({
@@ -213,7 +233,7 @@ export default function HomePage() {
         stepIndex: activeStepIndex,
       }),
     );
-  }, [activeStepIndex, selectedColourId, selectedPaperId, selectedPrinterId]);
+  }, [activeStepIndex, isPreviewMode, selectedColourId, selectedPaperId, selectedPrinterId]);
 
   function resetToHome() {
     setSelectedPrinterId(null);
@@ -321,10 +341,33 @@ export default function HomePage() {
     return () => window.removeEventListener("keydown", onKeyDown);
   }, [showingSteps, hasSteps, steps.length]);
 
+  const previewBanner = isPreviewMode ? (
+    <Box
+      sx={{
+        position: "fixed",
+        top: 0,
+        left: 0,
+        right: 0,
+        zIndex: 1000,
+        bgcolor: "#E65100",
+        color: "#ffffff",
+        textAlign: "center",
+        py: 0.75,
+        px: 2,
+        fontSize: "0.8rem",
+        fontWeight: 700,
+        letterSpacing: "0.06em",
+      }}
+    >
+      PREVIEW MODE — Includes unpublished content
+    </Box>
+  ) : null;
+
   // RENDER HOME PAGE (PRINTER SELECTION)
   if (showingPrinterSelection) {
     return (
-      <Box sx={{ minHeight: "100vh", bgcolor: colors.lightBg, py: { xs: 4, sm: 5, md: 7 } }}>
+      <Box sx={{ minHeight: "100vh", bgcolor: colors.lightBg, py: { xs: 4, sm: 5, md: 7 }, pt: isPreviewMode ? { xs: "calc(2rem + 36px)", sm: "calc(2.5rem + 36px)", md: "calc(3.5rem + 36px)" } : undefined }}>
+        {previewBanner}
         <Container maxWidth="md">
           {/* Header */}
           <Stack spacing={2} sx={{ mb: { xs: 5, sm: 6, md: 8 }, textAlign: "center" }}>
@@ -390,7 +433,7 @@ export default function HomePage() {
 
               <Grid container spacing={{ xs: 2, sm: 2.5, md: 3 }}>
                 {data.printers
-                  .filter((printer) => printer.published !== false)
+                  .filter((printer) => isPreviewMode || printer.published !== false)
                   .map((printer) => (
                   <Grid item xs={12} sm={6} md={4} key={printer.id}>
                     <Card
@@ -413,16 +456,16 @@ export default function HomePage() {
                       }}
                     >
                       {/* Image */}
-                      {printer.thumbnailDataUrl && (
-                        <Box
-                          sx={{
-                            position: "relative",
-                            width: "100%",
-                            paddingBottom: "66.67%",
-                            overflow: "hidden",
-                            bgcolor: "#f5f5f5",
-                          }}
-                        >
+                      <Box
+                        sx={{
+                          position: "relative",
+                          width: "100%",
+                          paddingBottom: "66.67%",
+                          overflow: "hidden",
+                          bgcolor: "#f5f5f5",
+                        }}
+                      >
+                        {printer.thumbnailDataUrl ? (
                           <Image
                             src={printer.thumbnailDataUrl}
                             alt={printer.name}
@@ -430,8 +473,21 @@ export default function HomePage() {
                             style={{ objectFit: "cover" }}
                             sizes="(max-width: 600px) 100vw, (max-width: 960px) 50vw, 33vw"
                           />
-                        </Box>
-                      )}
+                        ) : (
+                          <Box
+                            sx={{
+                              position: "absolute",
+                              inset: 0,
+                              display: "flex",
+                              alignItems: "center",
+                              justifyContent: "center",
+                              bgcolor: "#e8f4f8",
+                            }}
+                          >
+                            <ImageIcon sx={{ color: "#b0c4cc", fontSize: 40 }} />
+                          </Box>
+                        )}
+                      </Box>
 
                       {/* Content */}
                       <CardContent sx={{ p: { xs: 2, sm: 2.5 } }}>
@@ -479,7 +535,8 @@ export default function HomePage() {
   // RENDER PAPER SELECTION PAGE
   if (showingPaperSelection) {
     return (
-      <Box sx={{ minHeight: "100vh", bgcolor: colors.lightBg, py: { xs: 4, sm: 5, md: 7 } }}>
+      <Box sx={{ minHeight: "100vh", bgcolor: colors.lightBg, py: { xs: 4, sm: 5, md: 7 }, pt: isPreviewMode ? { xs: "calc(2rem + 36px)", sm: "calc(2.5rem + 36px)", md: "calc(3.5rem + 36px)" } : undefined }}>
+        {previewBanner}
         <Container maxWidth="md">
           {/* Top Navigation */}
           <Stack direction="row" spacing={1.5} sx={{ mb: { xs: 4, sm: 5 }, alignItems: "center" }}>
@@ -562,7 +619,7 @@ export default function HomePage() {
           {!loading && hasPapers && (
             <Grid container spacing={{ xs: 2, sm: 2.5, md: 3 }}>
               {selectedPrinter?.papers
-                .filter((paper) => paper.published !== false)
+                .filter((paper) => isPreviewMode || paper.published !== false)
                 .map((paper) => (
                 <Grid item xs={12} sm={6} md={4} key={paper.id}>
                   <Card
@@ -585,16 +642,16 @@ export default function HomePage() {
                     }}
                   >
                     {/* Image */}
-                    {paper.thumbnailDataUrl && (
-                      <Box
-                        sx={{
-                          position: "relative",
-                          width: "100%",
-                          paddingBottom: "66.67%",
-                          overflow: "hidden",
-                          bgcolor: "#f5f5f5",
-                        }}
-                      >
+                    <Box
+                      sx={{
+                        position: "relative",
+                        width: "100%",
+                        paddingBottom: "66.67%",
+                        overflow: "hidden",
+                        bgcolor: "#f5f5f5",
+                      }}
+                    >
+                      {paper.thumbnailDataUrl ? (
                         <Image
                           src={paper.thumbnailDataUrl}
                           alt={paper.name}
@@ -602,8 +659,21 @@ export default function HomePage() {
                           style={{ objectFit: "cover" }}
                           sizes="(max-width: 600px) 100vw, (max-width: 960px) 50vw, 33vw"
                         />
-                      </Box>
-                    )}
+                      ) : (
+                        <Box
+                          sx={{
+                            position: "absolute",
+                            inset: 0,
+                            display: "flex",
+                            alignItems: "center",
+                            justifyContent: "center",
+                            bgcolor: "#e8f4f8",
+                          }}
+                        >
+                          <ImageIcon sx={{ color: "#b0c4cc", fontSize: 40 }} />
+                        </Box>
+                      )}
+                    </Box>
 
                     {/* Content */}
                     <CardContent sx={{ p: { xs: 2, sm: 2.5 } }}>
@@ -650,7 +720,8 @@ export default function HomePage() {
   // RENDER COLOUR MANAGEMENT PAGE
   if (showingColourSelection) {
     return (
-      <Box sx={{ minHeight: "100vh", bgcolor: colors.lightBg, py: { xs: 4, sm: 5, md: 7 } }}>
+      <Box sx={{ minHeight: "100vh", bgcolor: colors.lightBg, py: { xs: 4, sm: 5, md: 7 }, pt: isPreviewMode ? { xs: "calc(2rem + 36px)", sm: "calc(2.5rem + 36px)", md: "calc(3.5rem + 36px)" } : undefined }}>
+        {previewBanner}
         <Container maxWidth="md">
           {/* Top Navigation */}
           <Stack direction="row" spacing={1.5} sx={{ mb: { xs: 4, sm: 5 }, alignItems: "center" }}>
@@ -747,7 +818,7 @@ export default function HomePage() {
           {!loading && hasColours && (
             <Grid container spacing={{ xs: 2, sm: 2.5, md: 3 }}>
               {selectedPaper?.colours
-                .filter((colour) => colour.published !== false)
+                .filter((colour) => isPreviewMode || colour.published !== false)
                 .map((colour) => (
                 <Grid item xs={12} sm={6} md={4} key={colour.id}>
                   <Card
@@ -770,16 +841,16 @@ export default function HomePage() {
                     }}
                   >
                     {/* Image */}
-                    {colour.thumbnailDataUrl && (
-                      <Box
-                        sx={{
-                          position: "relative",
-                          width: "100%",
-                          paddingBottom: "66.67%",
-                          overflow: "hidden",
-                          bgcolor: "#f5f5f5",
-                        }}
-                      >
+                    <Box
+                      sx={{
+                        position: "relative",
+                        width: "100%",
+                        paddingBottom: "66.67%",
+                        overflow: "hidden",
+                        bgcolor: "#f5f5f5",
+                      }}
+                    >
+                      {colour.thumbnailDataUrl ? (
                         <Image
                           src={colour.thumbnailDataUrl}
                           alt={colour.name}
@@ -787,8 +858,21 @@ export default function HomePage() {
                           style={{ objectFit: "cover" }}
                           sizes="(max-width: 600px) 100vw, (max-width: 960px) 50vw, 33vw"
                         />
-                      </Box>
-                    )}
+                      ) : (
+                        <Box
+                          sx={{
+                            position: "absolute",
+                            inset: 0,
+                            display: "flex",
+                            alignItems: "center",
+                            justifyContent: "center",
+                            bgcolor: "#e8f4f8",
+                          }}
+                        >
+                          <ImageIcon sx={{ color: "#b0c4cc", fontSize: 40 }} />
+                        </Box>
+                      )}
+                    </Box>
 
                     {/* Content */}
                     <CardContent sx={{ p: { xs: 2, sm: 2.5 } }}>
@@ -850,8 +934,9 @@ export default function HomePage() {
   if (showingSteps && activeStep) {
     return (
       <Box sx={{ minHeight: "100vh", bgcolor: colors.lightBg }}>
+        {previewBanner}
         {/* Blue Border Accent at Top */}
-        <Box sx={{ height: 3, bgcolor: colors.primary }} />
+        <Box sx={{ height: 3, bgcolor: colors.primary, mt: isPreviewMode ? "36px" : 0 }} />
 
         <Box sx={{ py: { xs: 4, sm: 5, md: 7 } }}>
           <Container maxWidth="md">

@@ -57,6 +57,8 @@ import {
   LinkOff as LinkOffIcon,
   Refresh as RefreshIcon,
   Crop as CropIcon,
+  Image as ImagePlaceholderIcon,
+  Pageview as PageviewIcon,
 } from "@mui/icons-material";
 import { type ChangeEvent, useEffect, useMemo, useRef, useState } from "react";
 
@@ -339,6 +341,7 @@ export default function AdminPage() {
   const [dragStartX, setDragStartX] = useState(0);
   const [dragStartY, setDragStartY] = useState(0);
   const [cropIsEdit, setCropIsEdit] = useState(false);
+  const [cropImgReady, setCropImgReady] = useState(false);
   const [originalCropImage, setOriginalCropImage] = useState<string>("");
   const [originalCropContext, setOriginalCropContext] = useState<{ mode: string; isEdit: boolean; originalImageUrl: string; currentImageUrl: string } | null>(null);
   const canvasRef = useRef<HTMLCanvasElement | null>(null);
@@ -687,6 +690,7 @@ export default function AdminPage() {
     }
 
     try {
+      console.log("[handleEditPrinter] Saving printer. thumbnailDataUrl length:", editPrinterThumbnail.length, "| isEmpty:", editPrinterThumbnail === "");
       await runAction("updatePrinter", {
         printerId: editPrinterId,
         name: editPrinterName,
@@ -796,6 +800,7 @@ export default function AdminPage() {
 
     try {
       // Update paper metadata
+      console.log("[handleEditPaper] Saving paper. thumbnailDataUrl length:", editPaperThumbnail.length, "| isEmpty:", editPaperThumbnail === "");
       await runAction("updatePaper", {
         paperId: editPaperId,
         name: editPaperName,
@@ -944,6 +949,7 @@ export default function AdminPage() {
     }
 
     try {
+      console.log("[handleEditColour] Saving colour. thumbnailDataUrl length:", editColourThumbnail.length, "| isEmpty:", editColourThumbnail === "");
       await runAction("updateColour", {
         printerId: selectedPrinterId,
         paperId: selectedPaperId,
@@ -1311,8 +1317,29 @@ export default function AdminPage() {
     setShowDeletedItems(false);
   };
 
+  // Alternate preview handler
+  const generateAltPreview = async () => {
+    try {
+      const res = await fetch("/api/preview-token", { method: "POST" });
+      const json = (await res.json()) as { token?: string; error?: string };
+      if (!res.ok || !json.token) {
+        setError("Failed to generate preview link.");
+        return;
+      }
+      const params = new URLSearchParams();
+      params.set("previewToken", json.token);
+      if (selectedPrinterId) params.set("printerId", selectedPrinterId);
+      if (selectedPaperId) params.set("paperId", selectedPaperId);
+      if (selectedColorId) params.set("colourId", selectedColorId);
+      window.open(`/?${params.toString()}`, "_blank");
+    } catch {
+      setError("Failed to generate preview link.");
+    }
+  };
+
   // Image crop handlers
   const openCropModal = (imageDataUrl: string, mode: "printer" | "paper" | "color" | "step", isEdit: boolean = false) => {
+    setCropImgReady(false);
     setCropImage(imageDataUrl);
 
     // Check if editing a different item
@@ -1372,6 +1399,7 @@ export default function AdminPage() {
     console.log("resetCropBox: originalCropImage length:", originalCropImage.length);
     console.log("resetCropBox: originalCropImage starts with:", originalCropImage.substring(0, 100));
 
+    setCropImgReady(false);
     setCropImage(originalCropImage);
 
     const img = new Image();
@@ -1501,6 +1529,9 @@ export default function AdminPage() {
       );
 
       const croppedImageUrl = cropCanvas.toDataURL("image/jpeg", 0.9);
+
+      // Update context so reopening the same item recognises the cropped URL as the current image
+      setOriginalCropContext(prev => prev ? { ...prev, currentImageUrl: croppedImageUrl } : null);
 
       // Apply cropped image to the appropriate form field
       if (cropMode === "printer") {
@@ -1676,6 +1707,46 @@ export default function AdminPage() {
               }}
             >
               PREVIEW
+            </Button>
+          )}
+
+          {/* Alternate Preview Button */}
+          {sidebarCollapsed ? (
+            <Box sx={{ display: "flex", justifyContent: "center" }}>
+              <Tooltip title="Alternate Preview (includes unpublished)" placement="right">
+                <IconButton
+                  onClick={() => void generateAltPreview()}
+                  size="large"
+                  sx={{
+                    width: 50,
+                    height: 50,
+                    borderRadius: 1,
+                    color: "#ffffff",
+                    bgcolor: "transparent",
+                    "&:hover": { bgcolor: "rgba(255, 255, 255, 0.1)" },
+                    transition: "all 0.2s ease",
+                  }}
+                >
+                  <PageviewIcon sx={{ fontSize: 24 }} />
+                </IconButton>
+              </Tooltip>
+            </Box>
+          ) : (
+            <Button
+              onClick={() => void generateAltPreview()}
+              fullWidth
+              startIcon={<PageviewIcon />}
+              variant="outlined"
+              sx={{
+                justifyContent: "flex-start",
+                color: "#ffffff",
+                borderColor: "rgba(255, 255, 255, 0.2)",
+                "&:hover": {
+                  bgcolor: "rgba(255, 255, 255, 0.1)",
+                },
+              }}
+            >
+              ALT PREVIEW
             </Button>
           )}
         </Stack>
@@ -2529,9 +2600,15 @@ export default function AdminPage() {
                                     width: 32,
                                     height: 32,
                                     borderRadius: 1,
-                                    backgroundColor: "action.hover",
+                                    backgroundColor: "#e8f4f8",
+                                    display: "flex",
+                                    alignItems: "center",
+                                    justifyContent: "center",
+                                    flexShrink: 0,
                                   }}
-                                />
+                                >
+                                  <ImagePlaceholderIcon sx={{ fontSize: 18, color: "#b0c4cc" }} />
+                                </Box>
                               )}
                               <Typography variant="body2">{colour.name}</Typography>
                             </Stack>
@@ -2917,9 +2994,15 @@ export default function AdminPage() {
                                     width: 32,
                                     height: 32,
                                     borderRadius: 1,
-                                    backgroundColor: "action.hover",
+                                    backgroundColor: "#e8f4f8",
+                                    display: "flex",
+                                    alignItems: "center",
+                                    justifyContent: "center",
+                                    flexShrink: 0,
                                   }}
-                                />
+                                >
+                                  <ImagePlaceholderIcon sx={{ fontSize: 18, color: "#b0c4cc" }} />
+                                </Box>
                               )}
                               <Typography variant="body2">{colour.name}</Typography>
                             </Stack>
@@ -4591,7 +4674,7 @@ export default function AdminPage() {
         <DialogTitle sx={{ backgroundColor: "#F4FAFF", borderBottom: "2px solid #BDE9FF", fontWeight: 700, color: "#009DC9", fontSize: "1.1rem", py: 2.5 }}>
           Crop Image
         </DialogTitle>
-        <DialogContent sx={{ pt: 3, pb: 3, backgroundColor: "#ffffff" }}>
+        <DialogContent sx={{ paddingTop: "24px !important", pb: 3, backgroundColor: "#ffffff" }}>
           <Box sx={{ mb: 3 }}>
             {cropImage && (
               <Box
@@ -4618,6 +4701,7 @@ export default function AdminPage() {
                   component="img"
                   src={cropImage}
                   alt="Crop preview"
+                  onLoad={() => setCropImgReady(true)}
                   sx={{
                     maxWidth: "100%",
                     maxHeight: "100%",
@@ -4626,7 +4710,7 @@ export default function AdminPage() {
                 />
 
                 {/* Crop Box Overlay */}
-                {cropImageWidth > 0 && cropImageHeight > 0 && (() => {
+                {cropImageWidth > 0 && cropImageHeight > 0 && cropImgReady && (() => {
                   const imgElements = cropContainerRef.current?.querySelectorAll('img');
                   if (!imgElements || imgElements.length === 0) return null;
                   const imgElement = imgElements[0] as HTMLImageElement;

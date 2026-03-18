@@ -127,6 +127,42 @@ function deletedItemsCollection() {
   return db.collection("deletedItems");
 }
 
+function previewTokensCollection() {
+  return db.collection("previewTokens");
+}
+
+// ============= PREVIEW TOKEN OPERATIONS =============
+
+export async function createPreviewToken(): Promise<string> {
+  // Delete all existing tokens so only one is valid at a time
+  const existing = await previewTokensCollection().get();
+  const batch = db.batch();
+  existing.docs.forEach((doc) => batch.delete(doc.ref));
+
+  // Generate a new token using a Firestore auto-ID as a random string
+  const token = db.collection("_tmp").doc().id;
+  const expiresAt = new Date(Date.now() + 3 * 60 * 60 * 1000); // 3 hours
+
+  batch.set(previewTokensCollection().doc(token), {
+    token,
+    createdAt: new Date(),
+    expiresAt,
+  });
+
+  await batch.commit();
+  return token;
+}
+
+export async function validatePreviewToken(token: string): Promise<boolean> {
+  const doc = await previewTokensCollection().doc(token).get();
+  if (!doc.exists) return false;
+  const data = doc.data();
+  if (!data) return false;
+  const expiresAt: Date | null = data.expiresAt?.toDate?.() ?? null;
+  if (!expiresAt || expiresAt < new Date()) return false;
+  return true;
+}
+
 // ============= FIRESTORE HELPERS =============
 
 async function assertDocExists(
@@ -277,7 +313,7 @@ export async function getTutorialState(): Promise<TutorialState> {
                   id: colourId,
                   name: globalColourData?.name || printerColourData?.name || "Unknown Colour",
                   description: globalColourData?.description || printerColourData?.description || "",
-                  thumbnailDataUrl: globalColourData?.thumbnailDataUrl || printerColourData?.thumbnailDataUrl || "",
+                  thumbnailDataUrl: globalColourData?.thumbnailDataUrl ?? printerColourData?.thumbnailDataUrl ?? "",
                   lastModified: globalColourData?.lastModified?.toDate() || printerColourData?.lastModified?.toDate?.() || new Date(),
                   createdAt: globalColourData?.createdAt?.toDate() || printerColourData?.createdAt?.toDate?.() || new Date(),
                   steps,
@@ -290,7 +326,7 @@ export async function getTutorialState(): Promise<TutorialState> {
               id: paperId,
               name: globalPaperData?.name || paperData.name || "Unknown Paper",
               description: globalPaperData?.description || paperData.description || "",
-              thumbnailDataUrl: globalPaperData?.thumbnailDataUrl || paperData.thumbnailDataUrl || "",
+              thumbnailDataUrl: globalPaperData?.thumbnailDataUrl ?? paperData.thumbnailDataUrl ?? "",
               lastModified: globalPaperData?.lastModified?.toDate() || new Date(),
               createdAt: globalPaperData?.createdAt?.toDate() || new Date(),
               modifiedBy: globalPaperData?.modifiedBy || "system",

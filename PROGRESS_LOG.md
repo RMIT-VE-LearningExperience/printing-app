@@ -1,6 +1,6 @@
 # Print App CMS - Progress Log
 
-**Last Updated:** March 16, 2026
+**Last Updated:** March 18, 2026 (Session 3)
 **Project:** Print App CMS System
 **User:** Arielle Lee (arielle.lee@rmit.edu.au)
 
@@ -803,6 +803,159 @@ When testing after any changes:
 - Implemented two-tier data architecture pattern
 - Built core CMS admin interface
 - Set up Firestore structure and backend functions
+
+---
+
+## Session March 18, 2026
+
+### File Cleanup
+- Identified and removed 4 unused `.md` files from the project root
+- Created dated backup: `PROGRESS_LOG.bak-2026-03-16.md`
+
+### Feature: Crop Image Reset-to-Original
+**Status:** ⚠️ Partially Working — correct image per item, but still at cropped dimensions
+
+**What was implemented:**
+- Added "Reset" button in the crop modal so admins can revert to the original image without re-uploading
+- Added `originalCropImage` and `originalCropContext` state variables to track the original per-item image
+- `openCropModal` stores the original image on first open; reopening the same item preserves it
+- `resetCropBox` restores `cropImage`, resets canvas dimensions, and resets crop box to full dimensions
+
+**Bugs fixed:**
+1. ✅ Reset showed image from a different item (e.g., a previously edited printer's photo appeared when editing a colour)
+   - Root Cause: `originalCropImage` was global state persisting across items
+   - Fix: Added `originalCropContext` with `{ mode, isEdit, originalImageUrl, currentImageUrl }` to detect item changes
+   - Commits: `9e6d531`, `a712fc4`
+2. ✅ Same-type items (e.g., two Printers) not detected as different
+   - Root Cause: mode + isEdit were the same for both; only imageUrl distinguishes them
+   - Fix: Added imageUrl comparison to context check
+3. ✅ Reset showed cropped image (not original) after apply + reopen
+   - Root Cause: After applying crop, reopening modal set new `cropImage` URL, which was treated as "different item" and set `originalCropImage` to the cropped version
+   - Fix: Dual imageUrl tracking — if incoming imageDataUrl matches `originalImageUrl` OR `currentImageUrl`, treat as same item
+
+**Remaining Bug (now fixed — see below):**
+- ✅ Reset displayed at cropped dimensions despite correct image content — fixed March 18
+
+### Bug Fix: Reset-to-Original Showed Cropped Dimensions ✅
+**Date Fixed:** March 18, 2026
+**File:** `app/admin/page.tsx` — `applyCrop` function
+
+**Root Cause:**
+`applyCrop` created `croppedImageUrl` and set it as the thumbnail, but never updated `originalCropContext.currentImageUrl` to reflect the new cropped URL. When the user reopened the crop modal for the same item (now passing the cropped image URL), the `isDifferentItem` check compared the cropped URL against both `originalImageUrl` and `currentImageUrl` — both still pointing to the original. Both comparisons returned `true`, so `isDifferentItem = true`, causing `originalCropImage` to be overwritten with the cropped image URL. `resetCropBox` then restored the cropped image (400×315) instead of the original.
+
+**Fix:**
+Added one line in `applyCrop` immediately after `croppedImageUrl` is created:
+```ts
+setOriginalCropContext(prev => prev ? { ...prev, currentImageUrl: croppedImageUrl } : null);
+```
+This keeps `currentImageUrl` in sync with the latest applied crop, so reopening the modal for the same item is correctly detected and `originalCropImage` (the true original) is preserved.
+
+---
+
+### Bug Fix: Image Not Cleared After Remove + Save in Edit Modal ✅
+**Date Fixed:** March 18, 2026
+**File:** `lib/tutorial-store.ts` — `getTutorialState` function
+
+**Root Cause:**
+`getTutorialState` used `||` (OR operator) for the thumbnail fallback chains on colours and papers:
+```ts
+// Colour (line 280):
+thumbnailDataUrl: globalColourData?.thumbnailDataUrl || printerColourData?.thumbnailDataUrl || "",
+// Paper (line 293):
+thumbnailDataUrl: globalPaperData?.thumbnailDataUrl || paperData.thumbnailDataUrl || "",
+```
+`||` treats `""` (empty string) as falsy. So when a thumbnail was cleared to `""` in the global Firestore document, the expression fell through to the printer-specific document's `thumbnailDataUrl`. If that document contained an old `thumbnailDataUrl` (possible with migrated or legacy data), the cleared thumbnail appeared to persist.
+
+**Fix:**
+Changed `||` to `??` (nullish coalescing) for these two fallback chains. `??` only falls through on `null` or `undefined`, so `""` is now preserved as-is:
+```ts
+thumbnailDataUrl: globalColourData?.thumbnailDataUrl ?? printerColourData?.thumbnailDataUrl ?? "",
+thumbnailDataUrl: globalPaperData?.thumbnailDataUrl ?? paperData.thumbnailDataUrl ?? "",
+```
+
+---
+
+### Bug Fix: Crop Box Intermittently Not Appearing ✅
+**Date Fixed:** March 18, 2026
+**File:** `app/admin/page.tsx` — crop modal overlay rendering
+
+**Root Cause:**
+The crop box overlay called `getBoundingClientRect()` directly inside the render function to calculate the displayed image dimensions and scale the crop box. When `setCropImageWidth/Height` fired (from `openCropModal`'s `img.onload`), it triggered a React re-render — but at that moment the modal's `<img>` element had not yet been laid out by the browser. `getBoundingClientRect()` returned `{width: 0, height: 0}`, making `scaleX` and `scaleY` both zero, so the crop box was rendered at 0×0 (invisible). This was intermittent because it depended on browser paint timing.
+
+**Fix:**
+Added a `cropImgReady` boolean state (starts `false`). The modal's `<img>` element now has an `onLoad` handler that sets `cropImgReady = true` — this fires only after the browser has finished loading and laying out the image, guaranteeing `getBoundingClientRect()` returns real dimensions. The overlay is now gated on `cropImgReady` in addition to `cropImageWidth > 0 && cropImageHeight > 0`. `openCropModal` and `resetCropBox` both reset `cropImgReady` to `false` when a new image is set.
+
+### Feature: Generic Image Placeholder ✅
+**Status:** IMPLEMENTED
+
+**Files Modified:**
+- `app/page.tsx` (user-facing)
+  - Added `import ImageIcon from "@mui/icons-material/Image"`
+  - Printer cards: Now always show image area; displays a light blue placeholder with image icon when no thumbnail
+  - Paper cards: Same placeholder treatment
+  - Colour cards: Same placeholder treatment
+- `app/admin/page.tsx`
+  - Added `Image as ImagePlaceholderIcon` to MUI icon imports
+  - Colour table rows (both instances): Enhanced grey box placeholder to show `ImagePlaceholderIcon` (18px, `#b0c4cc` colour, `#e8f4f8` bg)
+  - Note: Printer/Paper rows in admin already use MUI `Avatar` which shows letter initials as fallback
+
+---
+
+## Feature: Alternate Preview ✅
+**Date Implemented:** March 18, 2026
+**Status:** IMPLEMENTED
+
+**What it does:**
+- Adds an "ALT PREVIEW" button in the CMS sidebar, below the existing PREVIEW button
+- When clicked, generates a new unique time-limited token (3-hour expiry), invalidating any previous token
+- Opens the user-facing page in a new tab with all content visible — including unpublished printers, papers, colours, and steps
+- The link navigates directly to whatever is currently selected in the CMS columns (based on breadcrumb state)
+- A persistent orange banner at the top of the page reads "PREVIEW MODE — Includes unpublished content"
+- Preview navigation does not overwrite the user's saved localStorage progress
+
+**URL format:**
+```
+/?previewToken=<token>&printerId=<id>&paperId=<id>&colourId=<id>
+```
+(only IDs relevant to the current selection depth are included)
+
+**Token behaviour:**
+- Stored in Firestore `previewTokens` collection with `createdAt` and `expiresAt` fields
+- Only one valid token at a time — generating a new one deletes all previous tokens
+- Expires automatically after 3 hours (validated server-side on each page load)
+
+**Files Modified/Created:**
+- `lib/tutorial-store.ts` — Added `previewTokensCollection()`, `createPreviewToken()`, `validatePreviewToken()`
+- `app/api/preview-token/route.ts` — **New file**: POST endpoint that calls `createPreviewToken()` and returns token
+- `app/api/tutorial/route.ts` — GET handler now accepts `?previewToken=` query param; validates token and returns `isPreviewMode: true/false` alongside state
+- `app/page.tsx` — Reads `previewToken`/`printerId`/`paperId`/`colourId` from URL on load; fetches with token; skips published filters when `isPreviewMode`; auto-navigates to specified item; shows persistent orange preview banner; does not save preview navigation to localStorage
+- `app/admin/page.tsx` — Added `PageviewIcon` import; added `generateAltPreview()` handler; added ALT PREVIEW button (both collapsed icon and expanded label variants)
+
+---
+
+## 📌 Pinned: Future Feature — Reset Image to Original After Save
+
+**Pinned:** March 18, 2026
+**Status:** Not started — revisit later
+
+**Request:** After cropping and saving an image, admins should be able to revert back to the original (pre-crop) image at any time.
+
+**Current Limitation:** The original image only lives in React state (`originalCropImage`) and is lost when the modal closes or the page reloads. Firestore only stores one field — `thumbnailDataUrl` — with no backup of the pre-crop original.
+
+**Proposed Approach:**
+- Add `originalThumbnailDataUrl` field to Printer, Paper, and Colour Firestore documents
+- On first crop save: write both `thumbnailDataUrl` (cropped) and `originalThumbnailDataUrl` (original)
+- On subsequent crops: only update `thumbnailDataUrl`; leave `originalThumbnailDataUrl` unchanged
+- Add a "Reset to Original" button in the Printer/Paper/Colour edit modals
+
+**Files That Need Changing:**
+- `lib/tutorial-store.ts` — add field to type definitions; update `updatePrinter/Paper/Colour` to write/preserve it; read it back in `getTutorialState`
+- `app/api/tutorial/route.ts` — add `originalThumbnailDataUrl` to ActionPayload types for update actions
+- `app/admin/page.tsx` — new state vars for original thumbnails; update `applyCrop` to capture original on first crop; add Reset to Original button in edit modals
+
+**Risk:** Firestore has a 1 MB document size limit. Storing two base64 images per item doubles usage. Typical thumbnails (~200–400 KB as base64) should be fine, but large images could hit the limit.
+
+**Estimated Effort:** 3–4 hours
 
 ---
 

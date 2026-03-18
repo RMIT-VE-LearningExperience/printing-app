@@ -23,6 +23,7 @@ import {
   permanentlyDeleteItem,
   removeInvalidPapersFromPrinter,
   updateHomepageSettings,
+  validatePreviewToken,
   type TutorialState,
 } from "../../../lib/tutorial-store";
 
@@ -331,10 +332,18 @@ export async function POST(req: NextRequest) {
   }
 }
 
-export async function GET() {
+export async function GET(req: NextRequest) {
   try {
+    const { searchParams } = new URL(req.url);
+    const previewToken = searchParams.get("previewToken");
+
+    let isPreviewMode = false;
+    if (previewToken) {
+      isPreviewMode = await validatePreviewToken(previewToken);
+    }
+
     const state = await getTutorialState();
-    return NextResponse.json({ state });
+    return NextResponse.json({ state, isPreviewMode });
   } catch (error) {
     console.error("API Error:", error);
     const message = error instanceof Error ? error.message : "Unknown error";
