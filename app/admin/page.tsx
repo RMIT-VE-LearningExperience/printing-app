@@ -1325,10 +1325,16 @@ export default function AdminPage() {
 
     // Store original only if: first time ever, or switching to a different item
     if (!originalCropImage || isDifferentItem) {
+      console.log("openCropModal: Storing new originalCropImage");
+      console.log("openCropModal: isDifferentItem =", isDifferentItem);
+      console.log("openCropModal: imageDataUrl length:", imageDataUrl.length);
+      console.log("openCropModal: imageDataUrl starts with:", imageDataUrl.substring(0, 100));
       setOriginalCropImage(imageDataUrl);
       setOriginalCropContext({ mode, isEdit, originalImageUrl: imageDataUrl, currentImageUrl: imageDataUrl });
     } else {
       // Same item reopening - update currentImageUrl but preserve originalCropImage and originalImageUrl
+      console.log("openCropModal: Same item reopening, preserving originalCropImage");
+      console.log("openCropModal: Current imageDataUrl length:", imageDataUrl.length);
       setOriginalCropContext((prev) => prev ? { ...prev, currentImageUrl: imageDataUrl } : null);
     }
 
@@ -1357,13 +1363,22 @@ export default function AdminPage() {
 
   const resetCropBox = () => {
     // Restore original image to undo any crops
-    if (!originalCropImage) return;
+    if (!originalCropImage) {
+      console.error("resetCropBox: originalCropImage is empty!");
+      return;
+    }
+
+    console.log("resetCropBox: Setting cropImage to originalCropImage");
+    console.log("resetCropBox: originalCropImage length:", originalCropImage.length);
+    console.log("resetCropBox: originalCropImage starts with:", originalCropImage.substring(0, 100));
 
     setCropImage(originalCropImage);
 
     const img = new Image();
     img.crossOrigin = "anonymous";
     img.onload = () => {
+      console.log("resetCropBox: Image loaded successfully");
+      console.log("resetCropBox: Image dimensions:", img.width, "x", img.height);
       setCropImageWidth(img.width);
       setCropImageHeight(img.height);
 
