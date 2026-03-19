@@ -392,6 +392,17 @@ When testing after any changes:
 
 ## Session History
 
+### Current Session (March 19, 2026) - Part 2
+- **Added client-side image compression for JPEG/PNG uploads**
+  - ✅ JPEG/PNG files over 700 KB are now auto-compressed via the Canvas API (no rejection error)
+  - ✅ Compression reduces JPEG quality progressively (0.85 → 0.1), then scales dimensions if still too large
+  - ✅ GIF files over 700 KB are still hard-rejected (canvas cannot preserve GIF animation)
+  - ✅ Yellow inline note "Image was compressed to meet the 700 KB limit." shown to admin when compression occurs
+  - ✅ Yellow note clears correctly on Cancel, backdrop click, and Escape (same fix as error message)
+  - Refactored all 8 upload handlers to share a single `processUpload()` helper
+  - Added `compressImage()` function using off-screen canvas (no third-party libraries)
+  - Files Modified: `app/admin/page.tsx`
+
 ### Current Session (March 19, 2026)
 - **Added image upload validation to all CMS admin dialogs**
   - ✅ Restricted accepted file formats to JPEG, PNG, and GIF only (previously accepted all image types)

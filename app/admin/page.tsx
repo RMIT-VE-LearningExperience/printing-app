@@ -367,6 +367,7 @@ export default function AdminPage() {
   const [error, setError] = useState<string | null>(null);
   const [success, setSuccess] = useState<string | null>(null);
   const [imageUploadError, setImageUploadError] = useState<string | null>(null);
+  const [imageCompressed, setImageCompressed] = useState(false);
 
   // Sort states for each table
   const [printersSortByName, setPrintersSortByName] = useState(false); // false = by createdAt, true = by name
@@ -586,91 +587,134 @@ export default function AdminPage() {
     if (!ALLOWED_IMAGE_TYPES.includes(file.type)) {
       return "Invalid format. Please upload a JPEG, PNG, or GIF image.";
     }
-    if (file.size > MAX_IMAGE_SIZE_BYTES) {
-      return `File too large (${(file.size / 1024).toFixed(0)} KB). Maximum size is 700 KB.`;
+    if (file.type === "image/gif" && file.size > MAX_IMAGE_SIZE_BYTES) {
+      return `GIF too large (${(file.size / 1024).toFixed(0)} KB). GIF maximum size is 700 KB.`;
     }
     return null;
+  };
+
+  const compressImage = (dataUrl: string): Promise<string> => {
+    return new Promise((resolve) => {
+      const img = new Image();
+      img.onload = () => {
+        const canvas = document.createElement("canvas");
+        const ctx = canvas.getContext("2d")!;
+        // Try reducing quality first at original dimensions
+        for (let quality = 0.85; quality >= 0.1; quality = Math.round((quality - 0.1) * 10) / 10) {
+          canvas.width = img.naturalWidth;
+          canvas.height = img.naturalHeight;
+          ctx.drawImage(img, 0, 0);
+          const result = canvas.toDataURL("image/jpeg", quality);
+          if (result.length <= MAX_IMAGE_SIZE_BYTES) { resolve(result); return; }
+        }
+        // Still too large — scale down dimensions
+        for (let scale = 0.75; scale >= 0.25; scale -= 0.25) {
+          canvas.width = Math.round(img.naturalWidth * scale);
+          canvas.height = Math.round(img.naturalHeight * scale);
+          ctx.drawImage(img, 0, 0, canvas.width, canvas.height);
+          const result = canvas.toDataURL("image/jpeg", 0.7);
+          if (result.length <= MAX_IMAGE_SIZE_BYTES) { resolve(result); return; }
+        }
+        // Last resort
+        canvas.width = Math.round(img.naturalWidth * 0.25);
+        canvas.height = Math.round(img.naturalHeight * 0.25);
+        ctx.drawImage(img, 0, 0, canvas.width, canvas.height);
+        resolve(canvas.toDataURL("image/jpeg", 0.5));
+      };
+      img.src = dataUrl;
+    });
+  };
+
+  const processUpload = async (file: File): Promise<{ dataUrl: string; compressed: boolean } | null> => {
+    const err = validateImageFile(file);
+    if (err) { setImageUploadError(err); return null; }
+    setImageUploadError(null);
+    const raw = await toDataUrl(file);
+    if (file.type !== "image/gif" && file.size > MAX_IMAGE_SIZE_BYTES) {
+      return { dataUrl: await compressImage(raw), compressed: true };
+    }
+    return { dataUrl: raw, compressed: false };
   };
 
   // Thumbnail upload handlers
   const handleNewPrinterThumbnailUpload = async (e: ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (!file) return;
-    const err = validateImageFile(file);
-    if (err) { setImageUploadError(err); e.target.value = ""; return; }
-    setImageUploadError(null);
+    const result = await processUpload(file);
+    if (!result) { e.target.value = ""; return; }
+    setImageCompressed(result.compressed);
     setNewPrinterThumbnailName(file.name);
-    setNewPrinterThumbnail(await toDataUrl(file));
+    setNewPrinterThumbnail(result.dataUrl);
   };
 
   const handleNewPaperThumbnailUpload = async (e: ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (!file) return;
-    const err = validateImageFile(file);
-    if (err) { setImageUploadError(err); e.target.value = ""; return; }
-    setImageUploadError(null);
+    const result = await processUpload(file);
+    if (!result) { e.target.value = ""; return; }
+    setImageCompressed(result.compressed);
     setNewPaperThumbnailName(file.name);
-    setNewPaperThumbnail(await toDataUrl(file));
+    setNewPaperThumbnail(result.dataUrl);
   };
 
   const handleEditPrinterThumbnailUpload = async (e: ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (!file) return;
-    const err = validateImageFile(file);
-    if (err) { setImageUploadError(err); e.target.value = ""; return; }
-    setImageUploadError(null);
+    const result = await processUpload(file);
+    if (!result) { e.target.value = ""; return; }
+    setImageCompressed(result.compressed);
     setEditPrinterThumbnailName(file.name);
-    setEditPrinterThumbnail(await toDataUrl(file));
+    setEditPrinterThumbnail(result.dataUrl);
   };
 
   const handleEditPaperThumbnailUpload = async (e: ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (!file) return;
-    const err = validateImageFile(file);
-    if (err) { setImageUploadError(err); e.target.value = ""; return; }
-    setImageUploadError(null);
+    const result = await processUpload(file);
+    if (!result) { e.target.value = ""; return; }
+    setImageCompressed(result.compressed);
     setEditPaperThumbnailName(file.name);
-    setEditPaperThumbnail(await toDataUrl(file));
+    setEditPaperThumbnail(result.dataUrl);
   };
 
   const handleNewColourThumbnailUpload = async (e: ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (!file) return;
-    const err = validateImageFile(file);
-    if (err) { setImageUploadError(err); e.target.value = ""; return; }
-    setImageUploadError(null);
+    const result = await processUpload(file);
+    if (!result) { e.target.value = ""; return; }
+    setImageCompressed(result.compressed);
     setNewColourThumbnailName(file.name);
-    setNewColourThumbnail(await toDataUrl(file));
+    setNewColourThumbnail(result.dataUrl);
   };
 
   const handleEditColourThumbnailUpload = async (e: ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (!file) return;
-    const err = validateImageFile(file);
-    if (err) { setImageUploadError(err); e.target.value = ""; return; }
-    setImageUploadError(null);
+    const result = await processUpload(file);
+    if (!result) { e.target.value = ""; return; }
+    setImageCompressed(result.compressed);
     setEditColourThumbnailName(file.name);
-    setEditColourThumbnail(await toDataUrl(file));
+    setEditColourThumbnail(result.dataUrl);
   };
 
   const handleNewStepImageUpload = async (e: ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (!file) return;
-    const err = validateImageFile(file);
-    if (err) { setImageUploadError(err); e.target.value = ""; return; }
-    setImageUploadError(null);
+    const result = await processUpload(file);
+    if (!result) { e.target.value = ""; return; }
+    setImageCompressed(result.compressed);
     setNewStepImageName(file.name);
-    setNewStepImage(await toDataUrl(file));
+    setNewStepImage(result.dataUrl);
   };
 
   const handleEditStepImageUpload = async (e: ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (!file) return;
-    const err = validateImageFile(file);
-    if (err) { setImageUploadError(err); e.target.value = ""; return; }
-    setImageUploadError(null);
+    const result = await processUpload(file);
+    if (!result) { e.target.value = ""; return; }
+    setImageCompressed(result.compressed);
     setEditStepImageName(file.name);
-    setEditStepImage(await toDataUrl(file));
+    setEditStepImage(result.dataUrl);
   };
 
   // Homepage settings handler
@@ -3174,6 +3218,7 @@ export default function AdminPage() {
           setNewPrinterThumbnail("");
           setNewPrinterThumbnailName("");
           setImageUploadError(null);
+          setImageCompressed(false);
         }}
         maxWidth="sm"
         fullWidth
@@ -3195,6 +3240,11 @@ export default function AdminPage() {
               {imageUploadError && (
                 <Typography variant="caption" color="error" display="block" sx={{ mt: 0.5 }}>
                   {imageUploadError}
+                </Typography>
+              )}
+              {imageCompressed && (
+                <Typography variant="caption" display="block" sx={{ mt: 0.5, color: "#f59e0b" }}>
+                  Image was compressed to meet the 700 KB limit.
                 </Typography>
               )}
               {newPrinterThumbnailName && (
@@ -3317,6 +3367,7 @@ export default function AdminPage() {
           setEditPrinterThumbnail("");
           setEditPrinterThumbnailName("");
           setImageUploadError(null);
+          setImageCompressed(false);
         }}
         maxWidth="sm"
         fullWidth
@@ -3338,6 +3389,11 @@ export default function AdminPage() {
               {imageUploadError && (
                 <Typography variant="caption" color="error" display="block" sx={{ mt: 0.5 }}>
                   {imageUploadError}
+                </Typography>
+              )}
+              {imageCompressed && (
+                <Typography variant="caption" display="block" sx={{ mt: 0.5, color: "#f59e0b" }}>
+                  Image was compressed to meet the 700 KB limit.
                 </Typography>
               )}
               {editPrinterThumbnailName && (
@@ -3464,6 +3520,7 @@ export default function AdminPage() {
           setShowAddPaperSearch(true);
           setAddPaperFromFullList(false);
           setImageUploadError(null);
+          setImageCompressed(false);
         }}
         maxWidth="sm"
         fullWidth
@@ -3837,6 +3894,7 @@ export default function AdminPage() {
           setEditPaperThumbnailName("");
           setEditPaperSelectedPrinters([]);
           setImageUploadError(null);
+          setImageCompressed(false);
         }}
         maxWidth="sm"
         fullWidth
@@ -3858,6 +3916,11 @@ export default function AdminPage() {
               {imageUploadError && (
                 <Typography variant="caption" color="error" display="block" sx={{ mt: 0.5 }}>
                   {imageUploadError}
+                </Typography>
+              )}
+              {imageCompressed && (
+                <Typography variant="caption" display="block" sx={{ mt: 0.5, color: "#f59e0b" }}>
+                  Image was compressed to meet the 700 KB limit.
                 </Typography>
               )}
               {editPaperThumbnailName && (
@@ -4182,6 +4245,7 @@ export default function AdminPage() {
           setNewColourThumbnail("");
           setNewColourThumbnailName("");
           setImageUploadError(null);
+          setImageCompressed(false);
         }}
         maxWidth="sm"
         fullWidth
@@ -4203,6 +4267,11 @@ export default function AdminPage() {
               {imageUploadError && (
                 <Typography variant="caption" color="error" display="block" sx={{ mt: 0.5 }}>
                   {imageUploadError}
+                </Typography>
+              )}
+              {imageCompressed && (
+                <Typography variant="caption" display="block" sx={{ mt: 0.5, color: "#f59e0b" }}>
+                  Image was compressed to meet the 700 KB limit.
                 </Typography>
               )}
               {newColourThumbnailName && (
@@ -4291,6 +4360,7 @@ export default function AdminPage() {
               setNewColourThumbnail("");
               setNewColourThumbnailName("");
               setImageUploadError(null);
+              setImageCompressed(false);
             }}
             sx={{ color: "#009DC9", fontWeight: 600, textTransform: "none" }}
           >
@@ -4324,6 +4394,7 @@ export default function AdminPage() {
           setEditColourThumbnail("");
           setEditColourThumbnailName("");
           setImageUploadError(null);
+          setImageCompressed(false);
         }}
         maxWidth="sm"
         fullWidth
@@ -4345,6 +4416,11 @@ export default function AdminPage() {
               {imageUploadError && (
                 <Typography variant="caption" color="error" display="block" sx={{ mt: 0.5 }}>
                   {imageUploadError}
+                </Typography>
+              )}
+              {imageCompressed && (
+                <Typography variant="caption" display="block" sx={{ mt: 0.5, color: "#f59e0b" }}>
+                  Image was compressed to meet the 700 KB limit.
                 </Typography>
               )}
               {editColourThumbnailName && (
@@ -4434,6 +4510,7 @@ export default function AdminPage() {
               setEditColourThumbnail("");
               setEditColourThumbnailName("");
               setImageUploadError(null);
+              setImageCompressed(false);
             }}
             sx={{ color: "#009DC9", fontWeight: 600, textTransform: "none" }}
           >
@@ -4467,6 +4544,7 @@ export default function AdminPage() {
           setNewStepImage("");
           setNewStepImageName("");
           setImageUploadError(null);
+          setImageCompressed(false);
         }}
         maxWidth="sm"
         fullWidth
@@ -4499,6 +4577,11 @@ export default function AdminPage() {
               {imageUploadError && (
                 <Typography variant="caption" color="error" display="block" sx={{ mt: 0.5 }}>
                   {imageUploadError}
+                </Typography>
+              )}
+              {imageCompressed && (
+                <Typography variant="caption" display="block" sx={{ mt: 0.5, color: "#f59e0b" }}>
+                  Image was compressed to meet the 700 KB limit.
                 </Typography>
               )}
               {newStepImageName && (
@@ -4563,7 +4646,7 @@ export default function AdminPage() {
         </DialogContent>
         <DialogActions sx={{ borderTop: "1px solid #BDE9FF", pt: 2, pb: 2, px: 3, backgroundColor: "#F4FAFF" }}>
           <Button
-            onClick={() => { setShowAddStepModal(false); setImageUploadError(null); }}
+            onClick={() => { setShowAddStepModal(false); setImageUploadError(null); setImageCompressed(false); }}
             sx={{ color: "#009DC9", fontWeight: 600, textTransform: "none" }}
           >
             Cancel
@@ -4596,6 +4679,7 @@ export default function AdminPage() {
           setEditStepImage("");
           setEditStepImageName("");
           setImageUploadError(null);
+          setImageCompressed(false);
         }}
         maxWidth="sm"
         fullWidth
@@ -4628,6 +4712,11 @@ export default function AdminPage() {
               {imageUploadError && (
                 <Typography variant="caption" color="error" display="block" sx={{ mt: 0.5 }}>
                   {imageUploadError}
+                </Typography>
+              )}
+              {imageCompressed && (
+                <Typography variant="caption" display="block" sx={{ mt: 0.5, color: "#f59e0b" }}>
+                  Image was compressed to meet the 700 KB limit.
                 </Typography>
               )}
               {editStepImageName && (
@@ -4692,7 +4781,7 @@ export default function AdminPage() {
         </DialogContent>
         <DialogActions sx={{ borderTop: "1px solid #BDE9FF", pt: 2, pb: 2, px: 3, backgroundColor: "#F4FAFF" }}>
           <Button
-            onClick={() => { setShowEditStepModal(false); setImageUploadError(null); }}
+            onClick={() => { setShowEditStepModal(false); setImageUploadError(null); setImageCompressed(false); }}
             sx={{ color: "#009DC9", fontWeight: 600, textTransform: "none" }}
           >
             Cancel
