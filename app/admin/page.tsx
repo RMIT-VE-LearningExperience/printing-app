@@ -366,6 +366,7 @@ export default function AdminPage() {
   const [loadingState, setLoadingState] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [success, setSuccess] = useState<string | null>(null);
+  const [imageUploadError, setImageUploadError] = useState<string | null>(null);
 
   // Sort states for each table
   const [printersSortByName, setPrintersSortByName] = useState(false); // false = by createdAt, true = by name
@@ -578,10 +579,26 @@ export default function AdminPage() {
     });
   };
 
+  const ALLOWED_IMAGE_TYPES = ["image/jpeg", "image/png", "image/gif"];
+  const MAX_IMAGE_SIZE_BYTES = 700 * 1024; // 700 KB
+
+  const validateImageFile = (file: File): string | null => {
+    if (!ALLOWED_IMAGE_TYPES.includes(file.type)) {
+      return "Invalid format. Please upload a JPEG, PNG, or GIF image.";
+    }
+    if (file.size > MAX_IMAGE_SIZE_BYTES) {
+      return `File too large (${(file.size / 1024).toFixed(0)} KB). Maximum size is 700 KB.`;
+    }
+    return null;
+  };
+
   // Thumbnail upload handlers
   const handleNewPrinterThumbnailUpload = async (e: ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (!file) return;
+    const err = validateImageFile(file);
+    if (err) { setImageUploadError(err); e.target.value = ""; return; }
+    setImageUploadError(null);
     setNewPrinterThumbnailName(file.name);
     setNewPrinterThumbnail(await toDataUrl(file));
   };
@@ -589,6 +606,9 @@ export default function AdminPage() {
   const handleNewPaperThumbnailUpload = async (e: ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (!file) return;
+    const err = validateImageFile(file);
+    if (err) { setImageUploadError(err); e.target.value = ""; return; }
+    setImageUploadError(null);
     setNewPaperThumbnailName(file.name);
     setNewPaperThumbnail(await toDataUrl(file));
   };
@@ -596,6 +616,9 @@ export default function AdminPage() {
   const handleEditPrinterThumbnailUpload = async (e: ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (!file) return;
+    const err = validateImageFile(file);
+    if (err) { setImageUploadError(err); e.target.value = ""; return; }
+    setImageUploadError(null);
     setEditPrinterThumbnailName(file.name);
     setEditPrinterThumbnail(await toDataUrl(file));
   };
@@ -603,6 +626,9 @@ export default function AdminPage() {
   const handleEditPaperThumbnailUpload = async (e: ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (!file) return;
+    const err = validateImageFile(file);
+    if (err) { setImageUploadError(err); e.target.value = ""; return; }
+    setImageUploadError(null);
     setEditPaperThumbnailName(file.name);
     setEditPaperThumbnail(await toDataUrl(file));
   };
@@ -610,6 +636,9 @@ export default function AdminPage() {
   const handleNewColourThumbnailUpload = async (e: ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (!file) return;
+    const err = validateImageFile(file);
+    if (err) { setImageUploadError(err); e.target.value = ""; return; }
+    setImageUploadError(null);
     setNewColourThumbnailName(file.name);
     setNewColourThumbnail(await toDataUrl(file));
   };
@@ -617,6 +646,9 @@ export default function AdminPage() {
   const handleEditColourThumbnailUpload = async (e: ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (!file) return;
+    const err = validateImageFile(file);
+    if (err) { setImageUploadError(err); e.target.value = ""; return; }
+    setImageUploadError(null);
     setEditColourThumbnailName(file.name);
     setEditColourThumbnail(await toDataUrl(file));
   };
@@ -624,6 +656,9 @@ export default function AdminPage() {
   const handleNewStepImageUpload = async (e: ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (!file) return;
+    const err = validateImageFile(file);
+    if (err) { setImageUploadError(err); e.target.value = ""; return; }
+    setImageUploadError(null);
     setNewStepImageName(file.name);
     setNewStepImage(await toDataUrl(file));
   };
@@ -631,6 +666,9 @@ export default function AdminPage() {
   const handleEditStepImageUpload = async (e: ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (!file) return;
+    const err = validateImageFile(file);
+    if (err) { setImageUploadError(err); e.target.value = ""; return; }
+    setImageUploadError(null);
     setEditStepImageName(file.name);
     setEditStepImage(await toDataUrl(file));
   };
@@ -3135,6 +3173,7 @@ export default function AdminPage() {
           setNewPrinterDescription("");
           setNewPrinterThumbnail("");
           setNewPrinterThumbnailName("");
+          setImageUploadError(null);
         }}
         maxWidth="sm"
         fullWidth
@@ -3152,7 +3191,12 @@ export default function AdminPage() {
                   <InfoIcon sx={{ fontSize: 20, color: "text.secondary", cursor: "pointer" }} />
                 </Tooltip>
               </Stack>
-              <Box component="input" type="file" accept="image/*" onChange={(e: ChangeEvent<HTMLInputElement>) => { void handleNewPrinterThumbnailUpload(e); }} />
+              <Box component="input" type="file" accept="image/jpeg,image/png,image/gif" onChange={(e: ChangeEvent<HTMLInputElement>) => { void handleNewPrinterThumbnailUpload(e); }} />
+              {imageUploadError && (
+                <Typography variant="caption" color="error" display="block" sx={{ mt: 0.5 }}>
+                  {imageUploadError}
+                </Typography>
+              )}
               {newPrinterThumbnailName && (
                 <Typography variant="caption" color="text.secondary" display="block" sx={{ mt: 1 }}>
                   Selected: {newPrinterThumbnailName}
@@ -3239,6 +3283,7 @@ export default function AdminPage() {
               setNewPrinterDescription("");
               setNewPrinterThumbnail("");
               setNewPrinterThumbnailName("");
+              setImageUploadError(null);
             }}
             sx={{ color: "#009DC9", fontWeight: 600, textTransform: "none" }}
           >
@@ -3271,6 +3316,7 @@ export default function AdminPage() {
           setEditPrinterDescription("");
           setEditPrinterThumbnail("");
           setEditPrinterThumbnailName("");
+          setImageUploadError(null);
         }}
         maxWidth="sm"
         fullWidth
@@ -3288,7 +3334,12 @@ export default function AdminPage() {
                   <InfoIcon sx={{ fontSize: 20, color: "text.secondary", cursor: "pointer" }} />
                 </Tooltip>
               </Stack>
-              <Box component="input" type="file" accept="image/*" onChange={(e: ChangeEvent<HTMLInputElement>) => { void handleEditPrinterThumbnailUpload(e); }} />
+              <Box component="input" type="file" accept="image/jpeg,image/png,image/gif" onChange={(e: ChangeEvent<HTMLInputElement>) => { void handleEditPrinterThumbnailUpload(e); }} />
+              {imageUploadError && (
+                <Typography variant="caption" color="error" display="block" sx={{ mt: 0.5 }}>
+                  {imageUploadError}
+                </Typography>
+              )}
               {editPrinterThumbnailName && (
                 <Typography variant="caption" color="text.secondary" display="block" sx={{ mt: 1 }}>
                   Selected: {editPrinterThumbnailName}
@@ -3376,6 +3427,7 @@ export default function AdminPage() {
               setEditPrinterDescription("");
               setEditPrinterThumbnail("");
               setEditPrinterThumbnailName("");
+              setImageUploadError(null);
             }}
             sx={{ color: "#009DC9", fontWeight: 600, textTransform: "none" }}
           >
@@ -3411,6 +3463,7 @@ export default function AdminPage() {
           setNewPaperSelectedPrinters([]);
           setShowAddPaperSearch(true);
           setAddPaperFromFullList(false);
+          setImageUploadError(null);
         }}
         maxWidth="sm"
         fullWidth
@@ -3607,7 +3660,12 @@ export default function AdminPage() {
                   <Typography variant="body2" fontWeight={500} sx={{ mb: 1 }}>
                     Thumbnail
                   </Typography>
-                  <Box component="input" type="file" accept="image/*" onChange={(e: ChangeEvent<HTMLInputElement>) => { void handleNewPaperThumbnailUpload(e); }} />
+                  <Box component="input" type="file" accept="image/jpeg,image/png,image/gif" onChange={(e: ChangeEvent<HTMLInputElement>) => { void handleNewPaperThumbnailUpload(e); }} />
+                  {imageUploadError && (
+                    <Typography variant="caption" color="error" display="block" sx={{ mt: 0.5 }}>
+                      {imageUploadError}
+                    </Typography>
+                  )}
                   {newPaperThumbnailName && (
                     <Typography variant="caption" color="text.secondary" display="block" sx={{ mt: 1 }}>
                       Selected: {newPaperThumbnailName}
@@ -3736,6 +3794,7 @@ export default function AdminPage() {
               setSelectedSearchPaper(null);
               setSelectedSearchPaperPrinters([]);
               setPaperSearchQuery("");
+              setImageUploadError(null);
             }}
             sx={{ color: "#009DC9", fontWeight: 600, textTransform: "none" }}
           >
@@ -3777,6 +3836,7 @@ export default function AdminPage() {
           setEditPaperThumbnail("");
           setEditPaperThumbnailName("");
           setEditPaperSelectedPrinters([]);
+          setImageUploadError(null);
         }}
         maxWidth="sm"
         fullWidth
@@ -3794,7 +3854,12 @@ export default function AdminPage() {
                   <InfoIcon sx={{ fontSize: 20, color: "text.secondary", cursor: "pointer" }} />
                 </Tooltip>
               </Stack>
-              <Box component="input" type="file" accept="image/*" onChange={(e: ChangeEvent<HTMLInputElement>) => { void handleEditPaperThumbnailUpload(e); }} />
+              <Box component="input" type="file" accept="image/jpeg,image/png,image/gif" onChange={(e: ChangeEvent<HTMLInputElement>) => { void handleEditPaperThumbnailUpload(e); }} />
+              {imageUploadError && (
+                <Typography variant="caption" color="error" display="block" sx={{ mt: 0.5 }}>
+                  {imageUploadError}
+                </Typography>
+              )}
               {editPaperThumbnailName && (
                 <Typography variant="caption" color="text.secondary" display="block" sx={{ mt: 1 }}>
                   Selected: {editPaperThumbnailName}
@@ -3910,6 +3975,7 @@ export default function AdminPage() {
               setEditPaperThumbnail("");
               setEditPaperThumbnailName("");
               setEditPaperSelectedPrinters([]);
+              setImageUploadError(null);
             }}
             sx={{ color: "#009DC9", fontWeight: 600, textTransform: "none" }}
           >
@@ -4115,6 +4181,7 @@ export default function AdminPage() {
           setNewColourDescription("");
           setNewColourThumbnail("");
           setNewColourThumbnailName("");
+          setImageUploadError(null);
         }}
         maxWidth="sm"
         fullWidth
@@ -4132,7 +4199,12 @@ export default function AdminPage() {
                   <InfoIcon sx={{ fontSize: 20, color: "text.secondary", cursor: "pointer" }} />
                 </Tooltip>
               </Stack>
-              <Box component="input" type="file" accept="image/*" onChange={(e: ChangeEvent<HTMLInputElement>) => { void handleNewColourThumbnailUpload(e); }} />
+              <Box component="input" type="file" accept="image/jpeg,image/png,image/gif" onChange={(e: ChangeEvent<HTMLInputElement>) => { void handleNewColourThumbnailUpload(e); }} />
+              {imageUploadError && (
+                <Typography variant="caption" color="error" display="block" sx={{ mt: 0.5 }}>
+                  {imageUploadError}
+                </Typography>
+              )}
               {newColourThumbnailName && (
                 <Typography variant="caption" color="text.secondary" display="block" sx={{ mt: 1 }}>
                   Selected: {newColourThumbnailName}
@@ -4218,6 +4290,7 @@ export default function AdminPage() {
               setNewColourDescription("");
               setNewColourThumbnail("");
               setNewColourThumbnailName("");
+              setImageUploadError(null);
             }}
             sx={{ color: "#009DC9", fontWeight: 600, textTransform: "none" }}
           >
@@ -4250,6 +4323,7 @@ export default function AdminPage() {
           setEditColourDescription("");
           setEditColourThumbnail("");
           setEditColourThumbnailName("");
+          setImageUploadError(null);
         }}
         maxWidth="sm"
         fullWidth
@@ -4267,7 +4341,12 @@ export default function AdminPage() {
                   <InfoIcon sx={{ fontSize: 20, color: "text.secondary", cursor: "pointer" }} />
                 </Tooltip>
               </Stack>
-              <Box component="input" type="file" accept="image/*" onChange={(e: ChangeEvent<HTMLInputElement>) => { void handleEditColourThumbnailUpload(e); }} />
+              <Box component="input" type="file" accept="image/jpeg,image/png,image/gif" onChange={(e: ChangeEvent<HTMLInputElement>) => { void handleEditColourThumbnailUpload(e); }} />
+              {imageUploadError && (
+                <Typography variant="caption" color="error" display="block" sx={{ mt: 0.5 }}>
+                  {imageUploadError}
+                </Typography>
+              )}
               {editColourThumbnailName && (
                 <Typography variant="caption" color="text.secondary" display="block" sx={{ mt: 1 }}>
                   Selected: {editColourThumbnailName}
@@ -4354,6 +4433,7 @@ export default function AdminPage() {
               setEditColourDescription("");
               setEditColourThumbnail("");
               setEditColourThumbnailName("");
+              setImageUploadError(null);
             }}
             sx={{ color: "#009DC9", fontWeight: 600, textTransform: "none" }}
           >
@@ -4386,6 +4466,7 @@ export default function AdminPage() {
           setNewStepContent("");
           setNewStepImage("");
           setNewStepImageName("");
+          setImageUploadError(null);
         }}
         maxWidth="sm"
         fullWidth
@@ -4414,7 +4495,12 @@ export default function AdminPage() {
               <Typography variant="body2" fontWeight={500} sx={{ mb: 1 }}>
                 Image
               </Typography>
-              <Box component="input" type="file" accept="image/*" onChange={(e: ChangeEvent<HTMLInputElement>) => { void handleNewStepImageUpload(e); }} />
+              <Box component="input" type="file" accept="image/jpeg,image/png,image/gif" onChange={(e: ChangeEvent<HTMLInputElement>) => { void handleNewStepImageUpload(e); }} />
+              {imageUploadError && (
+                <Typography variant="caption" color="error" display="block" sx={{ mt: 0.5 }}>
+                  {imageUploadError}
+                </Typography>
+              )}
               {newStepImageName && (
                 <Typography variant="caption" color="text.secondary" display="block" sx={{ mt: 1 }}>
                   Selected: {newStepImageName}
@@ -4477,7 +4563,7 @@ export default function AdminPage() {
         </DialogContent>
         <DialogActions sx={{ borderTop: "1px solid #BDE9FF", pt: 2, pb: 2, px: 3, backgroundColor: "#F4FAFF" }}>
           <Button
-            onClick={() => setShowAddStepModal(false)}
+            onClick={() => { setShowAddStepModal(false); setImageUploadError(null); }}
             sx={{ color: "#009DC9", fontWeight: 600, textTransform: "none" }}
           >
             Cancel
@@ -4509,6 +4595,7 @@ export default function AdminPage() {
           setEditStepContent("");
           setEditStepImage("");
           setEditStepImageName("");
+          setImageUploadError(null);
         }}
         maxWidth="sm"
         fullWidth
@@ -4537,7 +4624,12 @@ export default function AdminPage() {
               <Typography variant="body2" fontWeight={500} sx={{ mb: 1 }}>
                 Image
               </Typography>
-              <Box component="input" type="file" accept="image/*" onChange={(e: ChangeEvent<HTMLInputElement>) => { void handleEditStepImageUpload(e); }} />
+              <Box component="input" type="file" accept="image/jpeg,image/png,image/gif" onChange={(e: ChangeEvent<HTMLInputElement>) => { void handleEditStepImageUpload(e); }} />
+              {imageUploadError && (
+                <Typography variant="caption" color="error" display="block" sx={{ mt: 0.5 }}>
+                  {imageUploadError}
+                </Typography>
+              )}
               {editStepImageName && (
                 <Typography variant="caption" color="text.secondary" display="block" sx={{ mt: 1 }}>
                   Selected: {editStepImageName}
@@ -4600,7 +4692,7 @@ export default function AdminPage() {
         </DialogContent>
         <DialogActions sx={{ borderTop: "1px solid #BDE9FF", pt: 2, pb: 2, px: 3, backgroundColor: "#F4FAFF" }}>
           <Button
-            onClick={() => setShowEditStepModal(false)}
+            onClick={() => { setShowEditStepModal(false); setImageUploadError(null); }}
             sx={{ color: "#009DC9", fontWeight: 600, textTransform: "none" }}
           >
             Cancel

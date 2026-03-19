@@ -392,6 +392,19 @@ When testing after any changes:
 
 ## Session History
 
+### Current Session (March 19, 2026)
+- **Added image upload validation to all CMS admin dialogs**
+  - ✅ Restricted accepted file formats to JPEG, PNG, and GIF only (previously accepted all image types)
+  - ✅ Added 700 KB file size limit (safely under Firestore's 1MB document limit after base64 encoding overhead)
+  - ✅ Inline error message renders inside the open dialog, just below the file input — not in the global alert
+  - ✅ Error clears automatically when a valid file is selected
+  - ✅ Error clears when a dialog is closed (via Cancel button, backdrop click, or Escape key)
+  - All 8 upload handlers updated: New/Edit Printer, New/Edit Paper, New/Edit Colour, New/Edit Step
+  - **Bug Fix**: Error message was persisting across modals after being triggered
+    - Root cause: MUI `onClose` does not fire when Cancel button programmatically sets `open={false}` — only fires on backdrop click or Escape
+    - Solution: Added `setImageUploadError(null)` to all 8 Cancel button `onClick` handlers (in addition to the existing `onClose` handlers)
+  - Files Modified: `app/admin/page.tsx`
+
 ### Current Session (March 16, 2026 - Part 7)
 - **Added reset-to-original functionality for image crops**
   - ✅ Added `originalCropImage` state variable to store the original image when modal opens
