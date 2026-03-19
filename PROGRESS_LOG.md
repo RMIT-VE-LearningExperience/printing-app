@@ -392,6 +392,13 @@ When testing after any changes:
 
 ## Session History
 
+### Current Session (March 19, 2026) - Part 4
+- **Fixed sidebar content alignment and collapsed icon spacing**
+  - ✅ Removed `flex: 1` from the Navigation Stack — previously caused Homepage Header & Description, Printer List, Full Paper List, and Colour Management to be pushed to the bottom of the sidebar
+  - ✅ All sidebar content now flows from the top in both expanded and collapsed states
+  - ✅ Unified collapsed icon spacing — previously two separate Stacks used inconsistent spacing (1.5 and 2) with an inner printer avatars Stack at spacing 1; all now use spacing 1.5 with matching gap between groups
+  - Files Modified: `app/admin/page.tsx`
+
 ### Current Session (March 19, 2026) - Part 3
 - **Fixed "Image was compressed" note persisting across modals**
   - Same root cause as the earlier imageUploadError bug: state was only cleared on Cancel/onClose, not on dialog open

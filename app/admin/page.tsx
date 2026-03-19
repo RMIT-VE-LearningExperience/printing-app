@@ -1736,7 +1736,7 @@ export default function AdminPage() {
         </Box>
 
         {/* Navigation Items */}
-        <Stack spacing={sidebarCollapsed ? 1.5 : 1} sx={{ flex: 1 }}>
+        <Stack spacing={sidebarCollapsed ? 1.5 : 1}>
           {/* Home Button - Collapsed Only */}
           {sidebarCollapsed && (
             <Box sx={{ display: "flex", justifyContent: "center" }}>
@@ -1943,9 +1943,9 @@ export default function AdminPage() {
 
         {/* Printer List */}
         {sidebarCollapsed ? (
-              <Stack spacing={2} sx={{ mb: 1 }}>
+              <Stack spacing={1.5} sx={{ mt: 1.5 }}>
                 {/* Printers Section */}
-                <Stack spacing={1} sx={{ mb: 1 }}>
+                <Stack spacing={1.5}>
                   {tutorialState.printers.map((printer) => (
                     <Tooltip key={printer.id} title={printer.name} placement="right">
                       <Box
