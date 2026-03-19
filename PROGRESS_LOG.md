@@ -392,6 +392,15 @@ When testing after any changes:
 
 ## Session History
 
+### Current Session (March 19, 2026) - Part 3
+- **Fixed "Image was compressed" note persisting across modals**
+  - Same root cause as the earlier imageUploadError bug: state was only cleared on Cancel/onClose, not on dialog open
+  - Also affected imageUploadError (would have surfaced via Save button path, which bypasses both Cancel and onClose)
+  - Fix: reset both `imageUploadError` and `imageCompressed` at every dialog open trigger
+    - 4 handler functions: `handlePrinterMenuEdit`, `handlePaperMenuEdit`, `handleColourMenuEdit`, `handleStepMenuEdit`
+    - 6 inline onClick buttons: Add Printer (×2), Add Paper (×2), Add Colour, Add Step
+  - Files Modified: `app/admin/page.tsx`
+
 ### Current Session (March 19, 2026) - Part 2
 - **Added client-side image compression for JPEG/PNG uploads**
   - ✅ JPEG/PNG files over 700 KB are now auto-compressed via the Canvas API (no rejection error)

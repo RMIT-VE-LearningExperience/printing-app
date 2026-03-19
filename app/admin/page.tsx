@@ -1193,6 +1193,8 @@ export default function AdminPage() {
       setEditPrinterName(printer.name);
       setEditPrinterDescription("");
       setEditPrinterThumbnail(printer.thumbnailDataUrl);
+      setImageUploadError(null);
+      setImageCompressed(false);
       setShowEditPrinterModal(true);
     }
     handlePrinterMenuClose();
@@ -1240,6 +1242,8 @@ export default function AdminPage() {
       setEditPaperDescription("");
       setEditPaperThumbnail(paper.thumbnailDataUrl);
       setEditPaperSelectedPrinters(printersWithPaper);
+      setImageUploadError(null);
+      setImageCompressed(false);
       setShowEditPaperModal(true);
     }
     handlePaperMenuClose();
@@ -1287,6 +1291,8 @@ export default function AdminPage() {
       setEditColourName(colour.name);
       setEditColourDescription(colour.description || "");
       setEditColourThumbnail(colour.thumbnailDataUrl);
+      setImageUploadError(null);
+      setImageCompressed(false);
       setShowEditColourModal(true);
     }
     handleColourMenuClose();
@@ -1332,6 +1338,8 @@ export default function AdminPage() {
       setEditStepTitle(step.title);
       setEditStepContent(step.contentHtml);
       setEditStepImage(step.imageDataUrl);
+      setImageUploadError(null);
+      setImageCompressed(false);
       setShowEditStepModal(true);
     }
     handleStepMenuClose();
@@ -2065,7 +2073,7 @@ export default function AdminPage() {
                 </Typography>
                 <IconButton
                   size="small"
-                  onClick={() => setShowAddPrinterModal(true)}
+                  onClick={() => { setImageUploadError(null); setImageCompressed(false); setShowAddPrinterModal(true); }}
                   sx={{
                     minWidth: "auto",
                     p: 0.5,
@@ -2346,7 +2354,7 @@ export default function AdminPage() {
                   </Box>
                   <Button
                     variant="contained"
-                    onClick={() => setShowAddPrinterModal(true)}
+                    onClick={() => { setImageUploadError(null); setImageCompressed(false); setShowAddPrinterModal(true); }}
                     sx={{
                       backgroundColor: "#009DC9",
                       color: "#ffffff",
@@ -2466,7 +2474,7 @@ export default function AdminPage() {
               </Box>
               <Button
                 variant="contained"
-                onClick={() => setShowAddPaperModal(true)}
+                onClick={() => { setImageUploadError(null); setImageCompressed(false); setShowAddPaperModal(true); }}
                 sx={{
                   backgroundColor: "#009DC9",
                   color: "#ffffff",
@@ -2597,7 +2605,7 @@ export default function AdminPage() {
               </Box>
               <Button
                 variant="contained"
-                onClick={() => setShowAddColourModal(true)}
+                onClick={() => { setImageUploadError(null); setImageCompressed(false); setShowAddColourModal(true); }}
                 sx={{
                   backgroundColor: "#009DC9",
                   color: "#ffffff",
@@ -2752,7 +2760,7 @@ export default function AdminPage() {
               </Box>
               <Button
                 variant="contained"
-                onClick={() => setShowAddStepModal(true)}
+                onClick={() => { setImageUploadError(null); setImageCompressed(false); setShowAddStepModal(true); }}
                 sx={{
                   backgroundColor: "#009DC9",
                   color: "#ffffff",
@@ -2901,6 +2909,8 @@ export default function AdminPage() {
               <Button
                 variant="contained"
                 onClick={() => {
+                  setImageUploadError(null);
+                  setImageCompressed(false);
                   setShowAddPaperModal(true);
                   setAddPaperFromFullList(true);
                   setShowAddPaperSearch(false);
