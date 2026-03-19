@@ -3187,7 +3187,7 @@ export default function AdminPage() {
                 <Typography variant="body2" fontWeight={500}>
                   Thumbnail
                 </Typography>
-                <Tooltip title="Upload thumbnails in portrait for the best student experience. Format: jpeg, png & gif">
+                <Tooltip title={<><div>• Upload thumbnails in landscape for the best student experience.</div><div>• Format: jpeg, png &amp; gif</div><div>• Size: &lt;700kb</div></>}>
                   <InfoIcon sx={{ fontSize: 20, color: "text.secondary", cursor: "pointer" }} />
                 </Tooltip>
               </Stack>
@@ -3330,7 +3330,7 @@ export default function AdminPage() {
                 <Typography variant="body2" fontWeight={500}>
                   Thumbnail
                 </Typography>
-                <Tooltip title="Upload thumbnails in portrait for the best student experience. Format: jpeg, png & gif">
+                <Tooltip title={<><div>• Upload thumbnails in landscape for the best student experience.</div><div>• Format: jpeg, png &amp; gif</div><div>• Size: &lt;700kb</div></>}>
                   <InfoIcon sx={{ fontSize: 20, color: "text.secondary", cursor: "pointer" }} />
                 </Tooltip>
               </Stack>
@@ -3850,7 +3850,7 @@ export default function AdminPage() {
                 <Typography variant="body2" fontWeight={500}>
                   Thumbnail
                 </Typography>
-                <Tooltip title="Upload thumbnails in portrait for the best student experience. Format: jpeg, png & gif">
+                <Tooltip title={<><div>• Upload thumbnails in landscape for the best student experience.</div><div>• Format: jpeg, png &amp; gif</div><div>• Size: &lt;700kb</div></>}>
                   <InfoIcon sx={{ fontSize: 20, color: "text.secondary", cursor: "pointer" }} />
                 </Tooltip>
               </Stack>
@@ -4195,7 +4195,7 @@ export default function AdminPage() {
                 <Typography variant="body2" fontWeight={500}>
                   Thumbnail
                 </Typography>
-                <Tooltip title="Upload thumbnails in portrait for the best student experience. Format: jpeg, png & gif">
+                <Tooltip title={<><div>• Upload thumbnails in landscape for the best student experience.</div><div>• Format: jpeg, png &amp; gif</div><div>• Size: &lt;700kb</div></>}>
                   <InfoIcon sx={{ fontSize: 20, color: "text.secondary", cursor: "pointer" }} />
                 </Tooltip>
               </Stack>
@@ -4337,7 +4337,7 @@ export default function AdminPage() {
                 <Typography variant="body2" fontWeight={500}>
                   Thumbnail
                 </Typography>
-                <Tooltip title="Upload thumbnails in portrait for the best student experience. Format: jpeg, png & gif">
+                <Tooltip title={<><div>• Upload thumbnails in landscape for the best student experience.</div><div>• Format: jpeg, png &amp; gif</div><div>• Size: &lt;700kb</div></>}>
                   <InfoIcon sx={{ fontSize: 20, color: "text.secondary", cursor: "pointer" }} />
                 </Tooltip>
               </Stack>
