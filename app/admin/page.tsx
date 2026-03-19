@@ -1673,7 +1673,7 @@ export default function AdminPage() {
           {/* Preview Button */}
           {sidebarCollapsed ? (
             <Box sx={{ display: "flex", justifyContent: "center" }}>
-              <Tooltip title="Preview" placement="right">
+              <Tooltip title="Preview from Start" placement="right">
                 <IconButton
                   onClick={() => window.open("/", "_blank")}
                   size="large"
@@ -1706,14 +1706,14 @@ export default function AdminPage() {
                 },
               }}
             >
-              PREVIEW
+              PREVIEW FROM START
             </Button>
           )}
 
           {/* Alternate Preview Button */}
           {sidebarCollapsed ? (
             <Box sx={{ display: "flex", justifyContent: "center" }}>
-              <Tooltip title="Alternate Preview (includes unpublished)" placement="right">
+              <Tooltip title="Preview Current Page" placement="right">
                 <IconButton
                   onClick={() => void generateAltPreview()}
                   size="large"
@@ -1746,7 +1746,7 @@ export default function AdminPage() {
                 },
               }}
             >
-              ALT PREVIEW
+              PREVIEW CURRENT PAGE
             </Button>
           )}
         </Stack>
