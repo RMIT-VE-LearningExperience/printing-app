@@ -67,6 +67,24 @@ type TutorialState = {
 const emptyState: TutorialState = { printers: [] };
 const PROGRESS_KEY = "printing_guide_progress_v1";
 
+function preloadImages(urls: string[]): Promise<void> {
+  if (urls.length === 0) return Promise.resolve();
+  return new Promise((resolve) => {
+    let loaded = 0;
+    const total = urls.length;
+    function onDone() {
+      loaded++;
+      if (loaded >= total) resolve();
+    }
+    for (const url of urls) {
+      const img = new window.Image();
+      img.onload = onDone;
+      img.onerror = onDone;
+      img.src = url;
+    }
+  });
+}
+
 // Color palette - Modern minimalist aesthetic
 const colors = {
   primary: "#009DC9",
@@ -138,6 +156,20 @@ export default function HomePage() {
         const urlPaperId = params.get("paperId");
         const urlColourId = params.get("colourId");
 
+        // Read localStorage to determine initial view for image preloading
+        let localPrinterId: string | null = null;
+        let localPaperId: string | null = null;
+        let localColourId: string | null = null;
+        try {
+          const stored = window.localStorage.getItem(PROGRESS_KEY);
+          if (stored) {
+            const parsed = JSON.parse(stored) as { printerId?: string; paperId?: string; colourId?: string };
+            localPrinterId = parsed.printerId ?? null;
+            localPaperId = parsed.paperId ?? null;
+            localColourId = parsed.colourId ?? null;
+          }
+        } catch { /* ignore */ }
+
         const url = previewToken
           ? `/api/tutorial?previewToken=${encodeURIComponent(previewToken)}`
           : "/api/tutorial";
@@ -150,9 +182,52 @@ export default function HomePage() {
           return;
         }
 
-        setData(result.state);
+        const isPreview = "isPreviewMode" in result && result.isPreviewMode;
+        const initPrinterId = isPreview ? (urlPrinterId ?? null) : localPrinterId;
+        const initPaperId = isPreview ? (urlPaperId ?? null) : localPaperId;
+        const initColourId = isPreview ? (urlColourId ?? null) : localColourId;
 
-        if ("isPreviewMode" in result && result.isPreviewMode) {
+        // Collect image URLs for the initial view only
+        const state = result.state;
+        let imageUrls: string[] = [];
+        const initPrinter = state.printers.find((p) => p.id === initPrinterId) ?? null;
+        if (!initPrinter) {
+          // Printer selection view
+          imageUrls = state.printers
+            .filter((p) => isPreview || p.published !== false)
+            .map((p) => p.thumbnailDataUrl)
+            .filter(Boolean);
+        } else {
+          const initPaper = initPrinter.papers.find((p) => p.id === initPaperId) ?? null;
+          if (!initPaper) {
+            // Paper selection view
+            imageUrls = initPrinter.papers
+              .filter((p) => isPreview || p.published !== false)
+              .map((p) => p.thumbnailDataUrl)
+              .filter(Boolean);
+          } else {
+            const initColour = initPaper.colours.find((c) => c.id === initColourId) ?? null;
+            if (!initColour) {
+              // Colour selection view
+              imageUrls = initPaper.colours
+                .filter((c) => isPreview || c.published !== false)
+                .map((c) => c.thumbnailDataUrl)
+                .filter(Boolean);
+            } else {
+              // Steps view — preload first step image only
+              const firstStep = initColour.steps[0];
+              if (firstStep?.imageDataUrl) {
+                imageUrls = [firstStep.imageDataUrl];
+              }
+            }
+          }
+        }
+
+        await preloadImages(imageUrls);
+
+        setData(state);
+
+        if (isPreview) {
           setIsPreviewMode(true);
           if (urlPrinterId) setSelectedPrinterId(urlPrinterId);
           if (urlPaperId) setSelectedPaperId(urlPaperId);
@@ -363,6 +438,46 @@ export default function HomePage() {
     </Box>
   ) : null;
 
+  // LOADING SCREEN
+  if (loading) {
+    return (
+      <Box
+        sx={{
+          position: "fixed",
+          inset: 0,
+          bgcolor: colors.lightBg,
+          display: "flex",
+          alignItems: "center",
+          justifyContent: "center",
+        }}
+      >
+        <Box sx={{ position: "relative", display: "inline-flex" }}>
+          {/* MD3 track ring */}
+          <CircularProgress
+            variant="determinate"
+            value={100}
+            size={48}
+            thickness={4}
+            sx={{ color: "rgba(0, 157, 201, 0.15)" }}
+          />
+          {/* MD3 indicator with rounded caps */}
+          <CircularProgress
+            size={48}
+            thickness={4}
+            sx={{
+              color: colors.primary,
+              position: "absolute",
+              left: 0,
+              "& .MuiCircularProgress-circle": {
+                strokeLinecap: "round",
+              },
+            }}
+          />
+        </Box>
+      </Box>
+    );
+  }
+
   // RENDER HOME PAGE (PRINTER SELECTION)
   if (showingPrinterSelection) {
     return (
@@ -395,27 +510,20 @@ export default function HomePage() {
             </Typography>
           </Stack>
 
-          {/* Loading State */}
-          {loading && (
-            <Box sx={{ display: "flex", justifyContent: "center", py: 6 }}>
-              <CircularProgress sx={{ color: colors.primary }} />
-            </Box>
-          )}
-
           {/* Error State */}
-          {error && !loading && (
+          {error && (
             <Alert severity="error" sx={{ mb: 3 }}>
               {error}
             </Alert>
           )}
 
           {/* Empty State */}
-          {!loading && !error && !hasPrinters && (
+          {!error && !hasPrinters && (
             <Alert severity="info">No printers available yet. Add your first printer in Admin.</Alert>
           )}
 
           {/* Printer Selection Grid */}
-          {!loading && !error && hasPrinters && (
+          {!error && hasPrinters && (
             <Box>
               <Typography
                 variant="body1"
@@ -603,20 +711,13 @@ export default function HomePage() {
             </Typography>
           </Stack>
 
-          {/* Loading State */}
-          {loading && (
-            <Box sx={{ display: "flex", justifyContent: "center", py: 6 }}>
-              <CircularProgress sx={{ color: colors.primary }} />
-            </Box>
-          )}
-
           {/* Empty State */}
-          {!loading && !hasPapers && (
+          {!hasPapers && (
             <Alert severity="info">No papers yet for this printer. Add first paper in Admin.</Alert>
           )}
 
           {/* Paper Selection Grid */}
-          {!loading && hasPapers && (
+          {hasPapers && (
             <Grid container spacing={{ xs: 2, sm: 2.5, md: 3 }}>
               {selectedPrinter?.papers
                 .filter((paper) => isPreviewMode || paper.published !== false)
@@ -802,20 +903,13 @@ export default function HomePage() {
             </Typography>
           </Stack>
 
-          {/* Loading State */}
-          {loading && (
-            <Box sx={{ display: "flex", justifyContent: "center", py: 6 }}>
-              <CircularProgress sx={{ color: colors.primary }} />
-            </Box>
-          )}
-
           {/* Empty State */}
-          {!loading && !hasColours && (
+          {!hasColours && (
             <Alert severity="info">No colours yet for this paper. Add first colour in Admin.</Alert>
           )}
 
           {/* Colour Selection Grid */}
-          {!loading && hasColours && (
+          {hasColours && (
             <Grid container spacing={{ xs: 2, sm: 2.5, md: 3 }}>
               {selectedPaper?.colours
                 .filter((colour) => isPreviewMode || colour.published !== false)

@@ -1,6 +1,6 @@
 # Print App CMS - Progress Log
 
-**Last Updated:** March 18, 2026 (Session 3)
+**Last Updated:** March 19, 2026 (Session 4)
 **Project:** Print App CMS System
 **User:** Arielle Lee (arielle.lee@rmit.edu.au)
 
@@ -930,6 +930,43 @@ Added a `cropImgReady` boolean state (starts `false`). The modal's `<img>` eleme
 - `app/api/tutorial/route.ts` — GET handler now accepts `?previewToken=` query param; validates token and returns `isPreviewMode: true/false` alongside state
 - `app/page.tsx` — Reads `previewToken`/`printerId`/`paperId`/`colourId` from URL on load; fetches with token; skips published filters when `isPreviewMode`; auto-navigates to specified item; shows persistent orange preview banner; does not save preview navigation to localStorage
 - `app/admin/page.tsx` — Added `PageviewIcon` import; added `generateAltPreview()` handler; added ALT PREVIEW button (both collapsed icon and expanded label variants)
+
+---
+
+---
+
+## Feature: Full-Screen Loading Indicator on Initial Page Load
+
+**Date Implemented:** March 19, 2026 (Session 4)
+**Type:** UX Enhancement
+
+**Request:** When the frontend page first loads (after clicking "Preview from start" or "Preview current page" in the CMS), display a full-screen loading indicator and hide the page until all content for the initial view is ready.
+
+**Behaviour:**
+- A full-screen overlay (`#FAFBFC` background, centred spinner) shows immediately on load
+- The page is completely hidden until loading is finished — no partial renders
+- Once data is fetched and images are preloaded, the overlay disappears and the fully-rendered page appears
+- Only the images for the **initial view** are preloaded (not all images in the dataset):
+  - Printer selection view → preload all visible printer thumbnails
+  - Paper selection view → preload papers for the selected printer
+  - Colour selection view → preload colours for the selected paper
+  - Steps view → preload the first step image only
+- Navigation within the app (clicking between views) is unaffected — no loading screen on in-app transitions
+
+**Loading Indicator Style (MD3-inspired):**
+- Two stacked `CircularProgress` components from MUI v5:
+  - Static `determinate` at 100% for the faint track ring (`rgba(0, 157, 201, 0.15)`)
+  - Animated indeterminate on top with `strokeLinecap: "round"` for MD3 rounded caps
+- Uses existing brand colour `#009DC9`
+
+**Technical Notes:**
+- `preloadImages(urls)` helper function uses `new window.Image()` to preload each URL; `onload` and `onerror` both count as done (broken images never block the page)
+- `loadData` reads localStorage directly (not from React state) to determine the initial view for non-preview loads — avoids relying on async state updates
+- For preview mode, URL params (`printerId`, `paperId`, `colourId`) determine the initial view
+- Since thumbnails are stored as base64 data URLs, preloading triggers decode only — no extra network requests
+
+**Files Modified:**
+- `app/page.tsx` — Added `preloadImages` helper; modified `loadData` to collect and preload initial-view images before setting state; added full-screen MD3 loading overlay (`if (loading) return ...`); removed three inline loading blocks from printer/paper/colour views; simplified `!loading &&` guards
 
 ---
 
