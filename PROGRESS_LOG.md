@@ -392,6 +392,17 @@ When testing after any changes:
 
 ## Session History
 
+### Current Session (March 20, 2026)
+- **Redesigned footer: fixed overlay with email link**
+  - ✅ Footer is now fixed at the bottom of the viewport on both user-facing and admin pages (always visible, overlays content)
+  - ✅ Transparent background with no gradient — dark grey (`#333333`) text readable over light blue page backgrounds
+  - ✅ "Digital Design & Media Team" is now a clickable underlined `mailto:dmd.cove@rmit.edu.au` link
+  - ✅ User-facing pages: text centered (unchanged)
+  - ✅ Admin page: text right-aligned, footer sits behind the sidebar (sidebar given `position: relative; zIndex: 20`, footer `zIndex: 10`)
+  - ✅ `pointerEvents: none` on footer so transparent area does not block clicks on underlying content; `auto` restored on the text/link
+  - Created `app/components/Footer.tsx` — client component using `usePathname()` to conditionally apply text alignment per page
+  - Files Modified: `app/layout.tsx`, `app/admin/page.tsx`, `app/components/Footer.tsx` (new)
+
 ### Current Session (March 19, 2026) - Part 4
 - **Fixed sidebar content alignment and collapsed icon spacing**
   - ✅ Removed `flex: 1` from the Navigation Stack — previously caused Homepage Header & Description, Printer List, Full Paper List, and Colour Management to be pushed to the bottom of the sidebar

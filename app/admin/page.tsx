@@ -1693,6 +1693,8 @@ export default function AdminPage() {
           transition: "all 0.3s ease",
           display: "flex",
           flexDirection: "column",
+          position: "relative",
+          zIndex: 20,
         }}
       >
         {/* Toggle Button and Title */}
