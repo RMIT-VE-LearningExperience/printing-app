@@ -1822,7 +1822,7 @@ export default function AdminPage() {
                 },
               }}
             >
-              PREVIEW FROM START
+              VIEW APP
             </Button>
           )}
 
