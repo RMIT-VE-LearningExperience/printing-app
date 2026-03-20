@@ -1166,7 +1166,7 @@ export default function HomePage() {
             size="small"
             onClick={() => window.scrollTo({ top: 0, behavior: "smooth" })}
             sx={{
-              position: "fixed", bottom: 32, right: 24, zIndex: 20,
+              position: "fixed", bottom: 72, right: 24, zIndex: 20,
               bgcolor: colors.primary, color: "#ffffff",
               "&:hover": { bgcolor: colors.darkBg },
               boxShadow: "0 4px 12px rgba(0,0,0,0.2)",

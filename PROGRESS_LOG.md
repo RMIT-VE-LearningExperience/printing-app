@@ -392,6 +392,14 @@ When testing after any changes:
 
 ## Session History
 
+### Current Session (March 20, 2026) - Part 6
+- **Footer redesign: dark navy background, white text, ribbon shape for admin**
+  - ✅ Both footers recoloured to dark navy `#001F2D` with white `#ffffff` text and link
+  - ✅ User-facing footer: full-width solid bar with `#001F2D` background
+  - ✅ Admin footer: parallelogram ribbon anchored to the right — `clip-path: polygon(32px 0, 100% 0, 100% 100%, 0 100%)` creates diagonal left edge; `filter: drop-shadow()` adds depth following the clip shape
+  - ✅ Back-to-top Fab moved to `bottom: 72px` — clears the footer on desktop and wrapped-text mobile layouts
+  - Files Modified: `app/components/Footer.tsx`, `app/page.tsx`
+
 ### Current Session (March 20, 2026) - Part 5
 - **Replaced step-by-step navigation with continuous scroll view (user-facing)**
   - ✅ All step cards rendered vertically in a scrollable `Stack` — users scroll through steps instead of clicking chevrons
