@@ -1,7 +1,7 @@
 "use client";
 
 import Image from "next/image";
-import { type TouchEvent, useEffect, useMemo, useRef, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import {
   Box,
   Container,
@@ -15,12 +15,12 @@ import {
   Grid,
   Stack,
   Modal,
+  Fab,
 } from "@mui/material";
 import InfoIcon from "@mui/icons-material/Info";
 import ArrowBackIcon from "@mui/icons-material/ArrowBack";
 import HomeIcon from "@mui/icons-material/Home";
-import ChevronLeftIcon from "@mui/icons-material/ChevronLeft";
-import ChevronRightIcon from "@mui/icons-material/ChevronRight";
+import KeyboardArrowUpIcon from "@mui/icons-material/KeyboardArrowUp";
 import ImageIcon from "@mui/icons-material/Image";
 
 type Step = {
@@ -118,8 +118,10 @@ export default function HomePage() {
   const [selectedPaperId, setSelectedPaperId] = useState<string | null>(null);
   const [selectedColourId, setSelectedColourId] = useState<string | null>(null);
   const [activeStepIndex, setActiveStepIndex] = useState(0);
-  const [isImageEnlarged, setIsImageEnlarged] = useState(false);
-  const touchStartXRef = useRef<number | null>(null);
+  const [enlargedStepImageUrl, setEnlargedStepImageUrl] = useState<string | null>(null);
+  const [showBackToTop, setShowBackToTop] = useState(false);
+  const stepCardRefs = useRef<(HTMLDivElement | null)[]>([]);
+  const visibleStepsRef = useRef(new Set<number>());
 
   useEffect(() => {
     const stored = window.localStorage.getItem(PROGRESS_KEY);
@@ -138,7 +140,6 @@ export default function HomePage() {
       setSelectedPrinterId(parsed.printerId ?? null);
       setSelectedPaperId(parsed.paperId ?? null);
       setSelectedColourId(parsed.colourId ?? null);
-      setActiveStepIndex(Number.isFinite(parsed.stepIndex) ? Math.max(0, parsed.stepIndex ?? 0) : 0);
     } catch {
       window.localStorage.removeItem(PROGRESS_KEY);
     }
@@ -259,8 +260,6 @@ export default function HomePage() {
   );
 
   const steps = selectedColour?.steps ?? [];
-  const activeStep = steps[activeStepIndex] ?? null;
-
   useEffect(() => {
     if (selectedPrinterId && !selectedPrinter) {
       setSelectedPrinterId(null);
@@ -305,10 +304,9 @@ export default function HomePage() {
         printerId: selectedPrinterId,
         paperId: selectedPaperId,
         colourId: selectedColourId,
-        stepIndex: activeStepIndex,
       }),
     );
-  }, [activeStepIndex, isPreviewMode, selectedColourId, selectedPaperId, selectedPrinterId]);
+  }, [isPreviewMode, selectedColourId, selectedPaperId, selectedPrinterId]);
 
   function resetToHome() {
     setSelectedPrinterId(null);
@@ -352,40 +350,6 @@ export default function HomePage() {
     setActiveStepIndex(0);
   }
 
-  function goPrevStep() {
-    setActiveStepIndex((value) => Math.max(0, value - 1));
-  }
-
-  function goNextStep() {
-    setActiveStepIndex((value) => Math.min(steps.length - 1, value + 1));
-  }
-
-  function handleStepTouchStart(event: TouchEvent<HTMLElement>) {
-    touchStartXRef.current = event.touches[0]?.clientX ?? null;
-  }
-
-  function handleStepTouchEnd(event: TouchEvent<HTMLElement>) {
-    const startX = touchStartXRef.current;
-    const endX = event.changedTouches[0]?.clientX ?? null;
-    touchStartXRef.current = null;
-
-    if (startX === null || endX === null) {
-      return;
-    }
-
-    const deltaX = startX - endX;
-    if (Math.abs(deltaX) < 50) {
-      return;
-    }
-
-    if (deltaX > 0) {
-      goNextStep();
-      return;
-    }
-
-    goPrevStep();
-  }
-
   const showingPrinterSelection = !selectedPrinter;
   const showingPaperSelection = !!selectedPrinter && !selectedPaper;
   const showingColourSelection = !!selectedPaper && !selectedColour;
@@ -394,27 +358,36 @@ export default function HomePage() {
   const hasPrinters = data.printers.length > 0;
   const hasPapers = (selectedPrinter?.papers.length ?? 0) > 0;
   const hasColours = (selectedPaper?.colours.length ?? 0) > 0;
-  const hasSteps = steps.length > 0;
 
   useEffect(() => {
-    if (!showingSteps || !hasSteps) {
-      return;
-    }
+    if (!showingSteps) return;
+    visibleStepsRef.current.clear();
+    const refs = stepCardRefs.current;
+    const observer = new IntersectionObserver(
+      (entries) => {
+        entries.forEach((entry) => {
+          const index = Number(entry.target.getAttribute("data-step-index"));
+          if (entry.isIntersecting) {
+            visibleStepsRef.current.add(index);
+          } else {
+            visibleStepsRef.current.delete(index);
+          }
+        });
+        const visible = [...visibleStepsRef.current].sort((a, b) => a - b);
+        if (visible.length > 0) setActiveStepIndex(visible[0]);
+      },
+      { threshold: 0.2 },
+    );
+    refs.forEach((ref) => { if (ref) observer.observe(ref); });
+    return () => observer.disconnect();
+  }, [showingSteps, steps.length]);
 
-    function onKeyDown(event: KeyboardEvent) {
-      if (event.key === "ArrowLeft") {
-        event.preventDefault();
-        setActiveStepIndex((value) => Math.max(0, value - 1));
-      }
-      if (event.key === "ArrowRight") {
-        event.preventDefault();
-        setActiveStepIndex((value) => Math.min(steps.length - 1, value + 1));
-      }
-    }
-
-    window.addEventListener("keydown", onKeyDown);
-    return () => window.removeEventListener("keydown", onKeyDown);
-  }, [showingSteps, hasSteps, steps.length]);
+  useEffect(() => {
+    if (!showingSteps) return;
+    function onScroll() { setShowBackToTop(window.scrollY > 400); }
+    window.addEventListener("scroll", onScroll, { passive: true });
+    return () => window.removeEventListener("scroll", onScroll);
+  }, [showingSteps]);
 
   const previewBanner = isPreviewMode ? (
     <Box
@@ -1025,7 +998,7 @@ export default function HomePage() {
   }
 
   // RENDER STEPS DISPLAY PAGE
-  if (showingSteps && activeStep) {
+  if (showingSteps && steps.length > 0) {
     return (
       <Box sx={{ minHeight: "100vh", bgcolor: colors.lightBg }}>
         {previewBanner}
@@ -1034,7 +1007,7 @@ export default function HomePage() {
 
         <Box sx={{ py: { xs: 4, sm: 5, md: 7 } }}>
           <Container maxWidth="md">
-            {/* Top Navigation */}
+            {/* Top Navigation — scrolls off screen */}
             <Stack direction="row" spacing={1.5} sx={{ mb: { xs: 4, sm: 5 }, alignItems: "center" }}>
               <IconButton
                 onClick={backOneLevel}
@@ -1051,297 +1024,157 @@ export default function HomePage() {
               <Stack spacing={0.25} sx={{ flex: 1, textAlign: "center" }}>
                 <Typography
                   variant="body2"
-                  sx={{
-                    fontSize: { xs: "0.85rem", sm: "0.95rem" },
-                    fontWeight: 500,
-                    color: colors.lightText,
-                  }}
+                  sx={{ fontSize: { xs: "0.85rem", sm: "0.95rem" }, fontWeight: 500, color: colors.lightText }}
                 >
                   {selectedPrinter?.name}
                 </Typography>
                 <Typography
                   variant="caption"
-                  sx={{
-                    fontSize: { xs: "0.75rem", sm: "0.8rem" },
-                    fontWeight: 600,
-                    color: colors.primary,
-                    letterSpacing: "0.05em",
-                    textTransform: "uppercase",
-                  }}
+                  sx={{ fontSize: { xs: "0.75rem", sm: "0.8rem" }, fontWeight: 600, color: colors.primary, letterSpacing: "0.05em", textTransform: "uppercase" }}
                 >
                   {selectedPaper?.name}
                 </Typography>
               </Stack>
               <IconButton
                 onClick={resetToHome}
-                sx={{
-                  color: colors.text,
-                  border: `1px solid ${colors.lightBorder}`,
-                  borderRadius: "6px",
-                  transition: "all 0.2s ease",
-                  "&:hover": { bgcolor: colors.lightBorder },
-                }}
+                sx={{ color: colors.text, border: `1px solid ${colors.lightBorder}`, borderRadius: "6px", transition: "all 0.2s ease", "&:hover": { bgcolor: colors.lightBorder } }}
               >
                 <HomeIcon />
               </IconButton>
             </Stack>
 
-            {/* Colour Name as Title */}
-            <Typography
-              variant="h2"
+            {/* Sticky header: Colour Name + Step Counter */}
+            <Box
               sx={{
-                fontSize: { xs: "1.75rem", sm: "2.25rem", md: "2.5rem" },
-                fontWeight: 800,
-                letterSpacing: "-0.02em",
-                color: colors.text,
-                mb: { xs: 4, sm: 5 },
+                position: "sticky",
+                top: isPreviewMode ? "36px" : 0,
+                zIndex: 10,
+                bgcolor: colors.lightBg,
+                pb: 2,
+                pt: 1,
+                mb: { xs: 2, sm: 3 },
                 textAlign: "center",
-              }}
-            >
-              {selectedColour?.name}
-            </Typography>
-
-            {/* Progress Indicator */}
-            <Stack
-              direction="column"
-              spacing={{ xs: 1.5, sm: 2 }}
-              sx={{
-                mb: { xs: 3, sm: 4 },
-                alignItems: "center",
-                justifyContent: "center",
               }}
             >
               <Typography
+                variant="h2"
+                sx={{ fontSize: { xs: "1.75rem", sm: "2.25rem", md: "2.5rem" }, fontWeight: 800, letterSpacing: "-0.02em", color: colors.text, mb: 1 }}
+              >
+                {selectedColour?.name}
+              </Typography>
+              <Typography
                 variant="body1"
-                sx={{
-                  fontSize: { xs: "0.9rem", sm: "1rem" },
-                  fontWeight: 600,
-                  color: colors.text,
-                  letterSpacing: "0.05em",
-                }}
+                sx={{ fontSize: { xs: "0.9rem", sm: "1rem" }, fontWeight: 600, color: colors.text, letterSpacing: "0.05em" }}
               >
                 STEP {steps.length === 0 ? 0 : activeStepIndex + 1} OF {steps.length}
               </Typography>
+            </Box>
 
-              {/* Progress Dots */}
-              <Stack direction="row" spacing={1} sx={{ alignItems: "center" }}>
-                {steps.map((step, index) => (
-                  <Box
-                    key={step.id}
-                    sx={{
-                      width: 8,
-                      height: 8,
-                      borderRadius: "50%",
-                      bgcolor: index === activeStepIndex ? colors.primary : colors.lightBorder,
-                      transition: "all 0.2s ease",
-                    }}
-                  />
-                ))}
-              </Stack>
-            </Stack>
-
-            {/* Step Card */}
-            <Card
-              sx={{
-                borderRadius: "8px",
-                border: "none",
-                backgroundColor: colors.cardBg,
-                boxShadow: colors.cardShadow,
-                mb: { xs: 4, sm: 5 },
-                overflow: "hidden",
-              }}
-              onTouchStart={handleStepTouchStart}
-              onTouchEnd={handleStepTouchEnd}
-            >
-              <CardContent sx={{ p: { xs: 2.5, sm: 3.5 } }}>
-                {/* Step Number and Title */}
-                <Stack direction="row" spacing={1.5} alignItems="center" sx={{ mb: { xs: 2, sm: 2.5 } }}>
-                  <Box
-                    sx={{
-                      display: "inline-flex",
-                      alignItems: "center",
-                      justifyContent: "center",
-                      width: 40,
-                      height: 40,
-                      bgcolor: colors.darkBg,
-                      color: colors.lightBg,
-                      fontWeight: 700,
-                      borderRadius: 1,
-                      fontSize: "1.1rem",
-                      flexShrink: 0,
-                    }}
-                  >
-                    {activeStepIndex + 1}
-                  </Box>
-
-                  {/* Step Title */}
-                  {activeStep.title && (
-                    <Typography
-                      variant="h6"
-                      sx={{
-                        fontSize: { xs: "1rem", sm: "1.1rem" },
-                        fontWeight: 600,
-                        color: colors.primary,
-                      }}
-                    >
-                      {activeStep.title}
-                    </Typography>
-                  )}
-                </Stack>
-
-                {/* Step Content */}
-                {activeStep.contentHtml && (
-                  <Box
-                    sx={{
-                      fontSize: { xs: "0.95rem", sm: "1rem" },
-                      color: colors.text,
-                      lineHeight: 1.6,
-                      mb: { xs: 2, sm: 3 },
-                      whiteSpace: "pre-wrap",
-                      wordBreak: "break-word",
-                      "& p": { mb: 1 },
-                      "& ul, & ol": { pl: 2, mb: 1 },
-                      "& li": { mb: 0.5 },
-                      "& strong, & b": { fontWeight: 700 },
-                      "& em, & i": { fontStyle: "italic" },
-                      "& a": {
-                        color: colors.primary,
-                        textDecoration: "underline",
-                        "&:hover": { opacity: 0.8 },
-                      },
-                    }}
-                    dangerouslySetInnerHTML={{ __html: sanitizeStepHtml(activeStep.contentHtml) }}
-                  />
-                )}
-
-                {/* Step Image */}
-                {activeStep.imageDataUrl && (
-                  <>
-                    <Box
-                      onClick={() => setIsImageEnlarged(true)}
-                      sx={{
-                        position: "relative",
-                        width: "100%",
-                        paddingBottom: "60%",
-                        overflow: "hidden",
-                        borderRadius: 1,
-                        bgcolor: "#f5f5f5",
-                        mb: { xs: 2, sm: 3 },
-                        cursor: "pointer",
-                        transition: "all 0.2s ease",
-                        "&:hover": {
-                          boxShadow: colors.cardShadowHover,
-                        },
-                      }}
-                    >
-                      <Image
-                        src={activeStep.imageDataUrl}
-                        alt={activeStep.title || activeStep.name}
-                        fill
-                        style={{ objectFit: "contain" }}
-                        sizes="(max-width: 600px) 100vw, (max-width: 960px) 90vw, 800px"
-                      />
-                    </Box>
-
-                    {/* Image Modal */}
-                    <Modal
-                      open={isImageEnlarged}
-                      onClose={() => setIsImageEnlarged(false)}
-                      sx={{
-                        display: "flex",
-                        alignItems: "center",
-                        justifyContent: "center",
-                        bgcolor: "rgba(0, 0, 0, 0.7)",
-                      }}
-                    >
+            {/* All Step Cards */}
+            <Stack spacing={{ xs: 3, sm: 4 }} sx={{ pb: { xs: 6, sm: 8 } }}>
+              {steps.map((step, index) => (
+                <Card
+                  key={step.id}
+                  ref={(el) => { stepCardRefs.current[index] = el; }}
+                  data-step-index={index}
+                  sx={{ borderRadius: "8px", border: "none", backgroundColor: colors.cardBg, boxShadow: colors.cardShadow, overflow: "hidden" }}
+                >
+                  <CardContent sx={{ p: { xs: 2.5, sm: 3.5 } }}>
+                    {/* Step Number and Title */}
+                    <Stack direction="row" spacing={1.5} alignItems="center" sx={{ mb: { xs: 2, sm: 2.5 } }}>
                       <Box
                         sx={{
-                          position: "relative",
-                          width: { xs: "90%", sm: "80%", md: "70%" },
-                          maxWidth: "900px",
-                          maxHeight: "90vh",
-                          borderRadius: "8px",
-                          overflow: "hidden",
+                          display: "inline-flex", alignItems: "center", justifyContent: "center",
+                          width: 40, height: 40, bgcolor: colors.darkBg, color: colors.lightBg,
+                          fontWeight: 700, borderRadius: 1, fontSize: "1.1rem", flexShrink: 0,
+                        }}
+                      >
+                        {index + 1}
+                      </Box>
+                      {step.title && (
+                        <Typography variant="h6" sx={{ fontSize: { xs: "1rem", sm: "1.1rem" }, fontWeight: 600, color: colors.primary }}>
+                          {step.title}
+                        </Typography>
+                      )}
+                    </Stack>
+
+                    {/* Step Content */}
+                    {step.contentHtml && (
+                      <Box
+                        sx={{
+                          fontSize: { xs: "0.95rem", sm: "1rem" }, color: colors.text, lineHeight: 1.6,
+                          mb: { xs: 2, sm: 3 }, whiteSpace: "pre-wrap", wordBreak: "break-word",
+                          "& p": { mb: 1 }, "& ul, & ol": { pl: 2, mb: 1 }, "& li": { mb: 0.5 },
+                          "& strong, & b": { fontWeight: 700 }, "& em, & i": { fontStyle: "italic" },
+                          "& a": { color: colors.primary, textDecoration: "underline", "&:hover": { opacity: 0.8 } },
+                        }}
+                        dangerouslySetInnerHTML={{ __html: sanitizeStepHtml(step.contentHtml) }}
+                      />
+                    )}
+
+                    {/* Step Image */}
+                    {step.imageDataUrl && (
+                      <Box
+                        onClick={() => setEnlargedStepImageUrl(step.imageDataUrl)}
+                        sx={{
+                          position: "relative", width: "100%", paddingBottom: "60%",
+                          overflow: "hidden", borderRadius: 1, bgcolor: "#f5f5f5",
+                          cursor: "pointer", transition: "all 0.2s ease",
+                          "&:hover": { boxShadow: colors.cardShadowHover },
                         }}
                       >
                         <Image
-                          src={activeStep.imageDataUrl}
-                          alt={activeStep.title || activeStep.name}
-                          width={900}
-                          height={600}
-                          style={{
-                            width: "100%",
-                            height: "auto",
-                            objectFit: "contain",
-                          }}
+                          src={step.imageDataUrl}
+                          alt={step.title || step.name}
+                          fill
+                          style={{ objectFit: "contain" }}
+                          sizes="(max-width: 600px) 100vw, (max-width: 960px) 90vw, 800px"
                         />
                       </Box>
-                    </Modal>
-                  </>
-                )}
+                    )}
+                  </CardContent>
+                </Card>
+              ))}
+            </Stack>
 
-                {/* Navigation Chevrons */}
-                <Stack direction="row" spacing={2} sx={{ mt: { xs: 3, sm: 4 }, justifyContent: "center" }}>
-                  <IconButton
-                    onClick={goPrevStep}
-                    disabled={activeStepIndex === 0}
-                    sx={{
-                      color: activeStepIndex === 0 ? colors.lightText : colors.text,
-                      border: `1px solid ${colors.lightBorder}`,
-                      borderRadius: "6px",
-                      transition: "all 0.2s ease",
-                      "&:hover": {
-                        borderColor: activeStepIndex === 0 ? colors.lightBorder : colors.primary,
-                        bgcolor: activeStepIndex === 0 ? "transparent" : colors.primary,
-                        color: activeStepIndex === 0 ? colors.lightText : "white",
-                      },
-                      "&:disabled": {
-                        color: colors.lightText,
-                        borderColor: colors.lightBorder,
-                      },
-                    }}
-                  >
-                    <ChevronLeftIcon />
-                  </IconButton>
-                  <IconButton
-                    onClick={goNextStep}
-                    disabled={activeStepIndex >= steps.length - 1}
-                    sx={{
-                      color: activeStepIndex >= steps.length - 1 ? colors.lightText : colors.text,
-                      border: `1px solid ${colors.lightBorder}`,
-                      borderRadius: "6px",
-                      transition: "all 0.2s ease",
-                      "&:hover": {
-                        borderColor: activeStepIndex >= steps.length - 1 ? colors.lightBorder : colors.primary,
-                        bgcolor: activeStepIndex >= steps.length - 1 ? "transparent" : colors.primary,
-                        color: activeStepIndex >= steps.length - 1 ? colors.lightText : "white",
-                      },
-                      "&:disabled": {
-                        color: colors.lightText,
-                        borderColor: colors.lightBorder,
-                      },
-                    }}
-                  >
-                    <ChevronRightIcon />
-                  </IconButton>
-                </Stack>
-              </CardContent>
-            </Card>
-
-            {/* Hint for Touch Gestures */}
-            <Typography
-              variant="caption"
-              sx={{
-                display: { xs: "block", sm: "none" },
-                textAlign: "center",
-                color: colors.lightText,
-                fontSize: "0.8rem",
-              }}
+            {/* Shared Image Enlarge Modal */}
+            <Modal
+              open={!!enlargedStepImageUrl}
+              onClose={() => setEnlargedStepImageUrl(null)}
+              sx={{ display: "flex", alignItems: "center", justifyContent: "center", bgcolor: "rgba(0, 0, 0, 0.7)" }}
             >
-              Swipe left or right to navigate steps
-            </Typography>
+              <Box
+                sx={{ position: "relative", width: { xs: "90%", sm: "80%", md: "70%" }, maxWidth: "900px", maxHeight: "90vh", borderRadius: "8px", overflow: "hidden" }}
+              >
+                {enlargedStepImageUrl && (
+                  <Image
+                    src={enlargedStepImageUrl}
+                    alt="Step image"
+                    width={900}
+                    height={600}
+                    style={{ width: "100%", height: "auto", objectFit: "contain" }}
+                  />
+                )}
+              </Box>
+            </Modal>
           </Container>
         </Box>
+
+        {/* Back to Top FAB */}
+        {showBackToTop && (
+          <Fab
+            size="small"
+            onClick={() => window.scrollTo({ top: 0, behavior: "smooth" })}
+            sx={{
+              position: "fixed", bottom: 32, right: 24, zIndex: 20,
+              bgcolor: colors.primary, color: "#ffffff",
+              "&:hover": { bgcolor: colors.darkBg },
+              boxShadow: "0 4px 12px rgba(0,0,0,0.2)",
+            }}
+          >
+            <KeyboardArrowUpIcon />
+          </Fab>
+        )}
       </Box>
     );
   }

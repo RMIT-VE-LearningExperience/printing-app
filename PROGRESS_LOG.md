@@ -392,6 +392,18 @@ When testing after any changes:
 
 ## Session History
 
+### Current Session (March 20, 2026) - Part 5
+- **Replaced step-by-step navigation with continuous scroll view (user-facing)**
+  - ✅ All step cards rendered vertically in a scrollable `Stack` — users scroll through steps instead of clicking chevrons
+  - ✅ Colour name title + "STEP X OF Y" counter are sticky at the top of the viewport while scrolling
+  - ✅ "STEP X OF Y" updates dynamically via `IntersectionObserver` — whichever card is first in the visible area drives the counter
+  - ✅ Breadcrumb row (back/home buttons) scrolls off screen naturally
+  - ✅ Floating ↑ `Fab` (brand blue) appears after scrolling 400px and smooth-scrolls back to top
+  - ✅ Each step card retains existing number label, title, body content, and full-width enlargeable image
+  - ✅ Shared image enlarge Modal (single instance outside the map loop) driven by `enlargedStepImageUrl` state
+  - ✅ Removed: chevron buttons, progress dots, swipe gesture handlers, keyboard arrow navigation, `stepIndex` from `localStorage`
+  - Files Modified: `app/page.tsx`
+
 ### Current Session (March 20, 2026) - Part 4
 - **Improved homepage header/description save UX in admin sidebar**
   - ✅ Moved save action below the description field (was inline with header field)
