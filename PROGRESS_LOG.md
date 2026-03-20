@@ -392,6 +392,17 @@ When testing after any changes:
 
 ## Session History
 
+### Current Session (March 20, 2026) - Part 4
+- **Improved homepage header/description save UX in admin sidebar**
+  - ✅ Moved save action below the description field (was inline with header field)
+  - ✅ Replaced tick `IconButton` with small text `Save` button (MUI `SaveIcon` + contained style) and `Cancel` text button
+  - ✅ Save/Cancel only appear when there are unsaved changes (compares live values against last saved values)
+  - ✅ Saving shows inline `CircularProgress` spinner (16px) — does NOT trigger the main content overlay
+  - ✅ On success: green `✓ Saved` appears for 2 seconds then disappears automatically
+  - ✅ Cancel resets both fields to the last saved database values
+  - ✅ Homepage save bypasses `runAction()` to avoid triggering the global loading overlay
+  - Files Modified: `app/admin/page.tsx`
+
 ### Current Session (March 20, 2026) - Part 3
 - **Standardised global typography scale (Option A)**
   - ✅ Extended MUI theme in `app/providers.tsx` to define a full typography scale across all variants: `h1`–`h6`, `subtitle1/2`, `body1/2`, `caption`, `overline`, `button`

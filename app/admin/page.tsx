@@ -50,6 +50,7 @@ import {
   Add as AddIcon,
   Info as InfoIcon,
   Check as CheckIcon,
+  Save as SaveIcon,
   FormatBold as FormatBoldIcon,
   FormatItalic as FormatItalicIcon,
   FormatUnderlined as FormatUnderlinedIcon,
@@ -268,6 +269,10 @@ export default function AdminPage() {
   // Form inputs - Printers
   const [homePageTitle, setHomePageTitle] = useState("");
   const [homePageDescription, setHomePageDescription] = useState("");
+  const [savedHomePageTitle, setSavedHomePageTitle] = useState("");
+  const [savedHomePageDescription, setSavedHomePageDescription] = useState("");
+  const [homepageSaving, setHomepageSaving] = useState(false);
+  const [homepageSaved, setHomepageSaved] = useState(false);
   const [newPrinterName, setNewPrinterName] = useState("");
   const [newPrinterDescription, setNewPrinterDescription] = useState("");
   const [newPrinterThumbnail, setNewPrinterThumbnail] = useState("");
@@ -419,9 +424,11 @@ export default function AdminPage() {
         // Set homepage settings from tutorial state
         if (data.state.homepageTitle) {
           setHomePageTitle(data.state.homepageTitle);
+          setSavedHomePageTitle(data.state.homepageTitle);
         }
         if (data.state.homepageDescription) {
           setHomePageDescription(data.state.homepageDescription);
+          setSavedHomePageDescription(data.state.homepageDescription);
         }
       } catch {
         setError("Could not load tutorial data.");
@@ -729,15 +736,29 @@ export default function AdminPage() {
       return;
     }
 
+    setHomepageSaving(true);
     try {
-      await runAction("updateHomepageSettings", {
-        title: homePageTitle,
-        description: homePageDescription,
+      const res = await fetch("/api/tutorial", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ action: "updateHomepageSettings", payload: { title: homePageTitle, description: homePageDescription } }),
       });
+      if (!res.ok) throw new Error("Failed to save homepage settings");
+      setSavedHomePageTitle(homePageTitle);
+      setSavedHomePageDescription(homePageDescription);
       setError(null);
+      setHomepageSaved(true);
+      setTimeout(() => { setHomepageSaved(false); }, 2000);
     } catch (err) {
       setError(err instanceof Error ? err.message : "Failed to save homepage settings");
+    } finally {
+      setHomepageSaving(false);
     }
+  };
+
+  const handleCancelHomepageSettings = () => {
+    setHomePageTitle(savedHomePageTitle);
+    setHomePageDescription(savedHomePageDescription);
   };
 
   // Printer handlers
@@ -1852,56 +1873,41 @@ export default function AdminPage() {
             {/* Homepage Customization - Only on HOME page */}
             {!showFullPaperList && !showAllColoursView && !selectedPrinterId && !showDeletedItems && (
               <Stack spacing={2} sx={{ mb: 2, pb: 2 }}>
-                <Stack direction="row" spacing={1} sx={{ alignItems: "flex-end" }}>
-                  <TextField
-                    label="Homepage Header"
-                    size="small"
-                    fullWidth
-                    required
-                    value={homePageTitle}
-                    onChange={(e) => setHomePageTitle(e.target.value)}
-                    placeholder="e.g., PRINTER GUIDE"
-                    sx={{
-                      "& .MuiInputBase-input": {
-                        color: "#ffffff",
+                <TextField
+                  label="Homepage Header"
+                  size="small"
+                  fullWidth
+                  required
+                  value={homePageTitle}
+                  onChange={(e) => setHomePageTitle(e.target.value)}
+                  placeholder="e.g., PRINTER GUIDE"
+                  sx={{
+                    "& .MuiInputBase-input": {
+                      color: "#ffffff",
+                    },
+                    "& .MuiInputBase-input::placeholder": {
+                      color: "rgba(255, 255, 255, 0.5)",
+                      opacity: 1,
+                    },
+                    "& .MuiOutlinedInput-root": {
+                      "& fieldset": {
+                        borderColor: "rgba(255, 255, 255, 0.2)",
                       },
-                      "& .MuiInputBase-input::placeholder": {
-                        color: "rgba(255, 255, 255, 0.5)",
-                        opacity: 1,
+                      "&:hover fieldset": {
+                        borderColor: "rgba(255, 255, 255, 0.3)",
                       },
-                      "& .MuiOutlinedInput-root": {
-                        "& fieldset": {
-                          borderColor: "rgba(255, 255, 255, 0.2)",
-                        },
-                        "&:hover fieldset": {
-                          borderColor: "rgba(255, 255, 255, 0.3)",
-                        },
-                        "&.Mui-focused fieldset": {
-                          borderColor: "#009DC9",
-                        },
+                      "&.Mui-focused fieldset": {
+                        borderColor: "#009DC9",
                       },
-                      "& .MuiInputLabel-root": {
-                        color: "rgba(255, 255, 255, 0.7)",
-                        "&.Mui-focused": {
-                          color: "#009DC9",
-                        },
+                    },
+                    "& .MuiInputLabel-root": {
+                      color: "rgba(255, 255, 255, 0.7)",
+                      "&.Mui-focused": {
+                        color: "#009DC9",
                       },
-                    }}
-                  />
-                  <IconButton
-                    onClick={handleSaveHomepageSettings}
-                    size="small"
-                    sx={{
-                      color: "#009DC9",
-                      "&:hover": {
-                        bgcolor: "rgba(0, 157, 201, 0.1)",
-                      },
-                    }}
-                    title="Save homepage settings"
-                  >
-                    <CheckIcon />
-                  </IconButton>
-                </Stack>
+                    },
+                  }}
+                />
                 <TextField
                   label="Homepage Description"
                   size="small"
@@ -1939,6 +1945,56 @@ export default function AdminPage() {
                     },
                   }}
                 />
+
+                {/* Save / Cancel row — only shown when there are unsaved changes or after saving */}
+                {(homePageTitle !== savedHomePageTitle || homePageDescription !== savedHomePageDescription || homepageSaving || homepageSaved) && (
+                  <Stack direction="row" spacing={1} sx={{ alignItems: "center" }}>
+                    {homepageSaving ? (
+                      <CircularProgress size={16} sx={{ color: "#009DC9" }} />
+                    ) : homepageSaved ? (
+                      <Stack direction="row" spacing={0.5} sx={{ alignItems: "center" }}>
+                        <CheckIcon sx={{ fontSize: 16, color: "#4caf50" }} />
+                        <Typography variant="caption" sx={{ color: "#4caf50" }}>Saved</Typography>
+                      </Stack>
+                    ) : (
+                      <>
+                        <Button
+                          size="small"
+                          variant="contained"
+                          onClick={handleSaveHomepageSettings}
+                          startIcon={<SaveIcon sx={{ fontSize: "14px !important" }} />}
+                          sx={{
+                            fontSize: "0.7rem",
+                            py: 0.4,
+                            px: 1,
+                            minWidth: 0,
+                            backgroundColor: "#009DC9",
+                            "&:hover": { backgroundColor: "#007aa3" },
+                            textTransform: "none",
+                          }}
+                        >
+                          Save
+                        </Button>
+                        <Button
+                          size="small"
+                          variant="text"
+                          onClick={handleCancelHomepageSettings}
+                          sx={{
+                            fontSize: "0.7rem",
+                            py: 0.4,
+                            px: 1,
+                            minWidth: 0,
+                            color: "rgba(255,255,255,0.6)",
+                            "&:hover": { color: "#ffffff", backgroundColor: "rgba(255,255,255,0.08)" },
+                            textTransform: "none",
+                          }}
+                        >
+                          Cancel
+                        </Button>
+                      </>
+                    )}
+                  </Stack>
+                )}
               </Stack>
             )}
 
