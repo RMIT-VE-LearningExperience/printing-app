@@ -392,6 +392,22 @@ When testing after any changes:
 
 ## Session History
 
+### Current Session (March 20, 2026) - Part 2
+- **Added drag-and-drop reordering for Steps in CMS admin**
+  - ✅ Installed `@hello-pangea/dnd@18.0.1`
+  - ✅ Added `setStepOrder()` to `lib/tutorial-store.ts` — fetches all steps sorted by order, recomputes positions, batch-writes to Firestore in a single operation
+  - ✅ Added `setStepOrder` action type and case handler to `app/api/tutorial/route.ts`
+  - ✅ Replaced ▲▼ arrow buttons with a `⠿` drag handle icon on each step card
+  - ✅ Cards lift with a shadow while being dragged; drop position is shown inline
+  - ✅ Removed unused `Direction` type and `handleReorderStep` handler from admin page
+  - Files Modified: `lib/tutorial-store.ts`, `app/api/tutorial/route.ts`, `app/admin/page.tsx`
+
+- **Added loading overlay to main content area**
+  - ✅ Semi-transparent overlay (`rgba(224, 244, 255, 0.6)`) covers the main content area during any action
+  - ✅ Brand-blue `CircularProgress` spinner centered within the overlay
+  - ✅ Overlay blocks all interaction while loading, preventing conflicting actions across all sections (Printers, Papers, Colours, Steps)
+  - Files Modified: `app/admin/page.tsx`
+
 ### Current Session (March 20, 2026)
 - **Redesigned footer: fixed overlay with email link**
   - ✅ Footer is now fixed at the bottom of the viewport on both user-facing and admin pages (always visible, overlays content)

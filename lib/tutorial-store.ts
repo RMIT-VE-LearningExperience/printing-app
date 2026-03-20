@@ -1127,6 +1127,46 @@ export async function reorderStep(
   }
 }
 
+export async function setStepOrder(
+  printerId: string,
+  paperId: string,
+  colourId: string,
+  stepId: string,
+  newIndex: number,
+): Promise<TutorialState> {
+  try {
+    const globalPaperRef = await assertDocExists(papersCollection(), paperId, "Paper");
+    const globalColourRef = await assertDocExists(
+      globalPaperRef.collection("colours"),
+      colourId,
+      "Colour",
+    );
+    const stepsRef = globalColourRef.collection("steps");
+    const stepsSnapshot = await stepsRef.orderBy("order", "asc").get();
+
+    if (stepsSnapshot.empty) return getTutorialState();
+
+    const steps = stepsSnapshot.docs.map((doc) => ({ id: doc.id, ref: doc.ref }));
+    const currentIndex = steps.findIndex((s) => s.id === stepId);
+    if (currentIndex === -1) throw new Error("Step not found");
+
+    const reordered = [...steps];
+    const [moved] = reordered.splice(currentIndex, 1);
+    reordered.splice(newIndex, 0, moved);
+
+    const batch = db.batch();
+    reordered.forEach((step, index) => {
+      batch.update(step.ref, { order: index });
+    });
+    await batch.commit();
+
+    await updatePrinterLastModified(printerId);
+    return getTutorialState();
+  } catch (error) {
+    throw new Error(`Failed to set step order: ${error instanceof Error ? error.message : "Unknown error"}`);
+  }
+}
+
 // ============= DELETED ITEMS OPERATIONS =============
 
 export async function deletePrinter(printerId: string): Promise<TutorialState> {

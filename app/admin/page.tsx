@@ -6,6 +6,7 @@ import {
   Box,
   Breadcrumbs,
   Button,
+  CircularProgress,
   Container,
   Dialog,
   DialogActions,
@@ -59,7 +60,9 @@ import {
   Crop as CropIcon,
   Image as ImagePlaceholderIcon,
   Pageview as PageviewIcon,
+  DragIndicator as DragIndicatorIcon,
 } from "@mui/icons-material";
+import { DragDropContext, Droppable, Draggable, type DropResult } from "@hello-pangea/dnd";
 import { type ChangeEvent, useEffect, useMemo, useRef, useState } from "react";
 
 type Step = {
@@ -121,8 +124,6 @@ type TutorialState = {
   homepageTitle?: string;
   homepageDescription?: string;
 };
-
-type Direction = "up" | "down";
 
 const emptyState: TutorialState = { papers: [], printers: [] };
 
@@ -1157,16 +1158,18 @@ export default function AdminPage() {
     }
   };
 
-  const handleReorderStep = async (stepId: string, direction: Direction) => {
+  const handleDragEnd = async (result: DropResult) => {
+    if (!result.destination) return;
+    if (result.source.index === result.destination.index) return;
     if (!selectedPrinterId || !selectedPaperId || !selectedColorId) return;
 
     try {
-      await runAction("reorderStep", {
+      await runAction("setStepOrder", {
         printerId: selectedPrinterId,
         paperId: selectedPaperId,
         colourId: selectedColorId,
-        stepId,
-        direction,
+        stepId: result.draggableId,
+        newIndex: result.destination.index,
       });
     } catch {
       // Error already set in runAction
@@ -2262,7 +2265,21 @@ export default function AdminPage() {
       </Box>
 
       {/* MAIN CONTENT */}
-      <Box sx={{ flex: 1, p: 3, overflowY: "auto", backgroundColor: "#E0F4FF" }}>
+      <Box sx={{ flex: 1, p: 3, overflowY: "auto", backgroundColor: "#E0F4FF", position: "relative" }}>
+        {/* Loading overlay */}
+        {loading && (
+          <Box sx={{
+            position: "absolute",
+            top: 0, left: 0, right: 0, bottom: 0,
+            backgroundColor: "rgba(224, 244, 255, 0.6)",
+            display: "flex",
+            alignItems: "center",
+            justifyContent: "center",
+            zIndex: 10,
+          }}>
+            <CircularProgress sx={{ color: "#009DC9" }} />
+          </Box>
+        )}
         {/* Alerts */}
         {error && (
           <Alert severity="error" onClose={() => setError(null)} sx={{ mb: 2, backgroundColor: "#ffebee", color: "#b71c1c" }}>
@@ -2778,122 +2795,122 @@ export default function AdminPage() {
             {selectedColor.steps.length === 0 ? (
               <Typography color="text.secondary">No steps added yet.</Typography>
             ) : (
-              <Stack spacing={2}>
-                {selectedColor.steps.map((step, index) => (
-                  <Paper
-                    key={step.id}
-                    elevation={1}
-                    sx={{
-                      p: 3,
-                      borderRadius: 1,
-                      border: "1px solid #BDE9FF",
-                      transition: "all 200ms ease",
-                      "&:hover": {
-                        boxShadow: "0 4px 12px rgba(0, 0, 0, 0.1)",
-                      },
-                    }}
-                  >
-                    <Box sx={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start" }}>
-                      <Box sx={{ flex: 1 }}>
-                        <Box sx={{ display: "flex", alignItems: "center", gap: 2, mb: 1 }}>
-                          <Typography variant="h6" fontWeight={700} sx={{ color: "#001F2D" }}>
-                            Step {index + 1}: {step.title}
-                          </Typography>
-                          <Button
-                            size="small"
-                            variant="outlined"
-                            onClick={() => setExpandedSteps(expandedSteps === step.id ? null : step.id)}
-                            sx={{
-                              color: "#009DC9",
-                              borderColor: "#009DC9",
-                              fontWeight: 600,
-                              textTransform: "none",
-                              "&:hover": {
-                                backgroundColor: "rgba(30, 136, 229, 0.08)",
-                                borderColor: "#0081A8"
-                              }
-                            }}
-                          >
-                            {expandedSteps === step.id ? "Collapse" : "Expand"}
-                          </Button>
-                        </Box>
+              <DragDropContext onDragEnd={(result) => { void handleDragEnd(result); }}>
+                <Droppable droppableId="steps">
+                  {(provided) => (
+                    <Box
+                      ref={provided.innerRef}
+                      {...provided.droppableProps}
+                      sx={{ display: "flex", flexDirection: "column", gap: 2 }}
+                    >
+                      {selectedColor.steps.map((step, index) => (
+                        <Draggable key={step.id} draggableId={step.id} index={index}>
+                          {(provided, snapshot) => (
+                            <Paper
+                              ref={provided.innerRef}
+                              {...provided.draggableProps}
+                              elevation={1}
+                              sx={{
+                                p: 3,
+                                borderRadius: 1,
+                                border: "1px solid #BDE9FF",
+                                transition: snapshot.isDragging ? "none" : "box-shadow 200ms ease",
+                                boxShadow: snapshot.isDragging ? "0 8px 24px rgba(0,0,0,0.15)" : undefined,
+                              }}
+                            >
+                              <Box sx={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start" }}>
+                                <Box sx={{ display: "flex", alignItems: "flex-start", gap: 1, flex: 1 }}>
+                                  <Box
+                                    {...provided.dragHandleProps}
+                                    sx={{ display: "flex", alignItems: "center", pt: 0.5, cursor: "grab", color: "text.disabled" }}
+                                  >
+                                    <DragIndicatorIcon fontSize="small" />
+                                  </Box>
+                                  <Box sx={{ flex: 1 }}>
+                                    <Box sx={{ display: "flex", alignItems: "center", gap: 2, mb: 1 }}>
+                                      <Typography variant="h6" fontWeight={700} sx={{ color: "#001F2D" }}>
+                                        Step {index + 1}: {step.title}
+                                      </Typography>
+                                      <Button
+                                        size="small"
+                                        variant="outlined"
+                                        onClick={() => setExpandedSteps(expandedSteps === step.id ? null : step.id)}
+                                        sx={{
+                                          color: "#009DC9",
+                                          borderColor: "#009DC9",
+                                          fontWeight: 600,
+                                          textTransform: "none",
+                                          "&:hover": {
+                                            backgroundColor: "rgba(30, 136, 229, 0.08)",
+                                            borderColor: "#0081A8"
+                                          }
+                                        }}
+                                      >
+                                        {expandedSteps === step.id ? "Collapse" : "Expand"}
+                                      </Button>
+                                    </Box>
 
-                        <Collapse in={expandedSteps === step.id}>
-                          <Box sx={{ mt: 2, mb: 2 }}>
-                            {step.contentHtml && (
-                              <Box
-                                sx={{
-                                  p: 2,
-                                  backgroundColor: "action.hover",
-                                  borderRadius: 1,
-                                  mb: 2,
-                                  "& h3": { mt: 0, mb: 1 },
-                                  "& p": { mb: 1 },
-                                  "& ul": { pl: 2, mb: 1 },
-                                }}
-                                dangerouslySetInnerHTML={{ __html: step.contentHtml }}
-                              />
-                            )}
+                                    <Collapse in={expandedSteps === step.id}>
+                                      <Box sx={{ mt: 2, mb: 2 }}>
+                                        {step.contentHtml && (
+                                          <Box
+                                            sx={{
+                                              p: 2,
+                                              backgroundColor: "action.hover",
+                                              borderRadius: 1,
+                                              mb: 2,
+                                              "& h3": { mt: 0, mb: 1 },
+                                              "& p": { mb: 1 },
+                                              "& ul": { pl: 2, mb: 1 },
+                                            }}
+                                            dangerouslySetInnerHTML={{ __html: step.contentHtml }}
+                                          />
+                                        )}
+                                        {step.imageDataUrl && (
+                                          <Box
+                                            component="img"
+                                            src={step.imageDataUrl}
+                                            alt="Step image"
+                                            onClick={() => setEnlargedStepImageUrl(step.imageDataUrl)}
+                                            sx={{
+                                              width: "100%",
+                                              maxWidth: 400,
+                                              maxHeight: 300,
+                                              objectFit: "cover",
+                                              borderRadius: 1,
+                                              mt: 1,
+                                              cursor: "pointer",
+                                              transition: "transform 200ms ease",
+                                              "&:hover": { transform: "scale(1.02)" },
+                                            }}
+                                          />
+                                        )}
+                                      </Box>
+                                    </Collapse>
+                                  </Box>
+                                </Box>
 
-                            {step.imageDataUrl && (
-                              <Box
-                                component="img"
-                                src={step.imageDataUrl}
-                                alt="Step image"
-                                onClick={() => setEnlargedStepImageUrl(step.imageDataUrl)}
-                                sx={{
-                                  width: "100%",
-                                  maxWidth: 400,
-                                  maxHeight: 300,
-                                  objectFit: "cover",
-                                  borderRadius: 1,
-                                  mt: 1,
-                                  cursor: "pointer",
-                                  transition: "transform 200ms ease",
-                                  "&:hover": {
-                                    transform: "scale(1.02)",
-                                  },
-                                }}
-                              />
-                            )}
-                          </Box>
-                        </Collapse>
-                      </Box>
-
-                      <Box sx={{ display: "flex", gap: 1, ml: 2 }}>
-                        <Box sx={{ display: "flex", flexDirection: "column", gap: 0.5 }}>
-                          <IconButton
-                            size="small"
-                            disabled={index === 0}
-                            onClick={() => handleReorderStep(step.id, "up")}
-                            title="Move up"
-                          >
-                            ▲
-                          </IconButton>
-                          <IconButton
-                            size="small"
-                            disabled={index === selectedColor.steps.length - 1}
-                            onClick={() => handleReorderStep(step.id, "down")}
-                            title="Move down"
-                          >
-                            ▼
-                          </IconButton>
-                        </Box>
-                        <IconButton
-                          size="small"
-                          onClick={(e) => {
-                            e.stopPropagation();
-                            handleStepMenuOpen(e, step.id);
-                          }}
-                          title="More options"
-                        >
-                          ⋯
-                        </IconButton>
-                      </Box>
+                                <IconButton
+                                  size="small"
+                                  onClick={(e) => {
+                                    e.stopPropagation();
+                                    handleStepMenuOpen(e, step.id);
+                                  }}
+                                  title="More options"
+                                  sx={{ ml: 1 }}
+                                >
+                                  ⋯
+                                </IconButton>
+                              </Box>
+                            </Paper>
+                          )}
+                        </Draggable>
+                      ))}
+                      {provided.placeholder}
                     </Box>
-                  </Paper>
-                ))}
-              </Stack>
+                  )}
+                </Droppable>
+              </DragDropContext>
             )}
           </Box>
         )}

@@ -11,6 +11,7 @@ import {
   deleteStep,
   getTutorialState,
   reorderStep,
+  setStepOrder,
   updateColour,
   updatePaper,
   updatePrinter,
@@ -139,6 +140,14 @@ type ActionPayload =
       colourId: string;
       stepId: string;
       direction: "up" | "down";
+    }
+  | {
+      action: "setStepOrder";
+      printerId: string;
+      paperId: string;
+      colourId: string;
+      stepId: string;
+      newIndex: number;
     }
   | {
       action: "restoreDeletedItem";
@@ -274,6 +283,15 @@ async function executeAction(payload: ActionPayload): Promise<TutorialState> {
         payload.colourId,
         payload.stepId,
         payload.direction,
+      );
+
+    case "setStepOrder":
+      return setStepOrder(
+        payload.printerId,
+        payload.paperId,
+        payload.colourId,
+        payload.stepId,
+        payload.newIndex,
       );
 
     case "restoreDeletedItem":
