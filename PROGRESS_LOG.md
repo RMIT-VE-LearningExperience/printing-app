@@ -392,6 +392,15 @@ When testing after any changes:
 
 ## Session History
 
+### Current Session (March 20, 2026) - Part 3
+- **Standardised global typography scale (Option A)**
+  - ✅ Extended MUI theme in `app/providers.tsx` to define a full typography scale across all variants: `h1`–`h6`, `subtitle1/2`, `body1/2`, `caption`, `overline`, `button`
+  - ✅ Wrapped theme with `responsiveFontSizes()` — MUI automatically scales font sizes down on smaller screens without manual breakpoint overrides
+  - ✅ Added `textTransform: "none"` to `button` variant — removes MUI's default ALL CAPS on button text
+  - ✅ Font family remains Roboto (no external font loading added)
+  - ✅ Existing `sx={{ fontSize: ... }}` overrides take precedence — no existing layouts broken
+  - Files Modified: `app/providers.tsx`
+
 ### Current Session (March 20, 2026) - Part 2
 - **Added drag-and-drop reordering for Steps in CMS admin**
   - ✅ Installed `@hello-pangea/dnd@18.0.1`
