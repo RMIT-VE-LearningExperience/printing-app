@@ -1,6 +1,6 @@
 # Print App CMS - Progress Log
 
-**Last Updated:** March 19, 2026 (Session 4)
+**Last Updated:** March 24, 2026
 **Project:** Print App CMS System
 **User:** Arielle Lee (arielle.lee@rmit.edu.au)
 
@@ -391,6 +391,22 @@ When testing after any changes:
 ---
 
 ## Session History
+
+### Current Session (March 24, 2026)
+- **CMS section headings updated to match user-facing terminology**
+  - ✅ Papers section: `"Papers for {printer}"` → `"Paper Selection [Chip: printer name]"` — static label first, dynamic name as outlined MUI `Chip`
+  - ✅ Colour Management section: `"Colour Management - {paper}"` → `"Colour Management [Chip: paper name]"` — same pattern
+  - ✅ Steps section: `"Step Instructions - {colour}"` → `"Steps: [Chip: colour name]"` — prefix shortened, chip after
+  - ✅ Papers subtitle updated from `"Choose your paper type:"` to `"Choose your paper type to continue:"` (matches user-facing)
+  - ✅ Chip uses `variant="outlined"`, `#001F2D` border/text, `fontSize: "1rem"` — visually consistent with h5 heading
+  - ✅ Added `Chip` to MUI imports
+  - Files Modified: `app/admin/page.tsx`
+
+- **Sidebar collapse toggle moved to the right**
+  - ✅ Toggle `IconButton` (ChevronLeft/Right) moved after "Print Room Dashboard" link — layout is now `[Print Room Dashboard] [→]`
+  - ✅ `marginLeft` on the link changed to `marginRight` to maintain spacing
+  - ✅ Collapsed state unaffected — link is hidden when collapsed, arrow remains as the only element
+  - Files Modified: `app/admin/page.tsx`
 
 ### Current Session (March 20, 2026) - Part 6
 - **Footer redesign: dark navy background, white text, ribbon shape for admin**

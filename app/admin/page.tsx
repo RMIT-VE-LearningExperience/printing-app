@@ -6,6 +6,7 @@ import {
   Box,
   Breadcrumbs,
   Button,
+  Chip,
   CircularProgress,
   Container,
   Dialog,
@@ -1723,17 +1724,6 @@ export default function AdminPage() {
       >
         {/* Toggle Button and Title */}
         <Box sx={{ display: "flex", alignItems: "center", justifyContent: "space-between", mb: 3 }}>
-          <IconButton
-            size="small"
-            onClick={() => setSidebarCollapsed(!sidebarCollapsed)}
-            sx={{
-              padding: 0.5,
-              color: "#ffffff",
-              "&:hover": { bgcolor: "rgba(255, 255, 255, 0.1)" },
-            }}
-          >
-            {sidebarCollapsed ? <ChevronRightIcon /> : <ChevronLeftIcon />}
-          </IconButton>
           {!sidebarCollapsed && (
             <Link
               component="button"
@@ -1746,7 +1736,7 @@ export default function AdminPage() {
                 fontWeight: 600,
                 cursor: "pointer",
                 flex: 1,
-                marginLeft: 1.5,
+                marginRight: 1.5,
                 textAlign: "left",
                 textDecoration: "none",
                 color: "#ffffff",
@@ -1759,6 +1749,17 @@ export default function AdminPage() {
               Print Room Dashboard
             </Link>
           )}
+          <IconButton
+            size="small"
+            onClick={() => setSidebarCollapsed(!sidebarCollapsed)}
+            sx={{
+              padding: 0.5,
+              color: "#ffffff",
+              "&:hover": { bgcolor: "rgba(255, 255, 255, 0.1)" },
+            }}
+          >
+            {sidebarCollapsed ? <ChevronRightIcon /> : <ChevronLeftIcon />}
+          </IconButton>
         </Box>
 
         {/* Navigation Items */}
@@ -2542,9 +2543,12 @@ export default function AdminPage() {
           <Box>
             <Box sx={{ display: "flex", justifyContent: "space-between", alignItems: "center", mb: 3 }}>
               <Box>
-                <Typography variant="h5" sx={{ color: "#001F2D", fontWeight: 700, mb: 0.5 }}>Papers for {selectedPrinter.name}</Typography>
+                <Box sx={{ display: "flex", alignItems: "center", gap: 1, mb: 0.5 }}>
+                  <Typography variant="h5" sx={{ color: "#001F2D", fontWeight: 700 }}>Paper Selection</Typography>
+                  <Chip label={selectedPrinter.name} variant="outlined" size="small" sx={{ fontWeight: 700, fontSize: "1rem", borderColor: "#001F2D", color: "#001F2D", height: "auto", "& .MuiChip-label": { py: 0.25, px: 1 } }} />
+                </Box>
                 <Typography variant="body2" color="text.secondary" sx={{ mt: 0.5 }}>
-                  Choose your paper type:
+                  Choose your paper type to continue:
                 </Typography>
               </Box>
               <Button
@@ -2673,7 +2677,10 @@ export default function AdminPage() {
           <Box>
             <Box sx={{ display: "flex", justifyContent: "space-between", alignItems: "center", mb: 3 }}>
               <Box>
-                <Typography variant="h5" sx={{ color: "#001F2D", fontWeight: 700, mb: 0.5 }}>Colour Management - {selectedPaper.name}</Typography>
+                <Box sx={{ display: "flex", alignItems: "center", gap: 1, mb: 0.5 }}>
+                  <Typography variant="h5" sx={{ color: "#001F2D", fontWeight: 700 }}>Colour Management</Typography>
+                  <Chip label={selectedPaper.name} variant="outlined" size="small" sx={{ fontWeight: 700, fontSize: "1rem", borderColor: "#001F2D", color: "#001F2D", height: "auto", "& .MuiChip-label": { py: 0.25, px: 1 } }} />
+                </Box>
                 <Typography variant="body2" color="text.secondary" sx={{ mt: 0.5 }}>
                   I want to preserve:
                 </Typography>
@@ -2831,7 +2838,10 @@ export default function AdminPage() {
           <Box>
             <Box sx={{ display: "flex", justifyContent: "space-between", alignItems: "center", mb: 3 }}>
               <Box>
-                <Typography variant="h5" sx={{ color: "#001F2D", fontWeight: 700, mb: 0.5 }}>Step Instructions - {selectedColor.name}</Typography>
+                <Box sx={{ display: "flex", alignItems: "center", gap: 1, mb: 0.5 }}>
+                  <Typography variant="h5" sx={{ color: "#001F2D", fontWeight: 700 }}>Steps:</Typography>
+                  <Chip label={selectedColor.name} variant="outlined" size="small" sx={{ fontWeight: 700, fontSize: "1rem", borderColor: "#001F2D", color: "#001F2D", height: "auto", "& .MuiChip-label": { py: 0.25, px: 1 } }} />
+                </Box>
               </Box>
               <Button
                 variant="contained"
