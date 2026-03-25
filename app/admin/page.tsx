@@ -8,6 +8,7 @@ import {
   Button,
   Chip,
   CircularProgress,
+  InputAdornment,
   Container,
   Dialog,
   DialogActions,
@@ -274,6 +275,18 @@ export default function AdminPage() {
   const [savedHomePageDescription, setSavedHomePageDescription] = useState("");
   const [homepageSaving, setHomepageSaving] = useState(false);
   const [homepageSaved, setHomepageSaved] = useState(false);
+  const [sectionSettings, setSectionSettings] = useState({
+    printers: { title: "Printers List", subtitle: "Select your Printer:" },
+    papers:   { title: "Paper Selection", subtitle: "Choose your paper type to continue:" },
+    colours:  { title: "Colour Management", subtitle: "I want to preserve:" },
+  });
+  const [savedSectionSettings, setSavedSectionSettings] = useState({
+    printers: { title: "Printers List", subtitle: "Select your Printer:" },
+    papers:   { title: "Paper Selection", subtitle: "Choose your paper type to continue:" },
+    colours:  { title: "Colour Management", subtitle: "I want to preserve:" },
+  });
+  const [sectionSavingKey, setSectionSavingKey] = useState<"printers" | "papers" | "colours" | null>(null);
+  const [sectionSavedKey, setSectionSavedKey] = useState<"printers" | "papers" | "colours" | null>(null);
   const [newPrinterName, setNewPrinterName] = useState("");
   const [newPrinterDescription, setNewPrinterDescription] = useState("");
   const [newPrinterThumbnail, setNewPrinterThumbnail] = useState("");
@@ -430,6 +443,25 @@ export default function AdminPage() {
         if (data.state.homepageDescription) {
           setHomePageDescription(data.state.homepageDescription);
           setSavedHomePageDescription(data.state.homepageDescription);
+        }
+        if (data.state.sectionSettings) {
+          const ss = data.state.sectionSettings;
+          const loaded = {
+            printers: {
+              title:    ss.printers.title    || "Printers List",
+              subtitle: ss.printers.subtitle || "Select your Printer:",
+            },
+            papers: {
+              title:    ss.papers.title    || "Paper Selection",
+              subtitle: ss.papers.subtitle || "Choose your paper type to continue:",
+            },
+            colours: {
+              title:    ss.colours.title    || "Colour Management",
+              subtitle: ss.colours.subtitle || "I want to preserve:",
+            },
+          };
+          setSectionSettings(loaded);
+          setSavedSectionSettings(loaded);
         }
       } catch {
         setError("Could not load tutorial data.");
@@ -760,6 +792,44 @@ export default function AdminPage() {
   const handleCancelHomepageSettings = () => {
     setHomePageTitle(savedHomePageTitle);
     setHomePageDescription(savedHomePageDescription);
+  };
+
+  // Section settings handlers
+  const handleSaveSectionSettings = async (section: "printers" | "papers" | "colours") => {
+    setSectionSavingKey(section);
+    try {
+      const res = await fetch("/api/tutorial", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          action: "updateSectionSettings",
+          payload: {
+            section,
+            title: sectionSettings[section].title,
+            subtitle: sectionSettings[section].subtitle,
+          },
+        }),
+      });
+      if (!res.ok) throw new Error("Failed to save section settings");
+      setSavedSectionSettings((prev) => ({
+        ...prev,
+        [section]: { ...sectionSettings[section] },
+      }));
+      setError(null);
+      setSectionSavedKey(section);
+      setTimeout(() => setSectionSavedKey(null), 2000);
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Failed to save section settings");
+    } finally {
+      setSectionSavingKey(null);
+    }
+  };
+
+  const handleCancelSectionSettings = (section: "printers" | "papers" | "colours") => {
+    setSectionSettings((prev) => ({
+      ...prev,
+      [section]: { ...savedSectionSettings[section] },
+    }));
   };
 
   // Printer handlers
@@ -2008,7 +2078,7 @@ export default function AdminPage() {
               <Stack spacing={1.5} sx={{ mt: 1.5 }}>
                 {/* Printers Section */}
                 <Stack spacing={1.5}>
-                  {tutorialState.printers.map((printer) => (
+                  {tutorialState.printers.slice(0, 3).map((printer) => (
                     <Tooltip key={printer.id} title={printer.name} placement="right">
                       <Box
                         onClick={() => goToPrinterPapers(printer.id)}
@@ -2038,6 +2108,25 @@ export default function AdminPage() {
                       </Box>
                     </Tooltip>
                   ))}
+                  {tutorialState.printers.length > 3 && (
+                    <Box sx={{ display: "flex", justifyContent: "center" }}>
+                      <Tooltip title="More printers" placement="right">
+                        <IconButton
+                          onClick={goHome}
+                          size="small"
+                          sx={{
+                            width: 40,
+                            height: 40,
+                            borderRadius: 1,
+                            color: "#009DC9",
+                            "&:hover": { bgcolor: "rgba(30, 136, 229, 0.12)" },
+                          }}
+                        >
+                          ⋯
+                        </IconButton>
+                      </Tooltip>
+                    </Box>
+                  )}
                 </Stack>
 
                 {/* Full Paper List Section */}
@@ -2124,11 +2213,14 @@ export default function AdminPage() {
                 <Typography
                   variant="subtitle2"
                   fontWeight={600}
+                  onClick={goHome}
                   sx={{
                     color: "#ffffff",
                     textTransform: "uppercase",
                     fontSize: "0.75rem",
-                    letterSpacing: "0.5px"
+                    letterSpacing: "0.5px",
+                    cursor: "pointer",
+                    "&:hover": { color: "#009DC9" },
                   }}
                 >
                   PRINTER LIST
@@ -2147,13 +2239,10 @@ export default function AdminPage() {
                 </IconButton>
               </Stack>
 
-              {expandedPrinterList && tutorialState.printers.length > 0 && (
+              {tutorialState.printers.length > 0 && (
                 <List sx={{ p: 0, borderRadius: 1 }}>
-                  {tutorialState.printers.map((printer) => (
-                    <ListItem
-                      key={printer.id}
-                      disablePadding
-                    >
+                  {tutorialState.printers.slice(0, 3).map((printer) => (
+                    <ListItem key={printer.id} disablePadding>
                       <ListItemButton
                         selected={selectedPrinterId === printer.id && !showFullPaperList}
                         onClick={() => goToPrinterPapers(printer.id)}
@@ -2162,9 +2251,7 @@ export default function AdminPage() {
                           transition: "all 180ms ease",
                           bgcolor: selectedPrinterId === printer.id && !showFullPaperList ? "rgba(30, 136, 229, 0.12)" : "transparent",
                           color: selectedPrinterId === printer.id && !showFullPaperList ? "#009DC9" : "#ffffff",
-                          "&:hover": {
-                            bgcolor: "rgba(255, 255, 255, 0.1)",
-                          },
+                          "&:hover": { bgcolor: "rgba(255, 255, 255, 0.1)" },
                         }}
                       >
                         <ListItemAvatar sx={{ minWidth: 40 }}>
@@ -2183,11 +2270,7 @@ export default function AdminPage() {
                         </ListItemAvatar>
                         <ListItemText
                           primary={printer.name}
-                          sx={{
-                            "& .MuiListItemText-primary": {
-                              color: "inherit",
-                            }
-                          }}
+                          sx={{ "& .MuiListItemText-primary": { color: "inherit" } }}
                         />
                         <IconButton
                           size="small"
@@ -2195,11 +2278,7 @@ export default function AdminPage() {
                             e.stopPropagation();
                             handlePrinterMenuOpen(e, printer.id);
                           }}
-                          sx={{
-                            ml: 1,
-                            color: "inherit",
-                            "&:hover": { color: "#009DC9" }
-                          }}
+                          sx={{ ml: 1, color: "inherit", "&:hover": { color: "#009DC9" } }}
                         >
                           ⋯
                         </IconButton>
@@ -2209,37 +2288,34 @@ export default function AdminPage() {
                 </List>
               )}
 
-            {!expandedPrinterList && tutorialState.printers.length > 0 && (
-              <Button
-                fullWidth
-                size="small"
-                onClick={() => setExpandedPrinterList(true)}
-                sx={{
-                  textTransform: "none",
-                  color: "#009DC9",
-                  borderColor: "rgba(30, 136, 229, 0.3)",
-                  "&:hover": {
-                    bgcolor: "rgba(30, 136, 229, 0.08)",
-                    borderColor: "rgba(30, 136, 229, 0.5)"
-                  }
-                }}
-              >
-                Show {tutorialState.printers.length} Printers
-              </Button>
-            )}
+              {tutorialState.printers.length > 3 && (
+                <Button
+                  fullWidth
+                  size="small"
+                  onClick={goHome}
+                  sx={{
+                    mt: 0.5,
+                    textTransform: "none",
+                    color: "#009DC9",
+                    borderColor: "rgba(30, 136, 229, 0.3)",
+                    "&:hover": {
+                      bgcolor: "rgba(30, 136, 229, 0.08)",
+                      borderColor: "rgba(30, 136, 229, 0.5)",
+                    },
+                  }}
+                >
+                  More
+                </Button>
+              )}
 
-            {tutorialState.printers.length === 0 && expandedPrinterList && (
-              <Typography
-                variant="body2"
-                sx={{
-                  p: 2,
-                  textAlign: "center",
-                  color: "rgba(255, 255, 255, 0.5)"
-                }}
-              >
-                No printers yet
-              </Typography>
-            )}
+              {tutorialState.printers.length === 0 && (
+                <Typography
+                  variant="body2"
+                  sx={{ p: 2, textAlign: "center", color: "rgba(255, 255, 255, 0.5)" }}
+                >
+                  No printers yet
+                </Typography>
+              )}
           </Box>
 
           <Divider sx={{ my: 2, borderColor: "#003549" }} />
@@ -2421,26 +2497,53 @@ export default function AdminPage() {
           <Box>
             <Stack spacing={4}>
               <Box>
-                <Box sx={{ display: "flex", justifyContent: "space-between", alignItems: "center", mb: 2 }}>
-                  <Box>
-                    <Typography variant="h5" sx={{ color: "#001F2D", fontWeight: 700, mb: 0.5 }}>Printers List</Typography>
-                    <Typography variant="body2" color="text.secondary" sx={{ mt: 0.5 }}>
-                      Select your Printer:
-                    </Typography>
+                <Box sx={{ mb: 2 }}>
+                  <TextField
+                    value={sectionSettings.printers.title}
+                    onChange={(e) => setSectionSettings((p) => ({ ...p, printers: { ...p.printers, title: e.target.value } }))}
+                    size="small"
+                    label="Section Title"
+                    inputProps={{ maxLength: 50 }}
+                    InputProps={{ endAdornment: <InputAdornment position="end"><Typography variant="caption" color="text.secondary">{sectionSettings.printers.title.length}/50</Typography></InputAdornment> }}
+                    sx={{ mb: 2, minWidth: 240 }}
+                  />
+                  <Box sx={{ display: "flex", alignItems: "center", justifyContent: "space-between" }}>
+                    <TextField
+                      value={sectionSettings.printers.subtitle}
+                      onChange={(e) => setSectionSettings((p) => ({ ...p, printers: { ...p.printers, subtitle: e.target.value } }))}
+                      size="small"
+                      label="Subtitle"
+                      inputProps={{ maxLength: 100 }}
+                      InputProps={{ endAdornment: <InputAdornment position="end"><Typography variant="caption" color="text.secondary">{sectionSettings.printers.subtitle.length}/100</Typography></InputAdornment> }}
+                      sx={{ width: "50%" }}
+                    />
+                    <Button
+                      variant="contained"
+                      onClick={() => { setImageUploadError(null); setImageCompressed(false); setShowAddPrinterModal(true); }}
+                      sx={{ backgroundColor: "#009DC9", color: "#ffffff", fontWeight: 600, textTransform: "none", "&:hover": { backgroundColor: "#0081A8" }, whiteSpace: "nowrap" }}
+                    >
+                      + Add Printer
+                    </Button>
                   </Box>
-                  <Button
-                    variant="contained"
-                    onClick={() => { setImageUploadError(null); setImageCompressed(false); setShowAddPrinterModal(true); }}
-                    sx={{
-                      backgroundColor: "#009DC9",
-                      color: "#ffffff",
-                      fontWeight: 600,
-                      textTransform: "none",
-                      "&:hover": { backgroundColor: "#0081A8" }
-                    }}
-                  >
-                    + Add Printer
-                  </Button>
+                  {(sectionSettings.printers.title !== savedSectionSettings.printers.title ||
+                    sectionSettings.printers.subtitle !== savedSectionSettings.printers.subtitle ||
+                    sectionSavingKey === "printers" || sectionSavedKey === "printers") && (
+                    <Stack direction="row" spacing={1} alignItems="center" sx={{ mt: 1 }}>
+                      {sectionSavingKey === "printers" ? (
+                        <CircularProgress size={16} sx={{ color: "#009DC9" }} />
+                      ) : sectionSavedKey === "printers" ? (
+                        <Stack direction="row" spacing={0.5} alignItems="center">
+                          <CheckIcon sx={{ fontSize: 16, color: "#4caf50" }} />
+                          <Typography variant="caption" sx={{ color: "#4caf50" }}>Saved</Typography>
+                        </Stack>
+                      ) : (
+                        <>
+                          <Button size="small" variant="contained" onClick={() => handleSaveSectionSettings("printers")} startIcon={<SaveIcon sx={{ fontSize: "14px !important" }} />} sx={{ fontSize: "0.7rem", py: 0.4, px: 1, minWidth: 0, backgroundColor: "#009DC9", "&:hover": { backgroundColor: "#007aa3" }, textTransform: "none" }}>Save</Button>
+                          <Button size="small" variant="text" onClick={() => handleCancelSectionSettings("printers")} sx={{ fontSize: "0.7rem", py: 0.4, px: 1, minWidth: 0, color: "text.secondary", textTransform: "none" }}>Cancel</Button>
+                        </>
+                      )}
+                    </Stack>
+                  )}
                 </Box>
 
                 <TableContainer component={Paper} elevation={2} sx={{ borderRadius: 1, overflow: "hidden" }}>
@@ -2541,29 +2644,56 @@ export default function AdminPage() {
         {/* PRINTER PAPERS PAGE */}
         {selectedPrinterId && selectedPrinter && !selectedPaperId && !showFullPaperList && !showAllColoursView && (
           <Box>
-            <Box sx={{ display: "flex", justifyContent: "space-between", alignItems: "center", mb: 3 }}>
-              <Box>
-                <Box sx={{ display: "flex", alignItems: "center", gap: 1, mb: 0.5 }}>
-                  <Typography variant="h5" sx={{ color: "#001F2D", fontWeight: 700 }}>Paper Selection</Typography>
-                  <Chip label={selectedPrinter.name} variant="outlined" size="small" sx={{ fontWeight: 700, fontSize: "1rem", borderColor: "#001F2D", color: "#001F2D", height: "auto", "& .MuiChip-label": { py: 0.25, px: 1 } }} />
-                </Box>
-                <Typography variant="body2" color="text.secondary" sx={{ mt: 0.5 }}>
-                  Choose your paper type to continue:
-                </Typography>
+            <Box sx={{ mb: 3 }}>
+              <Box sx={{ display: "flex", alignItems: "center", gap: 1, mb: 2 }}>
+                <TextField
+                  value={sectionSettings.papers.title}
+                  onChange={(e) => setSectionSettings((p) => ({ ...p, papers: { ...p.papers, title: e.target.value } }))}
+                  size="small"
+                  label="Section Title"
+                  inputProps={{ maxLength: 50 }}
+                  InputProps={{ endAdornment: <InputAdornment position="end"><Typography variant="caption" color="text.secondary">{sectionSettings.papers.title.length}/50</Typography></InputAdornment> }}
+                  sx={{ minWidth: 220 }}
+                />
+                <Chip label={selectedPrinter.name} variant="outlined" size="small" sx={{ fontWeight: 700, fontSize: "1rem", borderColor: "#001F2D", color: "#001F2D", height: "auto", "& .MuiChip-label": { py: 0.25, px: 1 } }} />
               </Box>
-              <Button
-                variant="contained"
-                onClick={() => { setImageUploadError(null); setImageCompressed(false); setShowAddPaperModal(true); }}
-                sx={{
-                  backgroundColor: "#009DC9",
-                  color: "#ffffff",
-                  fontWeight: 600,
-                  textTransform: "none",
-                  "&:hover": { backgroundColor: "#0081A8" }
-                }}
-              >
-                + Add Paper
-              </Button>
+              <Box sx={{ display: "flex", alignItems: "center", justifyContent: "space-between" }}>
+                <TextField
+                  value={sectionSettings.papers.subtitle}
+                  onChange={(e) => setSectionSettings((p) => ({ ...p, papers: { ...p.papers, subtitle: e.target.value } }))}
+                  size="small"
+                  label="Subtitle"
+                  inputProps={{ maxLength: 100 }}
+                  InputProps={{ endAdornment: <InputAdornment position="end"><Typography variant="caption" color="text.secondary">{sectionSettings.papers.subtitle.length}/100</Typography></InputAdornment> }}
+                  sx={{ width: "50%" }}
+                />
+                <Button
+                  variant="contained"
+                  onClick={() => { setImageUploadError(null); setImageCompressed(false); setShowAddPaperModal(true); }}
+                  sx={{ backgroundColor: "#009DC9", color: "#ffffff", fontWeight: 600, textTransform: "none", "&:hover": { backgroundColor: "#0081A8" }, whiteSpace: "nowrap" }}
+                >
+                  + Add Paper
+                </Button>
+              </Box>
+              {(sectionSettings.papers.title !== savedSectionSettings.papers.title ||
+                sectionSettings.papers.subtitle !== savedSectionSettings.papers.subtitle ||
+                sectionSavingKey === "papers" || sectionSavedKey === "papers") && (
+                <Stack direction="row" spacing={1} alignItems="center" sx={{ mt: 1 }}>
+                  {sectionSavingKey === "papers" ? (
+                    <CircularProgress size={16} sx={{ color: "#009DC9" }} />
+                  ) : sectionSavedKey === "papers" ? (
+                    <Stack direction="row" spacing={0.5} alignItems="center">
+                      <CheckIcon sx={{ fontSize: 16, color: "#4caf50" }} />
+                      <Typography variant="caption" sx={{ color: "#4caf50" }}>Saved</Typography>
+                    </Stack>
+                  ) : (
+                    <>
+                      <Button size="small" variant="contained" onClick={() => handleSaveSectionSettings("papers")} startIcon={<SaveIcon sx={{ fontSize: "14px !important" }} />} sx={{ fontSize: "0.7rem", py: 0.4, px: 1, minWidth: 0, backgroundColor: "#009DC9", "&:hover": { backgroundColor: "#007aa3" }, textTransform: "none" }}>Save</Button>
+                      <Button size="small" variant="text" onClick={() => handleCancelSectionSettings("papers")} sx={{ fontSize: "0.7rem", py: 0.4, px: 1, minWidth: 0, color: "text.secondary", textTransform: "none" }}>Cancel</Button>
+                    </>
+                  )}
+                </Stack>
+              )}
             </Box>
 
             <TableContainer component={Paper} elevation={2} sx={{ borderRadius: 1, overflow: "hidden" }}>
@@ -2675,29 +2805,56 @@ export default function AdminPage() {
         {/* COLOURS PAGE */}
         {selectedPrinterId && selectedPaper && !selectedColorId && (
           <Box>
-            <Box sx={{ display: "flex", justifyContent: "space-between", alignItems: "center", mb: 3 }}>
-              <Box>
-                <Box sx={{ display: "flex", alignItems: "center", gap: 1, mb: 0.5 }}>
-                  <Typography variant="h5" sx={{ color: "#001F2D", fontWeight: 700 }}>Colour Management</Typography>
-                  <Chip label={selectedPaper.name} variant="outlined" size="small" sx={{ fontWeight: 700, fontSize: "1rem", borderColor: "#001F2D", color: "#001F2D", height: "auto", "& .MuiChip-label": { py: 0.25, px: 1 } }} />
-                </Box>
-                <Typography variant="body2" color="text.secondary" sx={{ mt: 0.5 }}>
-                  I want to preserve:
-                </Typography>
+            <Box sx={{ mb: 3 }}>
+              <Box sx={{ display: "flex", alignItems: "center", gap: 1, mb: 2 }}>
+                <TextField
+                  value={sectionSettings.colours.title}
+                  onChange={(e) => setSectionSettings((p) => ({ ...p, colours: { ...p.colours, title: e.target.value } }))}
+                  size="small"
+                  label="Section Title"
+                  inputProps={{ maxLength: 50 }}
+                  InputProps={{ endAdornment: <InputAdornment position="end"><Typography variant="caption" color="text.secondary">{sectionSettings.colours.title.length}/50</Typography></InputAdornment> }}
+                  sx={{ minWidth: 220 }}
+                />
+                <Chip label={selectedPaper.name} variant="outlined" size="small" sx={{ fontWeight: 700, fontSize: "1rem", borderColor: "#001F2D", color: "#001F2D", height: "auto", "& .MuiChip-label": { py: 0.25, px: 1 } }} />
               </Box>
-              <Button
-                variant="contained"
-                onClick={() => { setImageUploadError(null); setImageCompressed(false); setShowAddColourModal(true); }}
-                sx={{
-                  backgroundColor: "#009DC9",
-                  color: "#ffffff",
-                  fontWeight: 600,
-                  textTransform: "none",
-                  "&:hover": { backgroundColor: "#0081A8" }
-                }}
-              >
-                + Add Colour
-              </Button>
+              <Box sx={{ display: "flex", alignItems: "center", justifyContent: "space-between" }}>
+                <TextField
+                  value={sectionSettings.colours.subtitle}
+                  onChange={(e) => setSectionSettings((p) => ({ ...p, colours: { ...p.colours, subtitle: e.target.value } }))}
+                  size="small"
+                  label="Subtitle"
+                  inputProps={{ maxLength: 100 }}
+                  InputProps={{ endAdornment: <InputAdornment position="end"><Typography variant="caption" color="text.secondary">{sectionSettings.colours.subtitle.length}/100</Typography></InputAdornment> }}
+                  sx={{ width: "50%" }}
+                />
+                <Button
+                  variant="contained"
+                  onClick={() => { setImageUploadError(null); setImageCompressed(false); setShowAddColourModal(true); }}
+                  sx={{ backgroundColor: "#009DC9", color: "#ffffff", fontWeight: 600, textTransform: "none", "&:hover": { backgroundColor: "#0081A8" }, whiteSpace: "nowrap" }}
+                >
+                  + Add Colour
+                </Button>
+              </Box>
+              {(sectionSettings.colours.title !== savedSectionSettings.colours.title ||
+                sectionSettings.colours.subtitle !== savedSectionSettings.colours.subtitle ||
+                sectionSavingKey === "colours" || sectionSavedKey === "colours") && (
+                <Stack direction="row" spacing={1} alignItems="center" sx={{ mt: 1 }}>
+                  {sectionSavingKey === "colours" ? (
+                    <CircularProgress size={16} sx={{ color: "#009DC9" }} />
+                  ) : sectionSavedKey === "colours" ? (
+                    <Stack direction="row" spacing={0.5} alignItems="center">
+                      <CheckIcon sx={{ fontSize: 16, color: "#4caf50" }} />
+                      <Typography variant="caption" sx={{ color: "#4caf50" }}>Saved</Typography>
+                    </Stack>
+                  ) : (
+                    <>
+                      <Button size="small" variant="contained" onClick={() => handleSaveSectionSettings("colours")} startIcon={<SaveIcon sx={{ fontSize: "14px !important" }} />} sx={{ fontSize: "0.7rem", py: 0.4, px: 1, minWidth: 0, backgroundColor: "#009DC9", "&:hover": { backgroundColor: "#007aa3" }, textTransform: "none" }}>Save</Button>
+                      <Button size="small" variant="text" onClick={() => handleCancelSectionSettings("colours")} sx={{ fontSize: "0.7rem", py: 0.4, px: 1, minWidth: 0, color: "text.secondary", textTransform: "none" }}>Cancel</Button>
+                    </>
+                  )}
+                </Stack>
+              )}
             </Box>
 
             {selectedPrinterPaper?.colours.length === 0 ? (

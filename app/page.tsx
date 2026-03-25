@@ -58,10 +58,18 @@ type Printer = {
   published?: boolean;
 };
 
+type SectionSetting = { title: string; subtitle: string };
+type SectionSettings = {
+  printers: SectionSetting;
+  papers: SectionSetting;
+  colours: SectionSetting;
+};
+
 type TutorialState = {
   printers: Printer[];
   homepageTitle?: string;
   homepageDescription?: string;
+  sectionSettings?: SectionSettings;
 };
 
 const emptyState: TutorialState = { printers: [] };
@@ -509,7 +517,7 @@ export default function HomePage() {
                   letterSpacing: "0.01em",
                 }}
               >
-                Select a printer to begin:
+                {data.sectionSettings?.printers?.subtitle || "Select a printer to begin:"}
               </Typography>
 
               <Grid container spacing={{ xs: 2, sm: 2.5, md: 3 }}>
@@ -670,7 +678,7 @@ export default function HomePage() {
                 color: colors.text,
               }}
             >
-              Paper Selection
+              {data.sectionSettings?.papers?.title || "Paper Selection"}
             </Typography>
             <Typography
               variant="body1"
@@ -680,7 +688,7 @@ export default function HomePage() {
                 lineHeight: 1.5,
               }}
             >
-              Choose your paper type to continue:
+              {data.sectionSettings?.papers?.subtitle || "Choose your paper type to continue:"}
             </Typography>
           </Stack>
 
@@ -862,7 +870,7 @@ export default function HomePage() {
                 color: colors.text,
               }}
             >
-              Colour Management
+              {data.sectionSettings?.colours?.title || "Colour Management"}
             </Typography>
             <Typography
               variant="body1"
@@ -872,7 +880,7 @@ export default function HomePage() {
                 lineHeight: 1.5,
               }}
             >
-              I want to preserve:
+              {data.sectionSettings?.colours?.subtitle || "I want to preserve:"}
             </Typography>
           </Stack>
 
@@ -944,45 +952,33 @@ export default function HomePage() {
                     {/* Content */}
                     <CardContent sx={{ p: { xs: 2, sm: 2.5 } }}>
                       <Stack spacing={1.5}>
-                        <Stack direction="row" spacing={1} alignItems="flex-start">
-                          <Typography
-                            variant="h6"
+                        <Typography
+                          variant="h6"
+                          sx={{
+                            fontSize: { xs: "1rem", sm: "1.1rem" },
+                            fontWeight: 600,
+                            color: colors.text,
+                            lineHeight: 1.4,
+                          }}
+                        >
+                          {colour.name}
+                        </Typography>
+                        {colour.description && (
+                          <Box
+                            component="ul"
                             sx={{
-                              fontSize: { xs: "1rem", sm: "1.1rem" },
-                              fontWeight: 600,
-                              color: colors.text,
-                              flex: 1,
+                              m: 0,
+                              pl: 2,
+                              fontSize: { xs: "0.85rem", sm: "0.9rem" },
+                              color: colors.lightText,
                               lineHeight: 1.4,
                             }}
                           >
-                            {colour.name}
-                          </Typography>
-                          {colour.description && (
-                            <Tooltip
-                              arrow
-                              placement="top"
-                              title={
-                                <Box component="ul" sx={{ m: 0, pl: 2, py: 0.5 }}>
-                                  {colour.description.split("\n").filter(Boolean).map((line, i) => (
-                                    <li key={i}>{line}</li>
-                                  ))}
-                                </Box>
-                              }
-                            >
-                              <IconButton
-                                size="small"
-                                sx={{
-                                  color: colors.primary,
-                                  width: 24,
-                                  height: 24,
-                                  "&:hover": { bgcolor: `rgba(0, 157, 201, 0.1)` },
-                                }}
-                              >
-                                <InfoIcon sx={{ fontSize: 18 }} />
-                              </IconButton>
-                            </Tooltip>
-                          )}
-                        </Stack>
+                            {colour.description.split("\n").filter(Boolean).map((line, i) => (
+                              <li key={i}>{line}</li>
+                            ))}
+                          </Box>
+                        )}
                       </Stack>
                     </CardContent>
                   </Card>

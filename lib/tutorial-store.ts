@@ -76,12 +76,24 @@ export type DeletedItem = {
   data: unknown; // Stores the full item data for restoration
 };
 
+export type SectionSetting = {
+  title: string;
+  subtitle: string;
+};
+
+export type SectionSettings = {
+  printers: SectionSetting;
+  papers: SectionSetting;
+  colours: SectionSetting;
+};
+
 export type TutorialState = {
   papers: Paper[];
   printers: Printer[];
   deletedItems?: DeletedItem[];
   homepageTitle?: string;
   homepageDescription?: string;
+  sectionSettings?: SectionSettings;
 };
 
 // ============= UTILITY FUNCTIONS =============
@@ -380,8 +392,25 @@ export async function getTutorialState(): Promise<TutorialState> {
       console.warn("Failed to fetch homepage settings:", error);
     }
 
+    // Get section settings
+    let sectionSettings: SectionSettings | undefined;
+    try {
+      const sectionsRef = db.collection("settings").doc("sections");
+      const sectionsSnapshot = await sectionsRef.get();
+      if (sectionsSnapshot.exists) {
+        const d = sectionsSnapshot.data();
+        sectionSettings = {
+          printers: { title: d?.printers?.title || "", subtitle: d?.printers?.subtitle || "" },
+          papers:   { title: d?.papers?.title   || "", subtitle: d?.papers?.subtitle   || "" },
+          colours:  { title: d?.colours?.title  || "", subtitle: d?.colours?.subtitle  || "" },
+        };
+      }
+    } catch (error) {
+      console.warn("Failed to fetch section settings:", error);
+    }
+
     console.log("[getTutorialState] Successfully fetched all data");
-    return { papers, printers, deletedItems, homepageTitle, homepageDescription };
+    return { papers, printers, deletedItems, homepageTitle, homepageDescription, sectionSettings };
   } catch (error) {
     console.error("Error getting tutorial state:", error);
     throw new Error(`Failed to load tutorial state: ${error instanceof Error ? error.message : "Unknown error"}`);
@@ -409,6 +438,26 @@ export async function updateHomepageSettings(title: string, description: string)
   } catch (error) {
     console.error("Error updating homepage settings:", error);
     throw new Error(`Failed to save homepage settings: ${error instanceof Error ? error.message : "Unknown error"}`);
+  }
+}
+
+// ============= SECTION SETTINGS =============
+
+export async function updateSectionSettings(
+  section: "printers" | "papers" | "colours",
+  title: string,
+  subtitle: string
+): Promise<void> {
+  try {
+    const sectionsRef = db.collection("settings").doc("sections");
+    await sectionsRef.set(
+      { [section]: { title: title.trim(), subtitle: subtitle.trim(), updatedAt: new Date() } },
+      { merge: true }
+    );
+    console.log(`[updateSectionSettings] Saved ${section} settings`);
+  } catch (error) {
+    console.error("Error updating section settings:", error);
+    throw new Error(`Failed to save section settings: ${error instanceof Error ? error.message : "Unknown error"}`);
   }
 }
 

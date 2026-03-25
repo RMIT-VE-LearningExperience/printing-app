@@ -1,6 +1,6 @@
 # Print App CMS - Progress Log
 
-**Last Updated:** March 24, 2026 (Session 2)
+**Last Updated:** March 24, 2026 (Session 3)
 **Project:** Print App CMS System
 **User:** Arielle Lee (arielle.lee@rmit.edu.au)
 
@@ -391,6 +391,32 @@ When testing after any changes:
 ---
 
 ## Session History
+
+### Current Session (March 24, 2026) - Part 3
+- **CMS section heading layout polish**
+  - ✅ Char count displayed as `endAdornment` inside each TextField (e.g. `12/50`) — `InputAdornment` added to MUI imports
+  - ✅ Spacing increased between Section Title and Subtitle rows (`mb: 1` → `mb: 2`)
+  - ✅ ADD buttons right-aligned — subtitle row Box changed to `justifyContent: "space-between"`
+  - Files Modified: `app/admin/page.tsx`
+
+- **CMS section heading layout restructure**
+  - ✅ Subtitle TextField width reduced to 50%
+  - ✅ Chips (dynamic printer/paper name) aligned inline with Section Title TextField in same row
+  - ✅ ADD buttons moved into subtitle row (alongside Subtitle TextField)
+  - ✅ Character limits tightened: Title → 50 chars, Subtitle → 100 chars
+  - ✅ `helperText` removed from TextFields (char count moved to `endAdornment` in subsequent session)
+  - Files Modified: `app/admin/page.tsx`
+
+- **Editable section titles & subtitles — CMS + user-facing sync**
+  - ✅ New `SectionSettings` type (`printers`, `papers`, `colours` — each with `title` + `subtitle`)
+  - ✅ Fetched from Firestore `settings/sections` in `getTutorialState()` alongside homepage settings
+  - ✅ New `updateSectionSettings(section, title, subtitle)` function using `set(..., { merge: true })` so sections save independently
+  - ✅ New `updateSectionSettings` action in API route
+  - ✅ CMS admin: inline TextFields replace static headings for Printers, Papers, Colour Management — same save UX as Homepage Header (Save/Cancel on dirty, spinner, green ✓ Saved)
+  - ✅ State initialised from `tutorialState.sectionSettings` on load with hardcoded defaults as fallback
+  - ✅ User-facing page: 5 hardcoded strings replaced with `data.sectionSettings?.x?.y || "default"` — existing text shown until a custom value is saved
+  - ✅ Steps section excluded from editable labels
+  - Files Modified: `lib/tutorial-store.ts`, `app/api/tutorial/route.ts`, `app/admin/page.tsx`, `app/page.tsx`
 
 ### Current Session (March 24, 2026) - Part 2
 - **Colour Management cards: tooltip dot points + subtext removed (user-facing)**

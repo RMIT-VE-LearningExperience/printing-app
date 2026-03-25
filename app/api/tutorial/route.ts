@@ -24,6 +24,7 @@ import {
   permanentlyDeleteItem,
   removeInvalidPapersFromPrinter,
   updateHomepageSettings,
+  updateSectionSettings,
   validatePreviewToken,
   type TutorialState,
 } from "../../../lib/tutorial-store";
@@ -165,6 +166,12 @@ type ActionPayload =
       action: "updateHomepageSettings";
       title: string;
       description: string;
+    }
+  | {
+      action: "updateSectionSettings";
+      section: "printers" | "papers" | "colours";
+      title: string;
+      subtitle: string;
     };
 
 async function executeAction(payload: ActionPayload): Promise<TutorialState> {
@@ -305,6 +312,10 @@ async function executeAction(payload: ActionPayload): Promise<TutorialState> {
 
     case "updateHomepageSettings":
       await updateHomepageSettings(payload.title, payload.description);
+      return getTutorialState();
+
+    case "updateSectionSettings":
+      await updateSectionSettings(payload.section, payload.title, payload.subtitle);
       return getTutorialState();
 
     default:
