@@ -958,7 +958,17 @@ export default function HomePage() {
                             {colour.name}
                           </Typography>
                           {colour.description && (
-                            <Tooltip title={colour.description} arrow placement="top">
+                            <Tooltip
+                              arrow
+                              placement="top"
+                              title={
+                                <Box component="ul" sx={{ m: 0, pl: 2, py: 0.5 }}>
+                                  {colour.description.split("\n").filter(Boolean).map((line, i) => (
+                                    <li key={i}>{line}</li>
+                                  ))}
+                                </Box>
+                              }
+                            >
                               <IconButton
                                 size="small"
                                 sx={{
@@ -973,18 +983,6 @@ export default function HomePage() {
                             </Tooltip>
                           )}
                         </Stack>
-                        {colour.description && (
-                          <Typography
-                            variant="body2"
-                            sx={{
-                              fontSize: { xs: "0.85rem", sm: "0.9rem" },
-                              color: colors.lightText,
-                              lineHeight: 1.4,
-                            }}
-                          >
-                            {colour.description}
-                          </Typography>
-                        )}
                       </Stack>
                     </CardContent>
                   </Card>

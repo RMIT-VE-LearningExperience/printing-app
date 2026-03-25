@@ -1,6 +1,6 @@
 # Print App CMS - Progress Log
 
-**Last Updated:** March 24, 2026
+**Last Updated:** March 24, 2026 (Session 2)
 **Project:** Print App CMS System
 **User:** Arielle Lee (arielle.lee@rmit.edu.au)
 
@@ -391,6 +391,13 @@ When testing after any changes:
 ---
 
 ## Session History
+
+### Current Session (March 24, 2026) - Part 2
+- **Colour Management cards: tooltip dot points + subtext removed (user-facing)**
+  - ✅ Info tooltip now renders description as a bullet list — text split by `\n`, empty lines filtered, each line rendered as `<li>` inside a `<Box component="ul">`
+  - ✅ Subtext `Typography` below the card title (which repeated the description) removed
+  - ✅ Fixed syntax error: missing closing `</Stack>` for outer `<Stack spacing={1.5}>` accidentally dropped during edit
+  - Files Modified: `app/page.tsx`
 
 ### Current Session (March 24, 2026)
 - **CMS section headings updated to match user-facing terminology**
