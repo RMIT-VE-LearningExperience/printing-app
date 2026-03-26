@@ -1,6 +1,6 @@
 # Print App CMS - Progress Log
 
-**Last Updated:** March 26, 2026 (Session 4)
+**Last Updated:** March 26, 2026 (Session 5)
 **Project:** Print App CMS System
 **User:** Arielle Lee (arielle.lee@rmit.edu.au)
 
@@ -392,7 +392,37 @@ When testing after any changes:
 
 ## Session History
 
-### Current Session (March 26, 2026) - Session 4
+### Current Session (March 26, 2026) - Session 5
+
+- **Table header cleanup: removed `⋯` text from all table headers**
+  - ✅ Removed `⋯` character from the action column header in the Printers, Papers, and Colours tables
+  - Files Modified: `app/admin/page.tsx`
+
+- **Printer permalink / QR code system**
+  - ✅ Added `slug: string` to `Printer` type in `lib/tutorial-store.ts` and local types in `app/admin/page.tsx` and `app/page.tsx`
+  - ✅ `generateSlug()` exported from `lib/tutorial-store.ts` (lowercase, hyphenated, special chars stripped)
+  - ✅ `addPrinter()` stores `slug` on creation; `updatePrinter()` regenerates slug when name changes
+  - ✅ `getTutorialState()` reads `slug` with fallback: derives from `name` if field absent (backward compat)
+  - ✅ URL format: `/?printer=epson-ecotank` — written via `window.history.replaceState()` on printer select, cleared on back/reset
+  - ✅ `loadData()` in `app/page.tsx` reads `?printer=` param and auto-selects matching printer by slug
+  - ✅ "Printer not found" screen shown when slug doesn't match any published printer
+  - ✅ Slug change detection in admin: `slugUpdatedIds` set tracks printers whose slug changed after an edit; QR icon highlights amber as a prompt to re-download
+  - ✅ Copy Link button: copies `${origin}/?printer=${slug}` to clipboard
+  - ✅ QR code download: generates 300×300px QR PNG via `qrcode` package, draws printer name below on canvas, triggers download, clears amber highlight
+  - ✅ Placement: `⋯` menu → Copy Link icon → QR icon — all in the same action cell per printer row
+  - ✅ Papers section heading: plain monospace permalink (`/?printer=slug`) displayed as a clickable link, opens in new tab
+  - ✅ Removed "Copy Link" from the `⋯` dropdown menu (redundant with icon button)
+  - Files Modified: `lib/tutorial-store.ts`, `app/admin/page.tsx`, `app/page.tsx`
+
+- **Firebase Storage wire-up plan documented**
+  - ✅ Created `FIREBASE_STORAGE_PLAN.md` — full pre-launch migration plan for moving from inline base64 to Firebase Storage
+  - Plan covers: `resolveImageUrl()` integration into 8 store functions, storage path conventions, security rules, orphan tracking via `orphanedStorageFiles` Firestore collection, daily Cloud Function cleanup (30-day auto-delete), weekly safety-net audit function, deployment checklist
+  - Implementation deferred until test data wipe before launch
+  - Files Created: `FIREBASE_STORAGE_PLAN.md`
+
+---
+
+### Previous Session (March 26, 2026) - Session 4
 
 - **TypeScript fix: `sectionSettings` missing from local `TutorialState` type (admin)**
   - ✅ Local `TutorialState` type in `app/admin/page.tsx` was missing `sectionSettings?: SectionSettings` — caused TS2339 red highlight errors at lines 447–448

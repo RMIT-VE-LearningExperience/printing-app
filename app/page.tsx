@@ -11,6 +11,7 @@ import {
   CircularProgress,
   Alert,
   Tooltip,
+  Button,
   IconButton,
   Grid,
   Stack,
@@ -64,6 +65,7 @@ type Paper = {
 type Printer = {
   id: string;
   name: string;
+  slug: string;
   description?: string;
   thumbnailDataUrl: string;
   papers: Paper[];
@@ -139,6 +141,7 @@ export default function HomePage() {
   const [selectedColourId, setSelectedColourId] = useState<string | null>(null);
   const [activeStepIndex, setActiveStepIndex] = useState(0);
   const [enlargedStepImageUrl, setEnlargedStepImageUrl] = useState<string | null>(null);
+  const [printerNotFound, setPrinterNotFound] = useState(false);
   const [imgZoom, setImgZoom] = useState(1);
   const [showBackToTop, setShowBackToTop] = useState(false);
   const stepCardRefs = useRef<(HTMLDivElement | null)[]>([]);
@@ -174,6 +177,7 @@ export default function HomePage() {
       try {
         const params = new URLSearchParams(window.location.search);
         const previewToken = params.get("previewToken");
+        const urlPrinterSlug = params.get("printer");
         const urlPrinterId = params.get("printerId");
         const urlPaperId = params.get("paperId");
         const urlColourId = params.get("colourId");
@@ -249,7 +253,17 @@ export default function HomePage() {
 
         setData(state);
 
-        if (isPreview) {
+        // Permalink: /?printer=slug — jump straight to Paper Selection
+        if (urlPrinterSlug && !isPreview) {
+          const matched = state.printers.find(
+            (p) => p.published !== false && p.slug === urlPrinterSlug,
+          );
+          if (matched) {
+            setSelectedPrinterId(matched.id);
+          } else {
+            setPrinterNotFound(true);
+          }
+        } else if (isPreview) {
           setIsPreviewMode(true);
           if (urlPrinterId) setSelectedPrinterId(urlPrinterId);
           if (urlPaperId) setSelectedPaperId(urlPaperId);
@@ -329,11 +343,17 @@ export default function HomePage() {
     );
   }, [isPreviewMode, selectedColourId, selectedPaperId, selectedPrinterId]);
 
+  function clearPrinterSlugParam() {
+    window.history.replaceState(null, "", window.location.pathname);
+  }
+
   function resetToHome() {
     setSelectedPrinterId(null);
     setSelectedPaperId(null);
     setSelectedColourId(null);
     setActiveStepIndex(0);
+    setPrinterNotFound(false);
+    clearPrinterSlugParam();
   }
 
   function backOneLevel() {
@@ -350,6 +370,7 @@ export default function HomePage() {
 
     if (selectedPrinterId) {
       setSelectedPrinterId(null);
+      clearPrinterSlugParam();
     }
   }
 
@@ -358,6 +379,10 @@ export default function HomePage() {
     setSelectedPaperId(null);
     setSelectedColourId(null);
     setActiveStepIndex(0);
+    const printer = data.printers.find((p) => p.id === printerId);
+    if (printer?.slug) {
+      window.history.replaceState(null, "", `?printer=${printer.slug}`);
+    }
   }
 
   function selectPaper(paperId: string) {
@@ -468,6 +493,27 @@ export default function HomePage() {
             }}
           />
         </Box>
+      </Box>
+    );
+  }
+
+  // PRINTER NOT FOUND (invalid/deleted slug)
+  if (printerNotFound) {
+    return (
+      <Box sx={{ minHeight: "100vh", bgcolor: colors.lightBg, display: "flex", alignItems: "center", justifyContent: "center" }}>
+        <Stack spacing={3} alignItems="center" sx={{ textAlign: "center", px: 3 }}>
+          <Typography variant="h4" fontWeight={700} color={colors.text}>Printer not found</Typography>
+          <Typography variant="body1" color={colors.lightText}>
+            This printer link is no longer available or has been removed.
+          </Typography>
+          <Button
+            variant="contained"
+            onClick={resetToHome}
+            sx={{ bgcolor: colors.primary, color: "#fff", fontWeight: 700, textTransform: "none", borderRadius: 2, px: 3, "&:hover": { bgcolor: colors.darkBg } }}
+          >
+            Printer List
+          </Button>
+        </Stack>
       </Box>
     );
   }

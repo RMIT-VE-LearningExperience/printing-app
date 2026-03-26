@@ -64,7 +64,10 @@ import {
   Image as ImagePlaceholderIcon,
   Pageview as PageviewIcon,
   DragIndicator as DragIndicatorIcon,
+  QrCode2 as QrCodeIcon,
+  ContentCopy as ContentCopyIcon,
 } from "@mui/icons-material";
+import QRCode from "qrcode";
 import { DragDropContext, Droppable, Draggable, type DropResult } from "@hello-pangea/dnd";
 import { type ChangeEvent, useEffect, useMemo, useRef, useState } from "react";
 
@@ -104,6 +107,7 @@ type Paper = {
 type Printer = {
   id: string;
   name: string;
+  slug: string;
   description?: string;
   thumbnailDataUrl: string;
   published: boolean;
@@ -144,6 +148,16 @@ type RichHtmlEditorProps = {
   value: string;
   onChange: (value: string) => void;
 };
+
+function generateSlugLocal(name: string): string {
+  return name
+    .toLowerCase()
+    .trim()
+    .replace(/[^a-z0-9\s-]/g, "")
+    .replace(/\s+/g, "-")
+    .replace(/-+/g, "-")
+    .replace(/^-|-$/g, "");
+}
 
 function getVideoEmbedUrl(url: string): string | null {
   const ytMatch = url.match(/(?:youtube\.com\/watch\?v=|youtu\.be\/)([a-zA-Z0-9_-]{11})/);
@@ -362,6 +376,7 @@ export default function AdminPage() {
   const [editStepVideoUrl, setEditStepVideoUrl] = useState("");
   const [newStepMediaType, setNewStepMediaType] = useState<"image" | "video">("image");
   const [editStepMediaType, setEditStepMediaType] = useState<"image" | "video">("image");
+  const [slugUpdatedIds, setSlugUpdatedIds] = useState<Set<string>>(new Set());
 
   // Sidebar state
   const [expandedPrinterList, setExpandedPrinterList] = useState(true);
@@ -887,6 +902,10 @@ export default function AdminPage() {
     }
 
     try {
+      const printerBeforeEdit = tutorialState.printers.find((p) => p.id === editPrinterId);
+      const oldSlug = printerBeforeEdit?.slug ?? "";
+      const newSlug = generateSlugLocal(editPrinterName);
+
       console.log("[handleEditPrinter] Saving printer. thumbnailDataUrl length:", editPrinterThumbnail.length, "| isEmpty:", editPrinterThumbnail === "");
       await runAction("updatePrinter", {
         printerId: editPrinterId,
@@ -894,6 +913,10 @@ export default function AdminPage() {
         description: editPrinterDescription,
         thumbnailDataUrl: editPrinterThumbnail,
       });
+
+      if (oldSlug && newSlug !== oldSlug) {
+        setSlugUpdatedIds((prev) => new Set([...prev, editPrinterId]));
+      }
 
       setShowEditPrinterModal(false);
       setEditPrinterId(null);
@@ -1305,6 +1328,47 @@ export default function AdminPage() {
   const handlePrinterMenuClose = () => {
     setPrinterMenuAnchor(null);
     setSelectedPrinterForMenu(null);
+  };
+
+  const copyPrinterLink = (printer: Printer) => {
+    const url = `${window.location.origin}/?printer=${printer.slug}`;
+    void navigator.clipboard.writeText(url);
+  };
+
+  const generateAndDownloadQR = async (printer: Printer) => {
+    const url = `${window.location.origin}/?printer=${printer.slug}`;
+    const qrDataUrl = await QRCode.toDataURL(url, { width: 300, margin: 2, color: { dark: "#000000", light: "#ffffff" } });
+
+    const padding = 20;
+    const qrSize = 300;
+    const textHeight = 40;
+    const canvas = document.createElement("canvas");
+    canvas.width = qrSize + padding * 2;
+    canvas.height = qrSize + padding * 2 + textHeight;
+    const ctx = canvas.getContext("2d")!;
+    ctx.fillStyle = "#ffffff";
+    ctx.fillRect(0, 0, canvas.width, canvas.height);
+
+    const img = new Image();
+    img.onload = () => {
+      ctx.drawImage(img, padding, padding, qrSize, qrSize);
+      ctx.fillStyle = "#000000";
+      ctx.font = "bold 16px Arial, sans-serif";
+      ctx.textAlign = "center";
+      ctx.fillText(printer.name, canvas.width / 2, qrSize + padding + textHeight / 2 + 6);
+
+      const link = document.createElement("a");
+      link.download = `${printer.slug}-qr.png`;
+      link.href = canvas.toDataURL("image/png");
+      link.click();
+
+      setSlugUpdatedIds((prev) => {
+        const next = new Set(prev);
+        next.delete(printer.id);
+        return next;
+      });
+    };
+    img.src = qrDataUrl;
   };
 
   const handlePrinterMenuEdit = () => {
@@ -2593,7 +2657,7 @@ export default function AdminPage() {
                         >
                           Printer {printersSortByName ? "↑" : "↓"}
                         </TableCell>
-                        <TableCell align="center" sx={{ fontWeight: 700, width: 50, color: "#001F2D", fontSize: "0.95rem", padding: "16px" }}>⋯</TableCell>
+                        <TableCell align="center" sx={{ fontWeight: 700, width: 50, color: "#001F2D", fontSize: "0.95rem", padding: "16px" }}></TableCell>
                         <TableCell align="center" sx={{ fontWeight: 700, color: "#001F2D", fontSize: "0.95rem", padding: "16px" }}>Last Edited</TableCell>
                         <TableCell align="center" sx={{ fontWeight: 700, color: "#001F2D", fontSize: "0.95rem", padding: "16px" }}>Status</TableCell>
                       </TableRow>
@@ -2623,15 +2687,21 @@ export default function AdminPage() {
                             </Stack>
                           </TableCell>
                           <TableCell align="center">
-                            <IconButton
-                              size="small"
-                              onClick={(e) => {
-                                e.stopPropagation();
-                                handlePrinterMenuOpen(e, printer.id);
-                              }}
-                            >
-                              ⋯
-                            </IconButton>
+                            <Stack direction="row" alignItems="center" justifyContent="center">
+                              <IconButton size="small" onClick={(e) => { e.stopPropagation(); handlePrinterMenuOpen(e, printer.id); }}>
+                                ⋯
+                              </IconButton>
+                              <Tooltip title="Copy link">
+                                <IconButton size="small" onClick={(e) => { e.stopPropagation(); copyPrinterLink(printer); }}>
+                                  <ContentCopyIcon fontSize="small" />
+                                </IconButton>
+                              </Tooltip>
+                              <Tooltip title={slugUpdatedIds.has(printer.id) ? "Link updated — download new QR code" : "Download QR code"}>
+                                <IconButton size="small" onClick={(e) => { e.stopPropagation(); void generateAndDownloadQR(printer); }} sx={slugUpdatedIds.has(printer.id) ? { color: "#f59e0b" } : {}}>
+                                  <QrCodeIcon fontSize="small" />
+                                </IconButton>
+                              </Tooltip>
+                            </Stack>
                           </TableCell>
                           <TableCell align="center">
                             <Typography variant="body2" color="text.secondary">
@@ -2686,6 +2756,16 @@ export default function AdminPage() {
                   sx={{ minWidth: 220 }}
                 />
                 <Chip label={selectedPrinter.name} variant="outlined" size="small" sx={{ fontWeight: 700, fontSize: "1rem", borderColor: "#001F2D", color: "#001F2D", height: "auto", "& .MuiChip-label": { py: 0.25, px: 1 } }} />
+                <Link
+                  href={`/?printer=${selectedPrinter.slug}`}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  underline="hover"
+                  variant="caption"
+                  sx={{ color: "#009DC9", fontFamily: "monospace", whiteSpace: "nowrap" }}
+                >
+                  {`/?printer=${selectedPrinter.slug}`}
+                </Link>
               </Box>
               <Box sx={{ display: "flex", alignItems: "center", justifyContent: "space-between" }}>
                 <TextField
@@ -2743,7 +2823,7 @@ export default function AdminPage() {
                     >
                       Paper {papersSortByName ? "↑" : "↓"}
                     </TableCell>
-                    <TableCell align="center" sx={{ fontWeight: 700, width: 50, color: "#001F2D", fontSize: "0.95rem", padding: "16px" }}>⋯</TableCell>
+                    <TableCell align="center" sx={{ fontWeight: 700, width: 50, color: "#001F2D", fontSize: "0.95rem", padding: "16px" }}></TableCell>
                     <TableCell align="center" sx={{ fontWeight: 700, color: "#001F2D", fontSize: "0.95rem", padding: "16px" }}>Last Edited</TableCell>
                     <TableCell align="center" sx={{ fontWeight: 700, color: "#001F2D", fontSize: "0.95rem", padding: "16px" }}>Status</TableCell>
                   </TableRow>
@@ -2907,7 +2987,7 @@ export default function AdminPage() {
                       >
                         Colour {coloursSortByName ? "↑" : "↓"}
                       </TableCell>
-                      <TableCell align="center" sx={{ fontWeight: 700, width: 50, color: "#001F2D", fontSize: "0.95rem", padding: "16px" }}>⋯</TableCell>
+                      <TableCell align="center" sx={{ fontWeight: 700, width: 50, color: "#001F2D", fontSize: "0.95rem", padding: "16px" }}></TableCell>
                       <TableCell align="center" sx={{ fontWeight: 700, color: "#001F2D", fontSize: "0.95rem", padding: "16px" }}>Last Edited</TableCell>
                       <TableCell align="center" sx={{ fontWeight: 700, color: "#001F2D", fontSize: "0.95rem", padding: "16px" }}>Status</TableCell>
                     </TableRow>

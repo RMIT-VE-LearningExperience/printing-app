@@ -60,6 +60,7 @@ export type PrinterPaperWithPublished = Paper & {
 export type Printer = {
   id: string;
   name: string;
+  slug: string;
   description?: string;
   thumbnailDataUrl: string;
   published: boolean;
@@ -98,6 +99,16 @@ export type TutorialState = {
 };
 
 // ============= UTILITY FUNCTIONS =============
+
+export function generateSlug(name: string): string {
+  return name
+    .toLowerCase()
+    .trim()
+    .replace(/[^a-z0-9\s-]/g, "")
+    .replace(/\s+/g, "-")
+    .replace(/-+/g, "-")
+    .replace(/^-|-$/g, "");
+}
 
 function normalizeName(value: string, label: string): string {
   const result = value.trim();
@@ -354,6 +365,7 @@ export async function getTutorialState(): Promise<TutorialState> {
         return {
           id: doc.id,
           name: data.name,
+          slug: (data.slug as string) || generateSlug(data.name as string),
           description: data.description || "",
           thumbnailDataUrl: data.thumbnailDataUrl || "",
           published: data.published ?? true,
@@ -477,6 +489,7 @@ export async function addPrinter(
     const newPrinterId = generateId();
     await printersCollection().doc(newPrinterId).set({
       name: normalizedName,
+      slug: generateSlug(normalizedName),
       description: normalizedDescription,
       thumbnailDataUrl: thumbnailDataUrl || "",
       published: true,
@@ -501,7 +514,10 @@ export async function updatePrinter(
     const printerRef = await assertDocExists(printersCollection(), printerId, "Printer");
 
     const updates: Record<string, unknown> = {};
-    if (name) updates.name = normalizeName(name, "Printer name");
+    if (name) {
+      updates.name = normalizeName(name, "Printer name");
+      updates.slug = generateSlug(updates.name as string);
+    }
     if (description !== undefined) updates.description = normalizeDescription(description);
     if (thumbnailDataUrl !== undefined) updates.thumbnailDataUrl = thumbnailDataUrl;
     if (published !== undefined) updates.published = published;
