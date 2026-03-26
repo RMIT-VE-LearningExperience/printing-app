@@ -116,6 +116,7 @@ type ActionPayload =
       title: string;
       contentHtml: string;
       imageDataUrl: string;
+      videoUrl?: string;
     }
   | {
       action: "updateStep";
@@ -126,6 +127,7 @@ type ActionPayload =
       title?: string;
       contentHtml?: string;
       imageDataUrl?: string;
+      videoUrl?: string;
     }
   | {
       action: "deleteStep";
@@ -262,6 +264,7 @@ async function executeAction(payload: ActionPayload): Promise<TutorialState> {
         payload.title,
         payload.contentHtml,
         payload.imageDataUrl,
+        payload.videoUrl,
       );
 
     case "updateStep":
@@ -273,6 +276,7 @@ async function executeAction(payload: ActionPayload): Promise<TutorialState> {
         payload.title,
         payload.contentHtml,
         payload.imageDataUrl,
+        payload.videoUrl,
       );
 
     case "deleteStep":

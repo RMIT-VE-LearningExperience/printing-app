@@ -74,6 +74,7 @@ type Step = {
   title: string;
   contentHtml: string;
   imageDataUrl: string;
+  videoUrl?: string;
   order: number;
 };
 
@@ -120,12 +121,20 @@ type DeletedItem = {
   data: unknown;
 };
 
+type SectionSetting = { title: string; subtitle: string };
+type SectionSettings = {
+  printers: SectionSetting;
+  papers: SectionSetting;
+  colours: SectionSetting;
+};
+
 type TutorialState = {
   papers: Paper[];
   printers: Printer[];
   deletedItems?: DeletedItem[];
   homepageTitle?: string;
   homepageDescription?: string;
+  sectionSettings?: SectionSettings;
 };
 
 const emptyState: TutorialState = { papers: [], printers: [] };
@@ -135,6 +144,15 @@ type RichHtmlEditorProps = {
   value: string;
   onChange: (value: string) => void;
 };
+
+function getVideoEmbedUrl(url: string): string | null {
+  const ytMatch = url.match(/(?:youtube\.com\/watch\?v=|youtu\.be\/)([a-zA-Z0-9_-]{11})/);
+  if (ytMatch) return `https://www.youtube.com/embed/${ytMatch[1]}`;
+  const vimeoMatch = url.match(/vimeo\.com\/(\d+)/);
+  if (vimeoMatch) return `https://player.vimeo.com/video/${vimeoMatch[1]}`;
+  if (/\.(mp4|webm|ogg)(\?.*)?$/i.test(url)) return url;
+  return null;
+}
 
 function RichHtmlEditor({ label, value, onChange }: RichHtmlEditorProps) {
   const editorRef = useRef<HTMLDivElement | null>(null);
@@ -340,6 +358,10 @@ export default function AdminPage() {
   const [editStepContent, setEditStepContent] = useState("");
   const [editStepImage, setEditStepImage] = useState("");
   const [editStepImageName, setEditStepImageName] = useState("");
+  const [newStepVideoUrl, setNewStepVideoUrl] = useState("");
+  const [editStepVideoUrl, setEditStepVideoUrl] = useState("");
+  const [newStepMediaType, setNewStepMediaType] = useState<"image" | "video">("image");
+  const [editStepMediaType, setEditStepMediaType] = useState<"image" | "video">("image");
 
   // Sidebar state
   const [expandedPrinterList, setExpandedPrinterList] = useState(true);
@@ -1184,13 +1206,16 @@ export default function AdminPage() {
         colourId: selectedColorId,
         title: newStepTitle,
         contentHtml: newStepContent,
-        imageDataUrl: newStepImage,
+        imageDataUrl: newStepMediaType === "image" ? newStepImage : "",
+        videoUrl: newStepMediaType === "video" ? newStepVideoUrl : "",
       });
 
       setNewStepTitle("");
       setNewStepContent("");
       setNewStepImage("");
       setNewStepImageName("");
+      setNewStepVideoUrl("");
+      setNewStepMediaType("image");
       setShowAddStepModal(false);
     } catch {
       // Error already set in runAction
@@ -1215,7 +1240,8 @@ export default function AdminPage() {
         stepId: editStepId,
         title: editStepTitle,
         contentHtml: editStepContent,
-        imageDataUrl: editStepImage,
+        imageDataUrl: editStepMediaType === "image" ? editStepImage : "",
+        videoUrl: editStepMediaType === "video" ? editStepVideoUrl : "",
       });
 
       setShowEditStepModal(false);
@@ -1224,6 +1250,8 @@ export default function AdminPage() {
       setEditStepContent("");
       setEditStepImage("");
       setEditStepImageName("");
+      setEditStepVideoUrl("");
+      setEditStepMediaType("image");
     } catch {
       // Error already set in runAction
     }
@@ -1433,6 +1461,8 @@ export default function AdminPage() {
       setEditStepTitle(step.title);
       setEditStepContent(step.contentHtml);
       setEditStepImage(step.imageDataUrl);
+      setEditStepVideoUrl(step.videoUrl || "");
+      setEditStepMediaType(step.videoUrl ? "video" : "image");
       setImageUploadError(null);
       setImageCompressed(false);
       setShowEditStepModal(true);
@@ -4795,6 +4825,8 @@ export default function AdminPage() {
           setNewStepContent("");
           setNewStepImage("");
           setNewStepImageName("");
+          setNewStepVideoUrl("");
+          setNewStepMediaType("image");
           setImageUploadError(null);
           setImageCompressed(false);
         }}
@@ -4822,83 +4854,120 @@ export default function AdminPage() {
             />
 
             <Box>
-              <Typography variant="body2" fontWeight={500} sx={{ mb: 1 }}>
-                Image
-              </Typography>
-              <Box component="input" type="file" accept="image/jpeg,image/png,image/gif" onChange={(e: ChangeEvent<HTMLInputElement>) => { void handleNewStepImageUpload(e); }} />
-              {imageUploadError && (
-                <Typography variant="caption" color="error" display="block" sx={{ mt: 0.5 }}>
-                  {imageUploadError}
-                </Typography>
+              <Typography variant="body2" fontWeight={500} sx={{ mb: 1 }}>Media</Typography>
+              <Stack direction="row" spacing={1} sx={{ mb: 2 }}>
+                <Button
+                  size="small"
+                  variant={newStepMediaType === "image" ? "contained" : "outlined"}
+                  startIcon={<ImagePlaceholderIcon />}
+                  onClick={() => { setNewStepMediaType("image"); setNewStepVideoUrl(""); }}
+                  sx={{ textTransform: "none", fontWeight: 600, ...(newStepMediaType === "image" ? { backgroundColor: "#009DC9", color: "#fff", "&:hover": { backgroundColor: "#0081A8" } } : { color: "#009DC9", borderColor: "#009DC9" }) }}
+                >
+                  Image
+                </Button>
+                <Button
+                  size="small"
+                  variant={newStepMediaType === "video" ? "contained" : "outlined"}
+                  startIcon={<LinkIcon />}
+                  onClick={() => { setNewStepMediaType("video"); setNewStepImage(""); setNewStepImageName(""); setImageUploadError(null); setImageCompressed(false); }}
+                  sx={{ textTransform: "none", fontWeight: 600, ...(newStepMediaType === "video" ? { backgroundColor: "#009DC9", color: "#fff", "&:hover": { backgroundColor: "#0081A8" } } : { color: "#009DC9", borderColor: "#009DC9" }) }}
+                >
+                  Video URL
+                </Button>
+              </Stack>
+              {newStepMediaType === "image" && (
+                <>
+                  <Box component="input" type="file" accept="image/jpeg,image/png,image/gif" onChange={(e: ChangeEvent<HTMLInputElement>) => { void handleNewStepImageUpload(e); }} />
+                  {imageUploadError && (
+                    <Typography variant="caption" color="error" display="block" sx={{ mt: 0.5 }}>
+                      {imageUploadError}
+                    </Typography>
+                  )}
+                  {imageCompressed && (
+                    <Typography variant="caption" display="block" sx={{ mt: 0.5, color: "#f59e0b" }}>
+                      Image was compressed to meet the 700 KB limit.
+                    </Typography>
+                  )}
+                  {newStepImageName && (
+                    <Typography variant="caption" color="text.secondary" display="block" sx={{ mt: 1 }}>
+                      Selected: {newStepImageName}
+                    </Typography>
+                  )}
+                  {newStepImage && (
+                    <Box sx={{ mt: 2, display: "flex", gap: 2, alignItems: "flex-start" }}>
+                      <Box sx={{ position: "relative", display: "inline-block" }}>
+                        <Box
+                          component="img"
+                          src={newStepImage}
+                          alt="Step image preview"
+                          sx={{ width: 220, maxWidth: "100%", maxHeight: 300, objectFit: "cover", borderRadius: 1, border: "1px solid", borderColor: "divider" }}
+                        />
+                        <IconButton
+                          size="small"
+                          onClick={() => { setNewStepImage(""); setNewStepImageName(""); }}
+                          sx={{ position: "absolute", top: 0, right: 0, bgcolor: "rgba(255, 255, 255, 0.9)", "&:hover": { bgcolor: "rgba(255, 255, 255, 1)" } }}
+                        >
+                          ✕
+                        </IconButton>
+                      </Box>
+                      <Box sx={{ display: "flex", flexDirection: "column", gap: 1, mt: 1 }}>
+                        <Button
+                          size="small"
+                          variant="outlined"
+                          startIcon={<CropIcon />}
+                          onClick={() => openCropModal(newStepImage, "step")}
+                          sx={{ color: "#009DC9", borderColor: "#009DC9", textTransform: "none", fontWeight: 600 }}
+                        >
+                          Crop
+                        </Button>
+                      </Box>
+                    </Box>
+                  )}
+                </>
               )}
-              {imageCompressed && (
-                <Typography variant="caption" display="block" sx={{ mt: 0.5, color: "#f59e0b" }}>
-                  Image was compressed to meet the 700 KB limit.
-                </Typography>
-              )}
-              {newStepImageName && (
-                <Typography variant="caption" color="text.secondary" display="block" sx={{ mt: 1 }}>
-                  Selected: {newStepImageName}
-                </Typography>
-              )}
-              {newStepImage && (
-                <Box sx={{ mt: 2, display: "flex", gap: 2, alignItems: "flex-start" }}>
-                  <Box sx={{ position: "relative", display: "inline-block" }}>
-                    <Box
-                      component="img"
-                      src={newStepImage}
-                      alt="Step image preview"
-                      sx={{
-                        width: 220,
-                        maxWidth: "100%",
-                        maxHeight: 300,
-                        objectFit: "cover",
-                        borderRadius: 1,
-                        border: "1px solid",
-                        borderColor: "divider",
-                      }}
-                    />
-                    <IconButton
-                      size="small"
-                      onClick={() => {
-                        setNewStepImage("");
-                        setNewStepImageName("");
-                      }}
-                      sx={{
-                        position: "absolute",
-                        top: 0,
-                        right: 0,
-                        bgcolor: "rgba(255, 255, 255, 0.9)",
-                        "&:hover": { bgcolor: "rgba(255, 255, 255, 1)" },
-                      }}
-                    >
-                      ✕
-                    </IconButton>
-                  </Box>
-                  <Box sx={{ display: "flex", flexDirection: "column", gap: 1, mt: 1 }}>
-                    <Button
-                      size="small"
-                      variant="outlined"
-                      startIcon={<CropIcon />}
-                      onClick={() => openCropModal(newStepImage, "step")}
-                      sx={{
-                        color: "#009DC9",
-                        borderColor: "#009DC9",
-                        textTransform: "none",
-                        fontWeight: 600,
-                      }}
-                    >
-                      Crop
-                    </Button>
-                  </Box>
-                </Box>
+              {newStepMediaType === "video" && (
+                <Stack spacing={1.5}>
+                  <TextField
+                    label="Video URL"
+                    placeholder="YouTube, Vimeo, or direct .mp4 link"
+                    value={newStepVideoUrl}
+                    onChange={(e) => setNewStepVideoUrl(e.target.value)}
+                    fullWidth
+                    size="small"
+                    variant="outlined"
+                  />
+                  {getVideoEmbedUrl(newStepVideoUrl) && (
+                    <Box sx={{ position: "relative" }}>
+                      {/\.(mp4|webm|ogg)(\?.*)?$/i.test(newStepVideoUrl) ? (
+                        <Box component="video" controls src={newStepVideoUrl} sx={{ width: "100%", borderRadius: 1 }} />
+                      ) : (
+                        <Box sx={{ position: "relative", width: "100%", paddingBottom: "56.25%", borderRadius: 1, overflow: "hidden" }}>
+                          <Box
+                            component="iframe"
+                            src={getVideoEmbedUrl(newStepVideoUrl)!}
+                            allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
+                            allowFullScreen
+                            sx={{ position: "absolute", top: 0, left: 0, width: "100%", height: "100%", border: "none" }}
+                          />
+                        </Box>
+                      )}
+                      <IconButton
+                        size="small"
+                        onClick={() => setNewStepVideoUrl("")}
+                        sx={{ position: "absolute", top: 4, right: 4, bgcolor: "rgba(255,255,255,0.9)", "&:hover": { bgcolor: "#fff" } }}
+                      >
+                        ✕
+                      </IconButton>
+                    </Box>
+                  )}
+                </Stack>
               )}
             </Box>
           </Stack>
         </DialogContent>
         <DialogActions sx={{ borderTop: "1px solid #BDE9FF", pt: 2, pb: 2, px: 3, backgroundColor: "#F4FAFF" }}>
           <Button
-            onClick={() => { setShowAddStepModal(false); setImageUploadError(null); setImageCompressed(false); }}
+            onClick={() => { setShowAddStepModal(false); setNewStepVideoUrl(""); setNewStepMediaType("image"); setImageUploadError(null); setImageCompressed(false); }}
             sx={{ color: "#009DC9", fontWeight: 600, textTransform: "none" }}
           >
             Cancel
@@ -4930,6 +4999,8 @@ export default function AdminPage() {
           setEditStepContent("");
           setEditStepImage("");
           setEditStepImageName("");
+          setEditStepVideoUrl("");
+          setEditStepMediaType("image");
           setImageUploadError(null);
           setImageCompressed(false);
         }}
@@ -4957,83 +5028,120 @@ export default function AdminPage() {
             />
 
             <Box>
-              <Typography variant="body2" fontWeight={500} sx={{ mb: 1 }}>
-                Image
-              </Typography>
-              <Box component="input" type="file" accept="image/jpeg,image/png,image/gif" onChange={(e: ChangeEvent<HTMLInputElement>) => { void handleEditStepImageUpload(e); }} />
-              {imageUploadError && (
-                <Typography variant="caption" color="error" display="block" sx={{ mt: 0.5 }}>
-                  {imageUploadError}
-                </Typography>
+              <Typography variant="body2" fontWeight={500} sx={{ mb: 1 }}>Media</Typography>
+              <Stack direction="row" spacing={1} sx={{ mb: 2 }}>
+                <Button
+                  size="small"
+                  variant={editStepMediaType === "image" ? "contained" : "outlined"}
+                  startIcon={<ImagePlaceholderIcon />}
+                  onClick={() => { setEditStepMediaType("image"); setEditStepVideoUrl(""); }}
+                  sx={{ textTransform: "none", fontWeight: 600, ...(editStepMediaType === "image" ? { backgroundColor: "#009DC9", color: "#fff", "&:hover": { backgroundColor: "#0081A8" } } : { color: "#009DC9", borderColor: "#009DC9" }) }}
+                >
+                  Image
+                </Button>
+                <Button
+                  size="small"
+                  variant={editStepMediaType === "video" ? "contained" : "outlined"}
+                  startIcon={<LinkIcon />}
+                  onClick={() => { setEditStepMediaType("video"); setEditStepImage(""); setEditStepImageName(""); setImageUploadError(null); setImageCompressed(false); }}
+                  sx={{ textTransform: "none", fontWeight: 600, ...(editStepMediaType === "video" ? { backgroundColor: "#009DC9", color: "#fff", "&:hover": { backgroundColor: "#0081A8" } } : { color: "#009DC9", borderColor: "#009DC9" }) }}
+                >
+                  Video URL
+                </Button>
+              </Stack>
+              {editStepMediaType === "image" && (
+                <>
+                  <Box component="input" type="file" accept="image/jpeg,image/png,image/gif" onChange={(e: ChangeEvent<HTMLInputElement>) => { void handleEditStepImageUpload(e); }} />
+                  {imageUploadError && (
+                    <Typography variant="caption" color="error" display="block" sx={{ mt: 0.5 }}>
+                      {imageUploadError}
+                    </Typography>
+                  )}
+                  {imageCompressed && (
+                    <Typography variant="caption" display="block" sx={{ mt: 0.5, color: "#f59e0b" }}>
+                      Image was compressed to meet the 700 KB limit.
+                    </Typography>
+                  )}
+                  {editStepImageName && (
+                    <Typography variant="caption" color="text.secondary" display="block" sx={{ mt: 1 }}>
+                      Selected: {editStepImageName}
+                    </Typography>
+                  )}
+                  {editStepImage && (
+                    <Box sx={{ mt: 2, display: "flex", gap: 2, alignItems: "flex-start" }}>
+                      <Box sx={{ position: "relative", display: "inline-block" }}>
+                        <Box
+                          component="img"
+                          src={editStepImage}
+                          alt="Step image preview"
+                          sx={{ width: 220, maxWidth: "100%", maxHeight: 300, objectFit: "cover", borderRadius: 1, border: "1px solid", borderColor: "divider" }}
+                        />
+                        <IconButton
+                          size="small"
+                          onClick={() => { setEditStepImage(""); setEditStepImageName(""); }}
+                          sx={{ position: "absolute", top: 0, right: 0, bgcolor: "rgba(255, 255, 255, 0.9)", "&:hover": { bgcolor: "rgba(255, 255, 255, 1)" } }}
+                        >
+                          ✕
+                        </IconButton>
+                      </Box>
+                      <Box sx={{ display: "flex", flexDirection: "column", gap: 1, mt: 1 }}>
+                        <Button
+                          size="small"
+                          variant="outlined"
+                          startIcon={<CropIcon />}
+                          onClick={() => openCropModal(editStepImage, "step", true)}
+                          sx={{ color: "#009DC9", borderColor: "#009DC9", textTransform: "none", fontWeight: 600 }}
+                        >
+                          Crop
+                        </Button>
+                      </Box>
+                    </Box>
+                  )}
+                </>
               )}
-              {imageCompressed && (
-                <Typography variant="caption" display="block" sx={{ mt: 0.5, color: "#f59e0b" }}>
-                  Image was compressed to meet the 700 KB limit.
-                </Typography>
-              )}
-              {editStepImageName && (
-                <Typography variant="caption" color="text.secondary" display="block" sx={{ mt: 1 }}>
-                  Selected: {editStepImageName}
-                </Typography>
-              )}
-              {editStepImage && (
-                <Box sx={{ mt: 2, display: "flex", gap: 2, alignItems: "flex-start" }}>
-                  <Box sx={{ position: "relative", display: "inline-block" }}>
-                    <Box
-                      component="img"
-                      src={editStepImage}
-                      alt="Step image preview"
-                      sx={{
-                        width: 220,
-                        maxWidth: "100%",
-                        maxHeight: 300,
-                        objectFit: "cover",
-                        borderRadius: 1,
-                        border: "1px solid",
-                        borderColor: "divider",
-                      }}
-                    />
-                    <IconButton
-                      size="small"
-                      onClick={() => {
-                        setEditStepImage("");
-                        setEditStepImageName("");
-                      }}
-                      sx={{
-                        position: "absolute",
-                        top: 0,
-                        right: 0,
-                        bgcolor: "rgba(255, 255, 255, 0.9)",
-                        "&:hover": { bgcolor: "rgba(255, 255, 255, 1)" },
-                      }}
-                    >
-                      ✕
-                    </IconButton>
-                  </Box>
-                  <Box sx={{ display: "flex", flexDirection: "column", gap: 1, mt: 1 }}>
-                    <Button
-                      size="small"
-                      variant="outlined"
-                      startIcon={<CropIcon />}
-                      onClick={() => openCropModal(editStepImage, "step", true)}
-                      sx={{
-                        color: "#009DC9",
-                        borderColor: "#009DC9",
-                        textTransform: "none",
-                        fontWeight: 600,
-                      }}
-                    >
-                      Crop
-                    </Button>
-                  </Box>
-                </Box>
+              {editStepMediaType === "video" && (
+                <Stack spacing={1.5}>
+                  <TextField
+                    label="Video URL"
+                    placeholder="YouTube, Vimeo, or direct .mp4 link"
+                    value={editStepVideoUrl}
+                    onChange={(e) => setEditStepVideoUrl(e.target.value)}
+                    fullWidth
+                    size="small"
+                    variant="outlined"
+                  />
+                  {getVideoEmbedUrl(editStepVideoUrl) && (
+                    <Box sx={{ position: "relative" }}>
+                      {/\.(mp4|webm|ogg)(\?.*)?$/i.test(editStepVideoUrl) ? (
+                        <Box component="video" controls src={editStepVideoUrl} sx={{ width: "100%", borderRadius: 1 }} />
+                      ) : (
+                        <Box sx={{ position: "relative", width: "100%", paddingBottom: "56.25%", borderRadius: 1, overflow: "hidden" }}>
+                          <Box
+                            component="iframe"
+                            src={getVideoEmbedUrl(editStepVideoUrl)!}
+                            allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
+                            allowFullScreen
+                            sx={{ position: "absolute", top: 0, left: 0, width: "100%", height: "100%", border: "none" }}
+                          />
+                        </Box>
+                      )}
+                      <IconButton
+                        size="small"
+                        onClick={() => setEditStepVideoUrl("")}
+                        sx={{ position: "absolute", top: 4, right: 4, bgcolor: "rgba(255,255,255,0.9)", "&:hover": { bgcolor: "#fff" } }}
+                      >
+                        ✕
+                      </IconButton>
+                    </Box>
+                  )}
+                </Stack>
               )}
             </Box>
           </Stack>
         </DialogContent>
         <DialogActions sx={{ borderTop: "1px solid #BDE9FF", pt: 2, pb: 2, px: 3, backgroundColor: "#F4FAFF" }}>
           <Button
-            onClick={() => { setShowEditStepModal(false); setImageUploadError(null); setImageCompressed(false); }}
+            onClick={() => { setShowEditStepModal(false); setEditStepVideoUrl(""); setEditStepMediaType("image"); setImageUploadError(null); setImageCompressed(false); }}
             sx={{ color: "#009DC9", fontWeight: 600, textTransform: "none" }}
           >
             Cancel

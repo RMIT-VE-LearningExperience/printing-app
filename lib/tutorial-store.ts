@@ -14,6 +14,7 @@ export type Step = {
   title: string;
   contentHtml: string;
   imageDataUrl: string;
+  videoUrl?: string;
   order: number;
 };
 
@@ -918,6 +919,7 @@ export async function addStep(
   title: string,
   contentHtml: string,
   imageDataUrl: string,
+  videoUrl?: string,
 ): Promise<TutorialState> {
   try {
     const printerRef = await assertDocExists(printersCollection(), printerId, "Printer");
@@ -969,6 +971,7 @@ export async function addStep(
       title: normalizedTitle,
       contentHtml: contentHtml.trim(),
       imageDataUrl: imageDataUrl || "",
+      videoUrl: videoUrl || "",
       order: nextOrder + 1,
     });
 
@@ -987,6 +990,7 @@ export async function updateStep(
   title?: string,
   contentHtml?: string,
   imageDataUrl?: string,
+  videoUrl?: string,
 ): Promise<TutorialState> {
   try {
     const printerRef = await assertDocExists(printersCollection(), printerId, "Printer");
@@ -1040,6 +1044,7 @@ export async function updateStep(
       updates.contentHtml = trimmedContent;
     }
     if (imageDataUrl !== undefined) updates.imageDataUrl = imageDataUrl;
+    if (videoUrl !== undefined) updates.videoUrl = videoUrl;
 
     await stepRef.update(updates);
     await updatePrinterLastModified(printerId);

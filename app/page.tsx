@@ -22,6 +22,8 @@ import ArrowBackIcon from "@mui/icons-material/ArrowBack";
 import HomeIcon from "@mui/icons-material/Home";
 import KeyboardArrowUpIcon from "@mui/icons-material/KeyboardArrowUp";
 import ImageIcon from "@mui/icons-material/Image";
+import AddIcon from "@mui/icons-material/Add";
+import RemoveIcon from "@mui/icons-material/Remove";
 
 type Step = {
   id: string;
@@ -29,7 +31,17 @@ type Step = {
   title: string;
   contentHtml: string;
   imageDataUrl: string;
+  videoUrl?: string;
 };
+
+function getVideoEmbedUrl(url: string): string | null {
+  const ytMatch = url.match(/(?:youtube\.com\/watch\?v=|youtu\.be\/)([a-zA-Z0-9_-]{11})/);
+  if (ytMatch) return `https://www.youtube.com/embed/${ytMatch[1]}`;
+  const vimeoMatch = url.match(/vimeo\.com\/(\d+)/);
+  if (vimeoMatch) return `https://player.vimeo.com/video/${vimeoMatch[1]}`;
+  if (/\.(mp4|webm|ogg)(\?.*)?$/i.test(url)) return url;
+  return null;
+}
 
 type Colour = {
   id: string;
@@ -127,6 +139,7 @@ export default function HomePage() {
   const [selectedColourId, setSelectedColourId] = useState<string | null>(null);
   const [activeStepIndex, setActiveStepIndex] = useState(0);
   const [enlargedStepImageUrl, setEnlargedStepImageUrl] = useState<string | null>(null);
+  const [imgZoom, setImgZoom] = useState(1);
   const [showBackToTop, setShowBackToTop] = useState(false);
   const stepCardRefs = useRef<(HTMLDivElement | null)[]>([]);
   const visibleStepsRef = useRef(new Set<number>());
@@ -1106,8 +1119,24 @@ export default function HomePage() {
                       />
                     )}
 
-                    {/* Step Image */}
-                    {step.imageDataUrl && (
+                    {/* Step Media */}
+                    {step.videoUrl && getVideoEmbedUrl(step.videoUrl) ? (
+                      /\.(mp4|webm|ogg)(\?.*)?$/i.test(step.videoUrl) ? (
+                        <Box component="video" controls sx={{ width: "100%", borderRadius: 1 }}>
+                          <source src={step.videoUrl} />
+                        </Box>
+                      ) : (
+                        <Box sx={{ position: "relative", width: "100%", paddingBottom: "56.25%", borderRadius: 1, overflow: "hidden" }}>
+                          <Box
+                            component="iframe"
+                            src={getVideoEmbedUrl(step.videoUrl)!}
+                            allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
+                            allowFullScreen
+                            sx={{ position: "absolute", top: 0, left: 0, width: "100%", height: "100%", border: "none" }}
+                          />
+                        </Box>
+                      )
+                    ) : step.imageDataUrl ? (
                       <Box
                         onClick={() => setEnlargedStepImageUrl(step.imageDataUrl)}
                         sx={{
@@ -1125,7 +1154,7 @@ export default function HomePage() {
                           sizes="(max-width: 600px) 100vw, (max-width: 960px) 90vw, 800px"
                         />
                       </Box>
-                    )}
+                    ) : null}
                   </CardContent>
                 </Card>
               ))}
@@ -1134,21 +1163,34 @@ export default function HomePage() {
             {/* Shared Image Enlarge Modal */}
             <Modal
               open={!!enlargedStepImageUrl}
-              onClose={() => setEnlargedStepImageUrl(null)}
-              sx={{ display: "flex", alignItems: "center", justifyContent: "center", bgcolor: "rgba(0, 0, 0, 0.7)" }}
+              onClose={() => { setEnlargedStepImageUrl(null); setImgZoom(1); }}
+              sx={{ display: "flex", alignItems: "center", justifyContent: "center", bgcolor: "rgba(0, 0, 0, 0.85)" }}
             >
-              <Box
-                sx={{ position: "relative", width: { xs: "90%", sm: "80%", md: "70%" }, maxWidth: "900px", maxHeight: "90vh", borderRadius: "8px", overflow: "hidden" }}
-              >
-                {enlargedStepImageUrl && (
-                  <Image
-                    src={enlargedStepImageUrl}
-                    alt="Step image"
-                    width={900}
-                    height={600}
-                    style={{ width: "100%", height: "auto", objectFit: "contain" }}
-                  />
-                )}
+              <Box sx={{ outline: "none", display: "flex", flexDirection: "column", alignItems: "center", gap: 1 }}>
+                {/* Scrollable image */}
+                <Box sx={{ overflow: "auto", maxWidth: "90vw", maxHeight: "80vh", borderRadius: "8px", bgcolor: "#111", lineHeight: 0 }}>
+                  {enlargedStepImageUrl && (
+                    // eslint-disable-next-line @next/next/no-img-element
+                    <img
+                      src={enlargedStepImageUrl}
+                      alt="Step image"
+                      style={{ display: "block", width: `${imgZoom * 100}%`, height: "auto", cursor: imgZoom > 1 ? "zoom-out" : "zoom-in" }}
+                      onClick={() => setImgZoom(z => z > 1 ? 1 : 1.5)}
+                    />
+                  )}
+                </Box>
+                {/* Zoom controls */}
+                <Stack direction="row" alignItems="center" spacing={1} sx={{ bgcolor: "rgba(0,0,0,0.6)", borderRadius: 2, px: 1.5, py: 0.5 }}>
+                  <IconButton size="small" onClick={() => setImgZoom(z => Math.max(1, z - 0.5))} disabled={imgZoom <= 1} sx={{ color: "white" }}>
+                    <RemoveIcon fontSize="small" />
+                  </IconButton>
+                  <Typography variant="caption" sx={{ color: "white", minWidth: 36, textAlign: "center" }}>
+                    {Math.round(imgZoom * 100)}%
+                  </Typography>
+                  <IconButton size="small" onClick={() => setImgZoom(z => Math.min(1.5, z + 0.5))} disabled={imgZoom >= 1.5} sx={{ color: "white" }}>
+                    <AddIcon fontSize="small" />
+                  </IconButton>
+                </Stack>
               </Box>
             </Modal>
           </Container>

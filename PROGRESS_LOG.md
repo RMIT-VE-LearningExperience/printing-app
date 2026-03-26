@@ -1,6 +1,6 @@
 # Print App CMS - Progress Log
 
-**Last Updated:** March 24, 2026 (Session 3)
+**Last Updated:** March 26, 2026 (Session 4)
 **Project:** Print App CMS System
 **User:** Arielle Lee (arielle.lee@rmit.edu.au)
 
@@ -391,6 +391,43 @@ When testing after any changes:
 ---
 
 ## Session History
+
+### Current Session (March 26, 2026) - Session 4
+
+- **TypeScript fix: `sectionSettings` missing from local `TutorialState` type (admin)**
+  - ✅ Local `TutorialState` type in `app/admin/page.tsx` was missing `sectionSettings?: SectionSettings` — caused TS2339 red highlight errors at lines 447–448
+  - ✅ Added `SectionSetting` and `SectionSettings` type definitions locally, added `sectionSettings?` field to the type
+  - Files Modified: `app/admin/page.tsx`
+
+- **Step image zoom on user-facing Steps page**
+  - ✅ Added `imgZoom` state (default 1×) to the enlarged image modal
+  - ✅ Single click/tap on the image toggles between 1× and 1.5×; cursor reflects zoom state (`zoom-in` / `zoom-out`)
+  - ✅ `−` / percentage label / `+` controls below the image for fine-grained zoom (0.5× steps, capped at 1.5×)
+  - ✅ Scrollable container (`overflow: auto`) allows panning when zoomed
+  - ✅ Zoom resets to 1× when the modal closes
+  - ✅ Switched from Next.js `<Image>` to plain `<img>` inside the modal — enables percentage-width zoom trick with natural panning
+  - ✅ Added `AddIcon` and `RemoveIcon` imports
+  - Files Modified: `app/page.tsx`
+
+- **Step media: video URL or image thumbnail (mutually exclusive) in CMS**
+  - ✅ Added `videoUrl?: string` to `Step` type in `lib/tutorial-store.ts`, `app/admin/page.tsx`, and `app/page.tsx`
+  - ✅ `addStep()` and `updateStep()` in `lib/tutorial-store.ts` accept and persist `videoUrl` to Firestore
+  - ✅ API route `addStep` and `updateStep` action payloads include `videoUrl?`; passed through `executeAction()`
+  - ✅ Admin Add Step + Edit Step modals: **Image / Video URL** toggle replaces the old image-only section
+    - Selecting "Image" clears any video URL; selecting "Video URL" clears image and resets upload state
+    - Image tab: existing upload, compress, crop, preview, and remove UI unchanged
+    - Video URL tab: `TextField` for URL input
+  - ✅ `handleStepMenuEdit` loads `videoUrl` from the step and sets `editStepMediaType` accordingly on open
+  - ✅ All modal close and cancel handlers reset `videoUrl` and `mediaType` state
+  - ✅ `getVideoEmbedUrl()` helper added to `app/admin/page.tsx` (YouTube, Vimeo, direct .mp4/webm/ogg)
+  - ✅ Video URL tab shows a **live iframe/video preview** automatically when a valid URL is detected
+    - YouTube/Vimeo → 16:9 responsive `<iframe>` embed
+    - Direct video file → `<video controls>` element
+    - ✕ button overlaid on the preview clears the URL
+  - ✅ User-facing Steps page: renders video embed (iframe or `<video>`) when `videoUrl` is set, otherwise falls back to existing image with zoom; `getVideoEmbedUrl()` helper added to `app/page.tsx`
+  - Files Modified: `lib/tutorial-store.ts`, `app/api/tutorial/route.ts`, `app/admin/page.tsx`, `app/page.tsx`
+
+---
 
 ### Current Session (March 24, 2026) - Part 3
 - **CMS section heading layout polish**
