@@ -71,7 +71,7 @@ export default function LoginPage() {
         }}
       >
         <Typography variant="h4" fontWeight={700} mb={2} textAlign="center">
-          Admin Login
+          Login
         </Typography>
 
         {linkSent ? (
@@ -95,7 +95,7 @@ export default function LoginPage() {
         ) : (
           <Stack spacing={2}>
             <TextField
-              label="Admin Email"
+              label="Email"
               type="email"
               value={email}
               onChange={(e) => {
@@ -118,11 +118,11 @@ export default function LoginPage() {
               fullWidth
               sx={{ mt: 2 }}
             >
-              {loading ? <CircularProgress size={24} /> : "Send Sign-In Link"}
+              {loading ? <CircularProgress size={24} /> : "Send Link"}
             </Button>
 
             <Typography variant="caption" color="#999" textAlign="center" sx={{ mt: 3 }}>
-              A magic link will be sent to your email. Click it to sign in securely.
+              A link will be sent to your email. Click to access the app as an admin.
             </Typography>
           </Stack>
         )}

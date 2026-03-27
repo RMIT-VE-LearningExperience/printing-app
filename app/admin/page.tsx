@@ -2522,41 +2522,6 @@ export default function AdminPage() {
             </Stack>
             )}
 
-        {/* Logout */}
-        <Box sx={{ mt: "auto", pt: 2 }}>
-          {sidebarCollapsed ? (
-            <Box sx={{ display: "flex", justifyContent: "center" }}>
-              <Tooltip title="Sign Out" placement="right">
-                <IconButton
-                  onClick={() => void signOut()}
-                  size="large"
-                  sx={{
-                    width: 50,
-                    height: 50,
-                    borderRadius: 1,
-                    color: "rgba(255,255,255,0.5)",
-                    "&:hover": { color: "#ffffff", bgcolor: "rgba(255,255,255,0.1)" },
-                  }}
-                >
-                  <LogoutIcon sx={{ fontSize: 22 }} />
-                </IconButton>
-              </Tooltip>
-            </Box>
-          ) : (
-            <Button
-              fullWidth
-              startIcon={<LogoutIcon />}
-              onClick={() => void signOut()}
-              sx={{
-                justifyContent: "flex-start",
-                color: "rgba(255,255,255,0.5)",
-                "&:hover": { color: "#ffffff", bgcolor: "rgba(255,255,255,0.08)" },
-              }}
-            >
-              Sign Out
-            </Button>
-          )}
-        </Box>
       </Box>
 
       {/* MAIN CONTENT */}
@@ -2588,8 +2553,8 @@ export default function AdminPage() {
         )}
 
         {/* Breadcrumbs Navigation */}
-        <Box sx={{ mb: 3 }}>
-          <Breadcrumbs aria-label="breadcrumb" sx={{ mb: 2 }}>
+        <Box sx={{ mb: 3, display: "flex", alignItems: "center", justifyContent: "space-between" }}>
+          <Breadcrumbs aria-label="breadcrumb">
             <Link
               component="button"
               variant="body2"
@@ -2648,6 +2613,11 @@ export default function AdminPage() {
               </Typography>
             )}
           </Breadcrumbs>
+          <Tooltip title="Sign Out">
+            <IconButton onClick={() => void signOut()} size="small" sx={{ color: "#666", "&:hover": { color: "#333" } }}>
+              <LogoutIcon fontSize="small" />
+            </IconButton>
+          </Tooltip>
         </Box>
 
         {!showDeletedItems && (

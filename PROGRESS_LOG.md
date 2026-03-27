@@ -392,7 +392,24 @@ When testing after any changes:
 
 ## Session History
 
-### Current Session (March 27, 2026) - Session 6
+### Current Session (March 27, 2026) - Session 7
+
+- **Login page UI updates**
+  - ✅ "Admin Login" → "Login"
+  - ✅ "Admin Email" → "Email"
+  - ✅ "Send Sign-In Link" → "Send Link"
+  - ✅ Caption updated to "A link will be sent to your email. Click to access the app as an admin."
+  - Files Modified: `app/login/page.tsx`
+
+- **Sign Out button repositioned**
+  - ✅ Removed from sidebar bottom
+  - ✅ Moved to top-right of main content area, inline with breadcrumb row — visible on all sections including Steps
+  - ✅ Icon only (`LogoutIcon`) with "Sign Out" tooltip on hover
+  - Files Modified: `app/admin/page.tsx`
+
+---
+
+### Previous Session (March 27, 2026) - Session 6
 
 - **Admin authentication system — Phase 2a (magic link login)**
   - ✅ Installed `firebase` client SDK (`npm install firebase`)
