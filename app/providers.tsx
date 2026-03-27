@@ -2,6 +2,7 @@
 
 import { CssBaseline, ThemeProvider, createTheme, responsiveFontSizes } from "@mui/material";
 import type { ReactNode } from "react";
+import { AuthProvider } from "./auth-provider";
 
 const baseTheme = createTheme({
   palette: {
@@ -103,9 +104,11 @@ type ProvidersProps = {
 
 export default function Providers({ children }: ProvidersProps) {
   return (
-    <ThemeProvider theme={theme}>
-      <CssBaseline />
-      {children}
-    </ThemeProvider>
+    <AuthProvider>
+      <ThemeProvider theme={theme}>
+        <CssBaseline />
+        {children}
+      </ThemeProvider>
+    </AuthProvider>
   );
 }

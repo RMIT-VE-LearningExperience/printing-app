@@ -66,10 +66,14 @@ import {
   DragIndicator as DragIndicatorIcon,
   QrCode2 as QrCodeIcon,
   ContentCopy as ContentCopyIcon,
+  Logout as LogoutIcon,
 } from "@mui/icons-material";
 import QRCode from "qrcode";
 import { DragDropContext, Droppable, Draggable, type DropResult } from "@hello-pangea/dnd";
-import { type ChangeEvent, useEffect, useMemo, useRef, useState } from "react";
+import { type ChangeEvent, useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { useRouter } from "next/navigation";
+import { useAuth } from "../auth-provider";
+import { getAuthInstance } from "../../lib/firebase-client";
 
 type Step = {
   id: string;
@@ -275,6 +279,27 @@ function RichHtmlEditor({ label, value, onChange }: RichHtmlEditorProps) {
 }
 
 export default function AdminPage() {
+  const { user, loading: authLoading, signOut } = useAuth();
+  const router = useRouter();
+
+  // Redirect to login if not authenticated
+  useEffect(() => {
+    if (!authLoading && !user) {
+      router.replace("/login");
+    }
+  }, [authLoading, user, router]);
+
+  // Get a fresh Firebase ID token for API calls
+  const getAuthToken = useCallback(async (): Promise<string> => {
+    try {
+      const firebaseAuth = getAuthInstance();
+      const token = await firebaseAuth.currentUser?.getIdToken();
+      return token ?? window.localStorage.getItem("adminAuthToken") ?? "";
+    } catch {
+      return window.localStorage.getItem("adminAuthToken") ?? "";
+    }
+  }, []);
+
   const [tutorialState, setTutorialState] = useState<TutorialState>(emptyState);
 
   // Hierarchy-based navigation state
@@ -463,7 +488,11 @@ export default function AdminPage() {
       setError(null);
 
       try {
-        const response = await fetch("/api/tutorial", { cache: "no-store" });
+        const token = await getAuthToken();
+        const response = await fetch("/api/tutorial", {
+          cache: "no-store",
+          headers: { Authorization: `Bearer ${token}` },
+        });
         const data = (await response.json()) as { state?: TutorialState; error?: string };
 
         if (!response.ok || !data.state) {
@@ -575,9 +604,10 @@ export default function AdminPage() {
     setSuccess(null);
 
     try {
+      const token = await getAuthToken();
       const response = await fetch("/api/tutorial", {
         method: "POST",
-        headers: { "Content-Type": "application/json" },
+        headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` },
         body: JSON.stringify({ action, payload }),
       });
 
@@ -808,9 +838,10 @@ export default function AdminPage() {
 
     setHomepageSaving(true);
     try {
+      const token = await getAuthToken();
       const res = await fetch("/api/tutorial", {
         method: "POST",
-        headers: { "Content-Type": "application/json" },
+        headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` },
         body: JSON.stringify({ action: "updateHomepageSettings", payload: { title: homePageTitle, description: homePageDescription } }),
       });
       if (!res.ok) throw new Error("Failed to save homepage settings");
@@ -835,9 +866,10 @@ export default function AdminPage() {
   const handleSaveSectionSettings = async (section: "printers" | "papers" | "colours") => {
     setSectionSavingKey(section);
     try {
+      const token = await getAuthToken();
       const res = await fetch("/api/tutorial", {
         method: "POST",
-        headers: { "Content-Type": "application/json" },
+        headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` },
         body: JSON.stringify({
           action: "updateSectionSettings",
           payload: {
@@ -2489,6 +2521,42 @@ export default function AdminPage() {
           </Button>
             </Stack>
             )}
+
+        {/* Logout */}
+        <Box sx={{ mt: "auto", pt: 2 }}>
+          {sidebarCollapsed ? (
+            <Box sx={{ display: "flex", justifyContent: "center" }}>
+              <Tooltip title="Sign Out" placement="right">
+                <IconButton
+                  onClick={() => void signOut()}
+                  size="large"
+                  sx={{
+                    width: 50,
+                    height: 50,
+                    borderRadius: 1,
+                    color: "rgba(255,255,255,0.5)",
+                    "&:hover": { color: "#ffffff", bgcolor: "rgba(255,255,255,0.1)" },
+                  }}
+                >
+                  <LogoutIcon sx={{ fontSize: 22 }} />
+                </IconButton>
+              </Tooltip>
+            </Box>
+          ) : (
+            <Button
+              fullWidth
+              startIcon={<LogoutIcon />}
+              onClick={() => void signOut()}
+              sx={{
+                justifyContent: "flex-start",
+                color: "rgba(255,255,255,0.5)",
+                "&:hover": { color: "#ffffff", bgcolor: "rgba(255,255,255,0.08)" },
+              }}
+            >
+              Sign Out
+            </Button>
+          )}
+        </Box>
       </Box>
 
       {/* MAIN CONTENT */}

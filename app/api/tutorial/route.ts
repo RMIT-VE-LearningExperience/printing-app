@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
+import { auth } from "../../../lib/firebase-admin";
 
 import {
   addColour,
@@ -329,6 +330,22 @@ async function executeAction(payload: ActionPayload): Promise<TutorialState> {
 
 export async function POST(req: NextRequest) {
   try {
+    // Verify admin auth token
+    const authHeader = req.headers.get("Authorization");
+    const token = authHeader?.startsWith("Bearer ") ? authHeader.slice(7) : null;
+    if (!token) {
+      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+    }
+    try {
+      const decoded = await auth.verifyIdToken(token);
+      const role = decoded.role as string | undefined;
+      if (role !== "admin" && role !== "superadmin") {
+        return NextResponse.json({ error: "Forbidden" }, { status: 403 });
+      }
+    } catch {
+      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+    }
+
     const body = (await req.json()) as { action: string; payload: unknown };
 
     if (!body.action || !body.payload) {

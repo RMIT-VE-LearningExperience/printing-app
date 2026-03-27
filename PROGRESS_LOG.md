@@ -392,7 +392,34 @@ When testing after any changes:
 
 ## Session History
 
-### Current Session (March 26, 2026) - Session 5
+### Current Session (March 27, 2026) - Session 6
+
+- **Admin authentication system — Phase 2a (magic link login)**
+  - ✅ Installed `firebase` client SDK (`npm install firebase`)
+  - ✅ Created `lib/firebase-client.ts` — Firebase client SDK singleton; exports `initializeFirebaseClient()` and `getAuthInstance()`
+  - ✅ Created `app/auth-provider.tsx` — `AuthProvider` React context exposing `user`, `role`, `loading`, `signOut()`; listens to `onAuthStateChanged`; clears session on sign-out
+  - ✅ Updated `app/providers.tsx` — wraps MUI `ThemeProvider` inside `AuthProvider`
+  - ✅ `app/layout.tsx` already wrapping children with `<Providers>` — no change needed
+  - ✅ Created `app/login/page.tsx` — email input form; sends magic link via `sendSignInLinkToEmail()`; saves email to `localStorage` for callback
+  - ✅ Created `app/login/callback/page.tsx` — detects magic link, completes sign-in, calls `/api/verify-auth`, stores `adminAuthToken` + `adminRole` in localStorage, sets `adminSession` cookie, redirects to `/admin`
+  - ✅ Created `app/api/verify-auth/route.ts` — verifies Firebase ID token, checks `admins` Firestore allowlist (`active: true`), sets custom claim `{ role }`, updates `lastLogin`
+  - ✅ Updated `middleware.ts` — redirects `/admin` to `/login` if `adminSession` cookie is absent
+  - ✅ Updated `app/api/tutorial/route.ts` — POST handler now requires `Authorization: Bearer <token>`; verifies token via Firebase Admin SDK; rejects if role is not `admin` or `superadmin`; GET remains public (used by user-facing page)
+  - ✅ Updated `app/admin/page.tsx` — added `useAuth()` hook with redirect-to-login if unauthenticated; `getAuthToken()` helper fetches fresh Firebase ID token; all 4 fetch calls include `Authorization` header; **Sign Out button** added at bottom of sidebar (collapsed: icon only, expanded: labelled button)
+  - ✅ Fixed broken `{ admin }` import in `verify-auth/route.ts` — `lib/firebase-admin.ts` now exports `auth` (via `getAuth(app)`) alongside existing `db` and `bucket`
+  - Files Created: `lib/firebase-client.ts`, `app/auth-provider.tsx`, `app/login/page.tsx`, `app/login/callback/page.tsx`, `app/api/verify-auth/route.ts`
+  - Files Modified: `lib/firebase-admin.ts`, `app/providers.tsx`, `middleware.ts`, `app/api/tutorial/route.ts`, `app/admin/page.tsx`
+
+- **Admin seed script**
+  - ✅ Created `scripts/admins.json` — list of admins to seed (email + role)
+  - ✅ Created `scripts/seed-admins.js` — reads `admins.json`, gets or creates Firebase Auth user per email, writes `admins/{uid}` Firestore document with `email`, `role`, `active: true`, `addedAt`
+  - ✅ Added `seed-admins` npm script — runs via `npm run seed-admins` using Node 20's `--env-file` flag to load `.env.local` automatically
+  - Files Created: `scripts/admins.json`, `scripts/seed-admins.js`
+  - Files Modified: `package.json`
+
+---
+
+### Previous Session (March 26, 2026) - Session 5
 
 - **Table header cleanup: removed `⋯` text from all table headers**
   - ✅ Removed `⋯` character from the action column header in the Printers, Papers, and Colours tables
