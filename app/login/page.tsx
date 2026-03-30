@@ -122,7 +122,7 @@ export default function LoginPage() {
             </Button>
 
             <Typography variant="caption" color="#999" textAlign="center" sx={{ mt: 3 }}>
-              A link will be sent to your email. Click to access the app as an admin.
+              A link will be sent to your email. Click to access the admin site.
             </Typography>
           </Stack>
         )}
