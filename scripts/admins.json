@@ -1,6 +1,14 @@
 [
   {
+    "name": "AJL",
     "email": "ajlworkstuff626@gmail.com",
-    "role": "superadmin"
+    "role": "superadmin",
+    "staffNumber": "00001"
+  },
+  {
+    "name": "Arielle Lee",
+    "email": "arielle.lee@rmit.edu.au",
+    "role": "superadmin",
+    "staffNumber": "e91629"
   }
 ]

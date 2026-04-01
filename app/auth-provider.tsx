@@ -1,9 +1,12 @@
 "use client";
 
-import React, { createContext, useContext, useEffect, useState, ReactNode } from "react";
+import React, { createContext, useCallback, useContext, useEffect, useState, ReactNode } from "react";
 import { onAuthStateChanged, signOut as firebaseSignOut } from "firebase/auth";
 import { useRouter } from "next/navigation";
 import { initializeFirebaseClient, getAuthInstance } from "../lib/firebase-client";
+
+const SESSION_DURATION_MS = 8 * 60 * 60 * 1000; // 8 hours
+const CHECK_INTERVAL_MS = 60 * 1000; // check every minute
 
 interface User {
   uid: string;
@@ -58,13 +61,39 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     }
   }, []);
 
+  const clearSession = useCallback(() => {
+    window.localStorage.removeItem("adminAuthToken");
+    window.localStorage.removeItem("adminRole");
+    window.localStorage.removeItem("adminLoginTime");
+    document.cookie = "adminSession=; path=/; expires=Thu, 01 Jan 1970 00:00:00 GMT";
+  }, []);
+
+  // Enforce 8-hour hard session limit
+  useEffect(() => {
+    if (!user) return;
+
+    const interval = setInterval(() => {
+      const loginTime = window.localStorage.getItem("adminLoginTime");
+      if (!loginTime) return;
+
+      const elapsed = Date.now() - parseInt(loginTime, 10);
+      if (elapsed >= SESSION_DURATION_MS) {
+        clearSession();
+        const auth = getAuthInstance();
+        void firebaseSignOut(auth).finally(() => {
+          router.push("/login");
+        });
+      }
+    }, CHECK_INTERVAL_MS);
+
+    return () => clearInterval(interval);
+  }, [user, clearSession, router]);
+
   const handleSignOut = async () => {
     try {
       const auth = getAuthInstance();
       await firebaseSignOut(auth);
-      window.localStorage.removeItem("adminAuthToken");
-      window.localStorage.removeItem("adminRole");
-      document.cookie = "adminSession=; path=/; expires=Thu, 01 Jan 1970 00:00:00 GMT";
+      clearSession();
       router.push("/login");
     } catch (err) {
       console.error("Sign out error:", err);

@@ -33,7 +33,7 @@ async function seedAdmins() {
   console.log(`\nSeeding ${admins.length} admin(s)...\n`);
 
   for (const entry of admins) {
-    const { email, role = "admin" } = entry;
+    const { email, role = "admin", name = "", staffNumber = "" } = entry;
 
     try {
       // Get existing Firebase Auth user, or create one
@@ -55,8 +55,10 @@ async function seedAdmins() {
       // Write to Firestore admins collection (merge so existing fields are kept)
       await db.collection("admins").doc(uid).set(
         {
+          name,
           email,
           role,
+          staffNumber,
           active: true,
           addedAt: new Date(),
         },

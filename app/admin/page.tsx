@@ -67,6 +67,9 @@ import {
   QrCode2 as QrCodeIcon,
   ContentCopy as ContentCopyIcon,
   Logout as LogoutIcon,
+  Settings as SettingsIcon,
+  CheckCircleOutline as ApproveIcon,
+  CancelOutlined as RejectIcon,
 } from "@mui/icons-material";
 import QRCode from "qrcode";
 import { DragDropContext, Droppable, Draggable, type DropResult } from "@hello-pangea/dnd";
@@ -279,7 +282,7 @@ function RichHtmlEditor({ label, value, onChange }: RichHtmlEditorProps) {
 }
 
 export default function AdminPage() {
-  const { user, loading: authLoading, signOut } = useAuth();
+  const { user, role, loading: authLoading, signOut } = useAuth();
   const router = useRouter();
 
   // Redirect to login if not authenticated
@@ -324,6 +327,63 @@ export default function AdminPage() {
   const [showEditColourModal, setShowEditColourModal] = useState(false);
   const [showAddStepModal, setShowAddStepModal] = useState(false);
   const [showEditStepModal, setShowEditStepModal] = useState(false);
+
+  // Superadmin modal
+  const [showSuperadminModal, setShowSuperadminModal] = useState(false);
+  const [pendingRequests, setPendingRequests] = useState<{
+    id: string;
+    name: string;
+    email: string;
+    staffNumber: string;
+    requestedAt: string;
+  }[]>([]);
+  const [pendingLoading, setPendingLoading] = useState(false);
+  const [pendingError, setPendingError] = useState("");
+  const [reviewingId, setReviewingId] = useState<string | null>(null);
+
+  const loadPendingRequests = useCallback(async () => {
+    setPendingLoading(true);
+    setPendingError("");
+    try {
+      const token = await getAuthToken();
+      const response = await fetch("/api/admin-requests", {
+        headers: { Authorization: `Bearer ${token}` },
+      });
+      if (!response.ok) {
+        setPendingError("Failed to load requests");
+        return;
+      }
+      const data = await response.json() as { requests: typeof pendingRequests };
+      setPendingRequests(data.requests);
+    } catch {
+      setPendingError("Failed to load requests");
+    } finally {
+      setPendingLoading(false);
+    }
+  }, [getAuthToken]);
+
+  const handleReview = async (requestId: string, action: "approve" | "reject") => {
+    setReviewingId(requestId);
+    try {
+      const token = await getAuthToken();
+      const response = await fetch("/api/admin-approve", {
+        method: "POST",
+        headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` },
+        body: JSON.stringify({ requestId, action, reviewerUid: user?.uid }),
+      });
+      if (!response.ok) {
+        const data = await response.json() as { error?: string };
+        setPendingError(data.error || "Action failed");
+        return;
+      }
+      // Remove reviewed request from the list
+      setPendingRequests((prev) => prev.filter((r) => r.id !== requestId));
+    } catch {
+      setPendingError("Action failed");
+    } finally {
+      setReviewingId(null);
+    }
+  };
 
   // Form inputs - Printers
   const [homePageTitle, setHomePageTitle] = useState("");
@@ -2613,11 +2673,27 @@ export default function AdminPage() {
               </Typography>
             )}
           </Breadcrumbs>
-          <Tooltip title="Sign Out">
-            <IconButton onClick={() => void signOut()} size="small" sx={{ color: "#666", "&:hover": { color: "#333" } }}>
-              <LogoutIcon fontSize="small" />
-            </IconButton>
-          </Tooltip>
+          <Stack direction="row" spacing={0.5} alignItems="center">
+            {role === "superadmin" && (
+              <Tooltip title="Superadmin Settings">
+                <IconButton
+                  onClick={() => {
+                    setShowSuperadminModal(true);
+                    void loadPendingRequests();
+                  }}
+                  size="small"
+                  sx={{ color: "#666", "&:hover": { color: "#333" } }}
+                >
+                  <SettingsIcon fontSize="small" />
+                </IconButton>
+              </Tooltip>
+            )}
+            <Tooltip title="Sign Out">
+              <IconButton onClick={() => void signOut()} size="small" sx={{ color: "#666", "&:hover": { color: "#333" } }}>
+                <LogoutIcon fontSize="small" />
+              </IconButton>
+            </Tooltip>
+          </Stack>
         </Box>
 
         {!showDeletedItems && (
@@ -3607,6 +3683,102 @@ export default function AdminPage() {
           </Box>
         )}
       </Box>
+
+      {/* Superadmin Settings Modal */}
+      <Dialog
+        open={showSuperadminModal}
+        onClose={() => {
+          setShowSuperadminModal(false);
+          setPendingError("");
+        }}
+        maxWidth="sm"
+        fullWidth
+      >
+        <DialogTitle sx={{ fontWeight: 700 }}>Superadmin Settings</DialogTitle>
+        <DialogContent dividers>
+          <Typography variant="subtitle1" fontWeight={600} mb={2}>
+            Pending Access Requests
+          </Typography>
+
+          {pendingLoading && (
+            <Box display="flex" justifyContent="center" py={3}>
+              <CircularProgress size={28} />
+            </Box>
+          )}
+
+          {pendingError && (
+            <Alert severity="error" sx={{ mb: 2 }}>{pendingError}</Alert>
+          )}
+
+          {!pendingLoading && pendingRequests.length === 0 && (
+            <Typography variant="body2" color="text.secondary" textAlign="center" py={3}>
+              No pending requests
+            </Typography>
+          )}
+
+          {!pendingLoading && pendingRequests.length > 0 && (
+            <TableContainer>
+              <Table size="small">
+                <TableHead>
+                  <TableRow>
+                    <TableCell><strong>Name</strong></TableCell>
+                    <TableCell><strong>Email</strong></TableCell>
+                    <TableCell><strong>E-number</strong></TableCell>
+                    <TableCell align="right"><strong>Actions</strong></TableCell>
+                  </TableRow>
+                </TableHead>
+                <TableBody>
+                  {pendingRequests.map((req) => (
+                    <TableRow key={req.id}>
+                      <TableCell>{req.name}</TableCell>
+                      <TableCell>{req.email}</TableCell>
+                      <TableCell>{req.staffNumber}</TableCell>
+                      <TableCell align="right">
+                        <Stack direction="row" spacing={0.5} justifyContent="flex-end">
+                          <Tooltip title="Approve">
+                            <span>
+                              <IconButton
+                                size="small"
+                                color="success"
+                                disabled={reviewingId === req.id}
+                                onClick={() => void handleReview(req.id, "approve")}
+                              >
+                                {reviewingId === req.id ? (
+                                  <CircularProgress size={16} />
+                                ) : (
+                                  <ApproveIcon fontSize="small" />
+                                )}
+                              </IconButton>
+                            </span>
+                          </Tooltip>
+                          <Tooltip title="Reject">
+                            <span>
+                              <IconButton
+                                size="small"
+                                color="error"
+                                disabled={reviewingId === req.id}
+                                onClick={() => void handleReview(req.id, "reject")}
+                              >
+                                <RejectIcon fontSize="small" />
+                              </IconButton>
+                            </span>
+                          </Tooltip>
+                        </Stack>
+                      </TableCell>
+                    </TableRow>
+                  ))}
+                </TableBody>
+              </Table>
+            </TableContainer>
+          )}
+        </DialogContent>
+        <DialogActions>
+          <Button onClick={() => void loadPendingRequests()} startIcon={<RefreshIcon />} size="small">
+            Refresh
+          </Button>
+          <Button onClick={() => setShowSuperadminModal(false)}>Close</Button>
+        </DialogActions>
+      </Dialog>
 
       {/* Modals - Printers */}
       <Dialog

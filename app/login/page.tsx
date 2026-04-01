@@ -1,54 +1,125 @@
 "use client";
 
 import { useState } from "react";
-import { sendSignInLinkToEmail } from "firebase/auth";
-import { Box, Button, TextField, Typography, Stack, Alert, CircularProgress } from "@mui/material";
+import { signInWithCustomToken } from "firebase/auth";
+import {
+  Box,
+  Button,
+  Tab,
+  Tabs,
+  TextField,
+  Typography,
+  Stack,
+  Alert,
+  CircularProgress,
+} from "@mui/material";
 import { initializeFirebaseClient } from "../../lib/firebase-client";
 
 export default function LoginPage() {
-  const [email, setEmail] = useState("");
-  const [loading, setLoading] = useState(false);
-  const [linkSent, setLinkSent] = useState(false);
-  const [error, setError] = useState("");
+  const [tab, setTab] = useState(0);
 
-  const handleSendLink = async () => {
-    if (!email.trim()) {
-      setError("Please enter your email");
+  // Login state
+  const [staffNumber, setStaffNumber] = useState("");
+  const [loginLoading, setLoginLoading] = useState(false);
+  const [loginError, setLoginError] = useState("");
+
+  // Register state
+  const [regName, setRegName] = useState("");
+  const [regEmail, setRegEmail] = useState("");
+  const [regStaffNumber, setRegStaffNumber] = useState("");
+  const [regLoading, setRegLoading] = useState(false);
+  const [regError, setRegError] = useState("");
+  const [regSuccess, setRegSuccess] = useState(false);
+
+  const handleLogin = async () => {
+    if (!staffNumber.trim()) {
+      setLoginError("Please enter your e-number");
       return;
     }
 
-    setError("");
-    setLoading(true);
+    setLoginError("");
+    setLoginLoading(true);
 
     try {
+      const response = await fetch("/api/admin-login", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ staffNumber: staffNumber.trim() }),
+      });
+
+      const data = await response.json() as { customToken?: string; role?: string; error?: string };
+
+      if (!response.ok) {
+        setLoginError(data.error || "Login failed");
+        return;
+      }
+
       const auth = initializeFirebaseClient();
+      const userCredential = await signInWithCustomToken(auth, data.customToken!);
+      const idToken = await userCredential.user.getIdToken();
 
-      const actionCodeSettings = {
-        url: `${window.location.origin}/login/callback?email=${encodeURIComponent(email)}`,
-        handleCodeInApp: true,
-      };
+      // Verify token and get role
+      const verifyResponse = await fetch("/api/verify-auth", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ idToken }),
+      });
 
-      await sendSignInLinkToEmail(auth, email, actionCodeSettings);
+      if (!verifyResponse.ok) {
+        const verifyData = await verifyResponse.json() as { error?: string };
+        setLoginError(verifyData.error || "Access not authorised");
+        await auth.signOut();
+        return;
+      }
 
-      // Save email to localStorage for the callback
-      window.localStorage.setItem("pendingAdminEmail", email);
+      const verifyData = await verifyResponse.json() as { role?: string };
+      window.localStorage.setItem("adminAuthToken", idToken);
+      window.localStorage.setItem("adminRole", verifyData.role || "admin");
+      window.localStorage.setItem("adminLoginTime", Date.now().toString());
+      document.cookie = "adminSession=1; path=/; SameSite=Strict; Max-Age=28800";
 
-      setLinkSent(true);
+      window.location.href = "/admin";
     } catch (err) {
-      const errorMessage = err instanceof Error ? err.message : "Failed to send sign-in link";
-      setError(errorMessage);
+      setLoginError(err instanceof Error ? err.message : "Login failed");
     } finally {
-      setLoading(false);
+      setLoginLoading(false);
     }
   };
 
-  const handleKeyPress = (e: React.KeyboardEvent) => {
-    if (e.key === "Enter" && email.trim()) {
-      void handleSendLink();
+  const handleRegister = async () => {
+    if (!regName.trim() || !regEmail.trim() || !regStaffNumber.trim()) {
+      setRegError("All fields are required");
+      return;
+    }
+
+    setRegError("");
+    setRegLoading(true);
+
+    try {
+      const response = await fetch("/api/admin-register", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          name: regName.trim(),
+          email: regEmail.trim(),
+          staffNumber: regStaffNumber.trim(),
+        }),
+      });
+
+      const data = await response.json() as { error?: string };
+
+      if (!response.ok) {
+        setRegError(data.error || "Registration failed");
+        return;
+      }
+
+      setRegSuccess(true);
+    } catch (err) {
+      setRegError(err instanceof Error ? err.message : "Registration failed");
+    } finally {
+      setRegLoading(false);
     }
   };
-
-  const textFieldColor = error ? "error" : "primary";
 
   return (
     <Box
@@ -65,67 +136,129 @@ export default function LoginPage() {
           width: "100%",
           maxWidth: 400,
           backgroundColor: "white",
-          padding: 4,
           borderRadius: 2,
           boxShadow: "0 2px 8px rgba(0,0,0,0.1)",
+          overflow: "hidden",
         }}
       >
-        <Typography variant="h4" fontWeight={700} mb={2} textAlign="center">
-          Login
-        </Typography>
+        <Tabs
+          value={tab}
+          onChange={(_, v: number) => {
+            setTab(v);
+            setLoginError("");
+            setRegError("");
+            setRegSuccess(false);
+          }}
+          variant="fullWidth"
+          sx={{ borderBottom: "1px solid #e0e0e0" }}
+        >
+          <Tab label="Login" />
+          <Tab label="Register" />
+        </Tabs>
 
-        {linkSent ? (
-          <Stack spacing={2}>
-            <Alert severity="success">
-              Check your email for a sign-in link. Click the link to continue.
-            </Alert>
-            <Typography variant="body2" color="#666" textAlign="center">
-              The link will expire in 24 hours.
-            </Typography>
-            <Button
-              onClick={() => {
-                setLinkSent(false);
-                setEmail("");
-              }}
-              sx={{ mt: 2 }}
-            >
-              Send another link
-            </Button>
-          </Stack>
-        ) : (
-          <Stack spacing={2}>
-            <TextField
-              label="Email"
-              type="email"
-              value={email}
-              onChange={(e) => {
-                setEmail(e.target.value);
-                setError("");
-              }}
-              onKeyPress={handleKeyPress}
-              color={textFieldColor}
-              fullWidth
-              disabled={loading}
-              autoFocus
-            />
+        <Box sx={{ padding: 4 }}>
+          {tab === 0 && (
+            <Stack spacing={2}>
+              <Typography variant="h5" fontWeight={700} textAlign="center">
+                Admin Login
+              </Typography>
 
-            {error && <Alert severity="error">{error}</Alert>}
+              <TextField
+                label="e-number"
+                value={staffNumber}
+                onChange={(e) => {
+                  setStaffNumber(e.target.value);
+                  setLoginError("");
+                }}
+                onKeyDown={(e) => {
+                  if (e.key === "Enter" && staffNumber.trim()) void handleLogin();
+                }}
+                fullWidth
+                disabled={loginLoading}
+                autoFocus
+              />
 
-            <Button
-              variant="contained"
-              onClick={() => void handleSendLink()}
-              disabled={loading || !email.trim()}
-              fullWidth
-              sx={{ mt: 2 }}
-            >
-              {loading ? <CircularProgress size={24} /> : "Send Link"}
-            </Button>
+              {loginError && <Alert severity="error">{loginError}</Alert>}
 
-            <Typography variant="caption" color="#999" textAlign="center" sx={{ mt: 3 }}>
-              A link will be sent to your email. Click to access the admin site.
-            </Typography>
-          </Stack>
-        )}
+              <Button
+                variant="contained"
+                onClick={() => void handleLogin()}
+                disabled={loginLoading || !staffNumber.trim()}
+                fullWidth
+              >
+                {loginLoading ? <CircularProgress size={24} /> : "Login"}
+              </Button>
+            </Stack>
+          )}
+
+          {tab === 1 && (
+            <Stack spacing={2}>
+              <Typography variant="h5" fontWeight={700} textAlign="center">
+                Register for Access
+              </Typography>
+
+              {regSuccess ? (
+                <Stack spacing={2}>
+                  <Alert severity="success">
+                    Your request has been submitted. A superadmin will review it shortly.
+                  </Alert>
+                  <Button onClick={() => setTab(0)}>Back to Login</Button>
+                </Stack>
+              ) : (
+                <>
+                  <TextField
+                    label="Full Name"
+                    value={regName}
+                    onChange={(e) => {
+                      setRegName(e.target.value);
+                      setRegError("");
+                    }}
+                    fullWidth
+                    disabled={regLoading}
+                    autoFocus
+                  />
+
+                  <TextField
+                    label="Email"
+                    type="email"
+                    value={regEmail}
+                    onChange={(e) => {
+                      setRegEmail(e.target.value);
+                      setRegError("");
+                    }}
+                    fullWidth
+                    disabled={regLoading}
+                  />
+
+                  <TextField
+                    label="e-number"
+                    value={regStaffNumber}
+                    onChange={(e) => {
+                      setRegStaffNumber(e.target.value);
+                      setRegError("");
+                    }}
+                    onKeyDown={(e) => {
+                      if (e.key === "Enter") void handleRegister();
+                    }}
+                    fullWidth
+                    disabled={regLoading}
+                  />
+
+                  {regError && <Alert severity="error">{regError}</Alert>}
+
+                  <Button
+                    variant="contained"
+                    onClick={() => void handleRegister()}
+                    disabled={regLoading || !regName.trim() || !regEmail.trim() || !regStaffNumber.trim()}
+                    fullWidth
+                  >
+                    {regLoading ? <CircularProgress size={24} /> : "Submit"}
+                  </Button>
+                </>
+              )}
+            </Stack>
+          )}
+        </Box>
       </Box>
     </Box>
   );

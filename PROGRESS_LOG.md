@@ -1,6 +1,6 @@
 # Print App CMS - Progress Log
 
-**Last Updated:** March 26, 2026 (Session 5)
+**Last Updated:** April 1, 2026 (Session 8)
 **Project:** Print App CMS System
 **User:** Arielle Lee (arielle.lee@rmit.edu.au)
 
@@ -392,7 +392,74 @@ When testing after any changes:
 
 ## Session History
 
-### Current Session (March 27, 2026) - Session 7
+### Current Session (April 1, 2026) - Session 8
+
+- **Admin auth system — Phase 2b: e-number login + self-registration + superadmin approval**
+
+  - **Login page redesigned with two tabs**
+    - ✅ Replaced single magic link form with MUI `Tabs` — Login tab and Register tab
+    - ✅ Login tab: single e-number (`staffNumber`) field; Enter key submits; instant server-side lookup
+    - ✅ Register tab: Full Name, Email, e-number fields; submits a pending access request
+    - ✅ Register tab title: "Register for Access"; submit button label: "Submit"
+    - ✅ On successful registration: success `Alert` shown + "Back to Login" link; user not yet granted access
+    - Files Modified: `app/login/page.tsx`
+
+  - **Magic link callback removed**
+    - ✅ Deleted `app/login/callback/page.tsx` and its directory — no longer needed
+    - Files Deleted: `app/login/callback/page.tsx`
+
+  - **New API route: `/api/admin-login`**
+    - ✅ POST — accepts `{ staffNumber }`; queries `admins` collection for matching active document
+    - ✅ On match: mints a Firebase custom token, updates `lastLogin`, returns `{ customToken, role, email }`
+    - ✅ Client signs in via `signInWithCustomToken()`, then calls existing `/api/verify-auth` to complete session
+    - Files Created: `app/api/admin-login/route.ts`
+
+  - **New API route: `/api/admin-register`**
+    - ✅ POST — accepts `{ name, email, staffNumber }`; validates all fields present
+    - ✅ Checks `admins` for duplicate e-number; checks `adminRequests` for existing pending request
+    - ✅ Writes to `adminRequests` collection with `status: "pending"` and `requestedAt`
+    - Files Created: `app/api/admin-register/route.ts`
+
+  - **New API route: `/api/admin-approve`**
+    - ✅ POST — accepts `{ requestId, action, reviewerUid }` where action is `"approve"` or `"reject"`
+    - ✅ Reject: marks `adminRequests` doc as `rejected` with reviewer + timestamp; no `admins` write
+    - ✅ Approve: gets or creates Firebase Auth user by email; writes to `admins` collection with `name`, `email`, `staffNumber`, `role: "admin"`, `active: true`; marks request as `approved`
+    - Files Created: `app/api/admin-approve/route.ts`
+
+  - **New API route: `/api/admin-requests`**
+    - ✅ GET — requires `Authorization: Bearer <token>`; verifies caller is an active superadmin
+    - ✅ Returns all `adminRequests` where `status === "pending"`, sorted by `requestedAt` client-side (avoids composite index requirement)
+    - Files Created: `app/api/admin-requests/route.ts`
+
+  - **Superadmin cog modal in admin page**
+    - ✅ `SettingsIcon` imported from `@mui/icons-material`
+    - ✅ Cog `IconButton` rendered next to Sign Out button — only visible when `role === "superadmin"`
+    - ✅ Both cog and logout wrapped in a `Stack` so they sit side-by-side correctly
+    - ✅ Clicking cog opens a Dialog modal titled "Superadmin Settings"
+    - ✅ Modal fetches pending requests from `/api/admin-requests` on open; Refresh button to reload
+    - ✅ Table shows: Name, Email, e-number; Approve (green tick) and Reject (red X) icon buttons per row
+    - ✅ Reviewed requests removed from the list immediately after action
+    - Files Modified: `app/admin/page.tsx`
+
+  - **seed-admins script + admins.json updated**
+    - ✅ `admins.json` — added `name` and `staffNumber` fields to both entries
+    - ✅ `seed-admins.js` — now reads and persists `name` and `staffNumber` to Firestore
+    - Files Modified: `scripts/admins.json`, `scripts/seed-admins.js`
+
+  - **Firestore collections**
+    - `admins` — existing collection; now includes `name` and `staffNumber` fields
+    - `adminRequests` — new collection for pending/approved/rejected registration requests
+
+- **8-hour session timeout**
+  - ✅ Login page stores `adminLoginTime` in `localStorage` on successful login
+  - ✅ Session cookie now has `Max-Age=28800` (8 hours) — browser expires it automatically
+  - ✅ `auth-provider.tsx` runs an interval every 60 seconds; signs out and redirects to `/login` if 8 hours have elapsed since `adminLoginTime`
+  - ✅ `clearSession()` helper centralises localStorage + cookie cleanup; used by both the interval and the manual Sign Out handler
+  - Files Modified: `app/login/page.tsx`, `app/auth-provider.tsx`
+
+---
+
+### Previous Session (March 27, 2026) - Session 7
 
 - **Login page UI updates**
   - ✅ "Admin Login" → "Login"
