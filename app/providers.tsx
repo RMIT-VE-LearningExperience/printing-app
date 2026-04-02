@@ -8,14 +8,27 @@ const baseTheme = createTheme({
   palette: {
     mode: "light",
     primary: {
-      main: "#1a73e8",
+      main: "#3D8078",
     },
     secondary: {
-      main: "#5f6368",
+      main: "#62615C",
     },
     background: {
-      default: "#f1f3f4",
-      paper: "#ffffff",
+      default: "#FDF9F1",
+      paper: "#FFFFFF",
+    },
+    text: {
+      primary: "#45443F",
+      secondary: "#62615C",
+    },
+    success: {
+      main: "#1A7A2E",
+    },
+    error: {
+      main: "#C4321A",
+    },
+    warning: {
+      main: "#f59e0b",
     },
   },
   shape: {

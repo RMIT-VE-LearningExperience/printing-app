@@ -2,7 +2,7 @@
 
 import { usePathname } from "next/navigation";
 
-const FOOTER_BG = "#001F2D";
+const FOOTER_BG = "#45443F";
 const FOOTER_TEXT = "#ffffff";
 
 const linkStyle: React.CSSProperties = { color: "#ffffff", textDecoration: "underline" };

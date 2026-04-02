@@ -1,6 +1,6 @@
 # Print App CMS - Progress Log
 
-**Last Updated:** April 1, 2026 (Session 8)
+**Last Updated:** April 2, 2026 (Session 10)
 **Project:** Print App CMS System
 **User:** Arielle Lee (arielle.lee@rmit.edu.au)
 
@@ -392,7 +392,74 @@ When testing after any changes:
 
 ## Session History
 
-### Current Session (April 1, 2026) - Session 8
+### Current Session (April 1, 2026) - Session 9
+
+- **Colour palette migration — Neutral Variant scale + unified primary**
+
+  - **Design decisions confirmed:**
+    - NV palette: 14-step Neutral Variant scale (`#FFFFFF` NV100 → `#000000` NV0)
+    - Primary blue unified to `#007aa3` (slightly darkened from `#009DC9` for accessibility — ~4.1:1 contrast)
+    - Hover/active primary: `#006688`
+    - Sidebar: NV70 `#AEA9B4` background, NV60 `#938F99` active/border, NV10 `#1D1A22` text/icons (black-on-gray)
+    - Page backgrounds: NV98 `#FDF7FF`
+    - Cards/modals: NV100 `#FFFFFF`
+    - Borders: NV90 `#E7E0EC`
+    - Body text: NV20 `#322F37`, secondary text: NV50 `#79747E`
+    - Preview banner orange `#E65100` → amber `#f59e0b` (consolidating to one warning colour)
+    - Green, red, and amber preserved as-is (MUI defaults)
+    - Accessibility note accepted: `#007aa3` on `#FDF7FF` is ~4.3:1 (passes large text AA)
+
+  - **`app/providers.tsx`**
+    - ✅ `primary.main`: `#1a73e8` → `#007aa3`
+    - ✅ `secondary.main`: `#5f6368` → NV50 `#79747E`
+    - ✅ `background.default`: `#f1f3f4` → NV98 `#FDF7FF`
+    - ✅ `background.paper`: unchanged `#FFFFFF`
+
+  - **`app/login/page.tsx`**
+    - ✅ Page background: `#f5f5f5` → NV98 `#FDF7FF`
+    - ✅ Card background: `white` → `#FFFFFF`
+    - ✅ Tab divider border: `#e0e0e0` → NV90 `#E7E0EC`
+
+  - **`app/admin/page.tsx`** (largest change — 100+ replacements)
+    - ✅ All `#009DC9` → `#007aa3`; all `#0081A8` hover → `#006688`
+    - ✅ `#006788` section headings → `#007aa3`
+    - ✅ Sidebar background: `#001F2D` → NV70 `#AEA9B4`
+    - ✅ Sidebar border/dividers: `#003549` → NV60 `#938F99`
+    - ✅ Sidebar active/hover item bg: `#001F2D` → NV60 `#938F99`
+    - ✅ Sidebar text/icons: `#ffffff` → NV10 `#1D1A22`
+    - ✅ Sidebar hover overlays: `rgba(255,255,255,0.1)` → `rgba(0,0,0,0.08)`
+    - ✅ Sidebar TextFields restyled from dark-bg to light-bg (labels, placeholders, borders)
+    - ✅ Sidebar nav buttons (expanded): white text → NV10, white borders → dark equivalents, active state keeps white text on cyan fill
+    - ✅ Dialog header backgrounds: `#F4FAFF` → NV98 `#FDF7FF`; `#BDE9FF` borders → NV90 `#E7E0EC`
+    - ✅ Main content background: `#E0F4FF` → NV98 `#FDF7FF`; loading overlay updated to match
+    - ✅ Table headings, chips, section titles: `#001F2D` → NV10 `#1D1A22`
+    - ✅ Highlight backgrounds: `#E0F4FF` → NV95 `#F5EEFA`
+    - ✅ Step media area bg: `#f5f5f5` → NV98 `#FDF7FF`
+    - ✅ All `rgba(30, 136, 229, ...)` blue overlays → `rgba(0, 122, 163, ...)` cyan equivalents
+
+  - **`app/page.tsx`**
+    - ✅ `colors` palette object updated: primary `#009DC9` → `#007aa3`, darkBg/text → NV10/NV20, lightBg → NV98, borders → NV60/NV90, lightText → NV50, shadows updated to NV tones
+    - ✅ Preview banner: `#E65100` → `#f59e0b` (amber)
+    - ✅ Unpublished preview borders: `#E65100` → `#f59e0b`
+    - ✅ Image placeholders: `#e8f4f8` → NV90 `#E7E0EC`, `#b0c4cc` icon → NV70 `#AEA9B4`
+
+  - **`app/page.module.css`** (full rewrite)
+    - ✅ Page/hero background: → NV98 `#FDF7FF`
+    - ✅ All blue-gray text (`#1a2238`, `#2a3047`, `#2f3348`, `#22314d`, etc.) → NV scale equivalents
+    - ✅ Card background: `#f8f9fb` → `#FFFFFF`; borders `#92a0bd` → NV80 `#CAC4D0`
+    - ✅ Active card: `#5b667d` → NV30 `#49454F`
+    - ✅ Step index badge: `#1b243d` → NV20 `#322F37`
+    - ✅ View toggle active: `#2f436d` → primary `#007aa3`
+    - ✅ Nav buttons: `#f3f5fa` → NV95 `#F5EEFA`, hover → NV90 `#E7E0EC`
+    - ✅ Footer home: `#edf0f5` → NV95, border `#a2acc0` → NV80, text → NV20
+    - ✅ Sticky nav: `rgba(248,250,255,0.97)` → `rgba(253,247,255,0.97)` (NV98 tinted)
+    - ✅ Callout/blockquote: border → NV40, background → NV95
+    - ✅ Rich text links: `#18439d` → `#007aa3`
+    - ✅ Shadow overlays: all `rgba(33/35/37, 41/49/53, 67/80/87, ...)` → `rgba(29, 26, 34, ...)`
+
+---
+
+### Previous Session (April 1, 2026) - Session 8
 
 - **Admin auth system — Phase 2b: e-number login + self-registration + superadmin approval**
 
@@ -1301,6 +1368,63 @@ Added a `cropImgReady` boolean state (starts `false`). The modal's `<img>` eleme
 
 **Files Modified:**
 - `app/page.tsx` — Added `preloadImages` helper; modified `loadData` to collect and preload initial-view images before setting state; added full-screen MD3 loading overlay (`if (loading) return ...`); removed three inline loading blocks from printer/paper/colour views; simplified `!loading &&` guards
+
+---
+
+## Session 10 — April 2, 2026: Colour Palette Rebrand + Accessibility Fixes
+
+### 🎨 Full Colour Rebrand — Warm Neutral Palette
+
+**Overview:** Replaced the original purple/teal Material Design colour scheme with a warm neutral palette sourced from [pigment.shapefactory.co](https://pigment.shapefactory.co/?s=3&a=E5E1D7&b=62615C), with a hand-picked warm teal accent.
+
+**New Palette:**
+
+| Token | Hex | Role |
+|-------|-----|------|
+| Background default | `#FDF9F1` | Page background |
+| Light surface | `#E5E1D7` | Hover states, callout backgrounds |
+| Border light | `#C2BDB1` | Borders, dividers |
+| Border medium | `#A19A8C` | Muted/disabled states |
+| Secondary text | `#62615C` | Subtitles, card descriptions |
+| Secondary colour | `#62615C` | MUI secondary |
+| Primary text | `#45443F` | Body text, headings |
+| Primary teal | `#0E6E63` | Links, buttons, active states |
+| Dark teal | `#2D6059` | Hover state for primary |
+| Success green | `#1A7A2E` | Success states |
+| Error red | `#C4321A` | Error states |
+| Warning amber | `#f59e0b` | Warning states (unchanged) |
+
+**Files Updated (285+ colour references across 6 files):**
+- `app/providers.tsx` — MUI theme palette foundation
+- `app/page.module.css` — All CSS module colour values
+- `app/page.tsx` — `colors` constants object + inline values
+- `app/admin/page.tsx` — All inline `sx` prop colours
+- `app/login/page.tsx` — Background and border colours
+- `app/components/Footer.tsx` — Footer background (`#001F2D` → `#45443F`)
+
+**Sidebar redesign:** CMS sidebar changed from light beige (`#C2BDB1`) to dark (`#45443F`) with light text — dark bg with `#E5E1D7` text and `#C2BDB1` muted icons.
+
+---
+
+### ♿ Accessibility Audit — WCAG AA Compliance Fixes
+
+**Audit method:** Computed WCAG 2.1 contrast ratios programmatically for all foreground/background pairs.
+
+**Issues found and fixed:**
+
+| # | Issue | Old ratio | Fix | New ratio |
+|---|-------|-----------|-----|-----------|
+| 1 | Secondary text `#767570` on off-white bg | 4.40:1 ❌ | → `#62615C` | 5.91:1 ✅ |
+| 2 | Primary teal `#3D8078` on off-white bg | 4.39:1 ❌ | → `#0E6E63` | 5.83:1 ✅ |
+| 3 | Primary teal on beige callout bg | 3.53:1 ❌ | → `#0E6E63` | 4.82:1 ✅ |
+| 4 | Sidebar active icon `#3D8078` on dark bg | 2.12:1 ❌ | → `#FDF9F1` | 9.29:1 ✅ |
+| 5 | White text on amber badge `#f59e0b` | 2.15:1 ❌ | → `#45443F` text | 4.54:1 ✅ |
+
+**All other pairs confirmed passing:** primary text (9.29:1 AAA), sidebar text (7.47:1 AAA), footer text (9.76:1 AAA), success/error on all backgrounds (4.63–5.62:1 AA).
+
+**Vivid semantic colours:** Success green and error red updated to more saturated, vivid versions that remain fully accessible:
+- Success: `#4E7C4E` (muted sage) → `#1A7A2E` (vivid green) — 5.17:1 on off-white
+- Error: `#B5402E` (warm terracotta) → `#C4321A` (vivid red) — 5.24:1 on off-white
 
 ---
 

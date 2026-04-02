@@ -1,7 +1,7 @@
 .page {
   min-height: 100vh;
-  background: #dfe3ea;
-  color: #1a2238;
+  background: #FDF9F1;
+  color: #45443F;
   animation: fadeIn 420ms ease-out;
 }
 
@@ -14,8 +14,8 @@
 .hero {
   text-align: center;
   padding: 32px 20px 28px;
-  border-bottom: 1px solid #94a2bf;
-  background: #f6f7f9;
+  border-bottom: 1px solid #C2BDB1;
+  background: #FDF9F1;
   animation: riseIn 500ms ease-out;
 }
 
@@ -30,7 +30,7 @@
   margin: 10px auto 0;
   max-width: 520px;
   font-size: clamp(1rem, 2vw, 1.35rem);
-  color: #2a3047;
+  color: #62615C;
 }
 
 .prompt {
@@ -44,9 +44,9 @@
 }
 
 .contextPill {
-  border: 3px solid #2b2f36;
+  border: 3px solid #45443F;
   border-radius: 999px;
-  background: #f7f8fa;
+  background: #FFFFFF;
   min-height: 56px;
   display: flex;
   align-items: center;
@@ -58,16 +58,16 @@
 
 .contextPill:hover {
   transform: translateY(-1px);
-  box-shadow: 0 8px 18px rgba(21, 28, 45, 0.1);
+  box-shadow: 0 8px 18px rgba(69, 68, 63, 0.1);
 }
 
 .backButton {
   width: 48px;
   height: 48px;
   border-radius: 999px;
-  border: 3px solid #2b2f36;
+  border: 3px solid #45443F;
   background: transparent;
-  color: #20232a;
+  color: #45443F;
   display: inline-flex;
   align-items: center;
   justify-content: center;
@@ -77,7 +77,7 @@
 }
 
 .backButton:hover {
-  background: #e7ebf2;
+  background: #E5E1D7;
 }
 
 .backButton:active {
@@ -97,7 +97,7 @@
 
 .pillSecondary {
   font-size: 0.95rem;
-  color: #ba1010;
+  color: #B5402E;
   font-weight: 700;
 }
 
@@ -124,7 +124,7 @@
   letter-spacing: 0.14em;
   font-size: 0.85rem;
   font-weight: 800;
-  color: #2f3348;
+  color: #62615C;
 }
 
 .dots {
@@ -141,12 +141,12 @@
 }
 
 .dot {
-  background: #8b98b3;
+  background: #A19A8C;
   transition: background-color 220ms ease, transform 220ms ease;
 }
 
 .dotActive {
-  background: #1b243d;
+  background: #45443F;
   transform: scaleX(1.15);
   transition: background-color 220ms ease, transform 220ms ease;
 }
@@ -166,23 +166,23 @@
   font-size: 0.88rem;
   font-weight: 800;
   letter-spacing: 0.03em;
-  color: #1c2a44;
+  color: #45443F;
 }
 
 .viewToggleWrap {
   display: inline-flex;
   gap: 6px;
   padding: 4px;
-  border: 2px solid #6f82aa;
+  border: 2px solid #A19A8C;
   border-radius: 999px;
-  background: #eef3ff;
-  box-shadow: 0 6px 14px rgba(37, 53, 87, 0.12);
+  background: #E5E1D7;
+  box-shadow: 0 6px 14px rgba(69, 68, 63, 0.12);
 }
 
 .viewToggleButton {
-  border: 1px solid #7b8fb8;
+  border: 1px solid #C2BDB1;
   background: transparent;
-  color: #22314d;
+  color: #45443F;
   border-radius: 999px;
   padding: 7px 14px;
   font-size: 0.85rem;
@@ -191,8 +191,8 @@
 }
 
 .viewToggleButtonActive {
-  border-color: #24365b;
-  background: #2f436d;
+  border-color: #45443F;
+  background: #3D8078;
   color: #fff;
 }
 
@@ -210,10 +210,10 @@
 .selectCard,
 .stepCard {
   border-radius: 14px;
-  border: 1px solid #92a0bd;
-  background: #f8f9fb;
+  border: 1px solid #C2BDB1;
+  background: #FFFFFF;
   overflow: hidden;
-  box-shadow: 0 10px 22px rgba(33, 41, 67, 0.08);
+  box-shadow: 0 10px 22px rgba(69, 68, 63, 0.08);
 }
 
 .selectCard {
@@ -251,15 +251,15 @@
 }
 
 .activeCard {
-  background: #5b667d;
+  background: #45443F;
   color: #fff;
-  box-shadow: 0 14px 28px rgba(29, 37, 58, 0.28);
+  box-shadow: 0 14px 28px rgba(69, 68, 63, 0.28);
 }
 
 .selectCard:hover {
   transform: translateY(-3px);
-  box-shadow: 0 16px 30px rgba(33, 41, 67, 0.18);
-  border-color: #6a7aa0;
+  box-shadow: 0 16px 30px rgba(69, 68, 63, 0.18);
+  border-color: #A19A8C;
 }
 
 .selectCard:active {
@@ -297,7 +297,7 @@
 
 .cardText {
   margin: 0;
-  color: #313751;
+  color: #62615C;
   font-size: 0.96rem;
 }
 
@@ -313,7 +313,7 @@
 
 .stepCard:hover {
   transform: translateY(-2px);
-  box-shadow: 0 14px 26px rgba(33, 41, 67, 0.18);
+  box-shadow: 0 14px 26px rgba(69, 68, 63, 0.18);
 }
 
 .stepIndex {
@@ -322,7 +322,7 @@
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  background: #1b243d;
+  background: #45443F;
   color: #fff;
   border-radius: 0 0 8px 8px;
   font-weight: 900;
@@ -347,7 +347,7 @@
 }
 
 .itemRich {
-  color: #24293f;
+  color: #62615C;
   line-height: 1.45;
   font-size: 0.95rem;
 }
@@ -374,14 +374,14 @@
 .itemCallout {
   margin: 0.5rem 0;
   padding: 0.6rem 0.7rem;
-  border-left: 4px solid #42557f;
+  border-left: 4px solid #62615C;
   border-radius: 8px;
-  background: #eef2fa;
+  background: #E5E1D7;
   font-style: italic;
 }
 
 .itemRich a {
-  color: #18439d;
+  color: #3D8078;
   text-decoration-thickness: 2px;
   text-underline-offset: 2px;
 }
@@ -389,8 +389,8 @@
 .itemImage {
   width: 100%;
   height: auto;
-  border: 1px solid #2e3344;
-  background: #dbdde2;
+  border: 1px solid #C2BDB1;
+  background: #E5E1D7;
   border-radius: 2px;
   object-fit: cover;
   transition: transform 260ms ease, box-shadow 260ms ease;
@@ -398,7 +398,7 @@
 
 .itemImage:hover {
   transform: scale(1.01);
-  box-shadow: 0 10px 18px rgba(25, 33, 52, 0.2);
+  box-shadow: 0 10px 18px rgba(69, 68, 63, 0.2);
 }
 
 .stepControls {
@@ -412,11 +412,11 @@
   bottom: 10px;
   margin: 0 auto 14px;
   width: min(860px, calc(100% - 24px));
-  border: 1px solid #9aa7c0;
+  border: 1px solid #C2BDB1;
   border-radius: 999px;
-  background: rgba(248, 250, 255, 0.97);
+  background: rgba(253, 249, 241, 0.97);
   backdrop-filter: blur(8px);
-  box-shadow: 0 10px 18px rgba(26, 36, 61, 0.12);
+  box-shadow: 0 10px 18px rgba(69, 68, 63, 0.12);
   padding: 10px 12px;
   display: flex;
   align-items: center;
@@ -428,13 +428,13 @@
 .stickyStepMeta {
   font-weight: 800;
   font-size: 0.9rem;
-  color: #1e2c49;
+  color: #62615C;
 }
 
 .navButton {
-  border: 1px solid #32405f;
-  background: #f3f5fa;
-  color: #1b243d;
+  border: 1px solid #62615C;
+  background: #E5E1D7;
+  color: #45443F;
   border-radius: 999px;
   padding: 8px 14px;
   font-weight: 700;
@@ -443,9 +443,9 @@
 }
 
 .navButton:hover:not(:disabled) {
-  background: #e8edf8;
+  background: #C2BDB1;
   transform: translateY(-1px);
-  box-shadow: 0 8px 14px rgba(35, 49, 80, 0.12);
+  box-shadow: 0 8px 14px rgba(69, 68, 63, 0.12);
 }
 
 .navButton:active:not(:disabled) {
@@ -461,8 +461,8 @@
   position: fixed;
   left: 0;
   bottom: 0;
-  background: #edf0f5;
-  border: 1px solid #a2acc0;
+  background: #E5E1D7;
+  border: 1px solid #C2BDB1;
   border-left: none;
   border-bottom: none;
   border-top-right-radius: 80px;
@@ -471,7 +471,7 @@
   display: grid;
   place-items: center;
   text-decoration: none;
-  color: #1e2438;
+  color: #45443F;
   font-weight: 800;
   letter-spacing: 0.08em;
   font-size: 0.76rem;
@@ -480,8 +480,8 @@
 
 .footerHome:hover {
   transform: translateY(-2px);
-  background: #f5f7fb;
-  box-shadow: 0 12px 20px rgba(36, 44, 66, 0.18);
+  background: #C2BDB1;
+  box-shadow: 0 12px 20px rgba(69, 68, 63, 0.18);
 }
 
 .footerHome:active {
@@ -498,8 +498,8 @@
   width: min(700px, calc(100% - 32px));
   padding: 14px 16px;
   border-radius: 12px;
-  border: 1px solid #9aa7c0;
-  background: #f8f9fb;
+  border: 1px solid #C2BDB1;
+  background: #FFFFFF;
   text-align: center;
   animation: riseIn 320ms ease-out;
 }

@@ -107,18 +107,18 @@ function preloadImages(urls: string[]): Promise<void> {
   });
 }
 
-// Color palette - Modern minimalist aesthetic
+// Color palette - Warm neutral aesthetic
 const colors = {
-  primary: "#009DC9",
-  darkBg: "#001F2D",
-  lightBg: "#FAFBFC",
-  border: "#003549",
-  lightBorder: "#E8EAED",
-  text: "#001F2D",
-  lightText: "#6B7280",
+  primary: "#3D8078",
+  darkBg: "#45443F",
+  lightBg: "#FDF9F1",
+  border: "#A19A8C",
+  lightBorder: "#E5E1D7",
+  text: "#45443F",
+  lightText: "#62615C",
   cardBg: "#FFFFFF",
-  cardShadow: "0 2px 8px rgba(0, 31, 45, 0.08)",
-  cardShadowHover: "0 8px 16px rgba(0, 31, 45, 0.12)",
+  cardShadow: "0 2px 8px rgba(69, 68, 63, 0.08)",
+  cardShadowHover: "0 8px 16px rgba(69, 68, 63, 0.12)",
 };
 
 function sanitizeStepHtml(content: string): string {
@@ -443,8 +443,8 @@ export default function HomePage() {
         left: 0,
         right: 0,
         zIndex: 1000,
-        bgcolor: "#E65100",
-        color: "#ffffff",
+        bgcolor: "#f59e0b",
+        color: "#45443F",
         textAlign: "center",
         py: 0.75,
         px: 2,
@@ -477,7 +477,7 @@ export default function HomePage() {
             value={100}
             size={48}
             thickness={4}
-            sx={{ color: "rgba(0, 157, 201, 0.15)" }}
+            sx={{ color: "rgba(61, 128, 120, 0.15)" }}
           />
           {/* MD3 indicator with rounded caps */}
           <CircularProgress
@@ -590,7 +590,7 @@ export default function HomePage() {
                         cursor: "pointer",
                         height: "100%",
                         borderRadius: "8px",
-                        border: isPreviewMode && printer.published === false ? "2px solid #E65100" : "none",
+                        border: isPreviewMode && printer.published === false ? "2px solid #f59e0b" : "none",
                         backgroundColor: colors.cardBg,
                         boxShadow: colors.cardShadow,
                         transition: "all 0.3s cubic-bezier(0.4, 0, 0.2, 1)",
@@ -610,7 +610,7 @@ export default function HomePage() {
                           width: "100%",
                           paddingBottom: "66.67%",
                           overflow: "hidden",
-                          bgcolor: "#f5f5f5",
+                          bgcolor: "#FDF9F1",
                         }}
                       >
                         {printer.thumbnailDataUrl ? (
@@ -629,10 +629,10 @@ export default function HomePage() {
                               display: "flex",
                               alignItems: "center",
                               justifyContent: "center",
-                              bgcolor: "#e8f4f8",
+                              bgcolor: "#E5E1D7",
                             }}
                           >
-                            <ImageIcon sx={{ color: "#b0c4cc", fontSize: 40 }} />
+                            <ImageIcon sx={{ color: "#C2BDB1", fontSize: 40 }} />
                           </Box>
                         )}
                       </Box>
@@ -660,7 +660,7 @@ export default function HomePage() {
                                   color: colors.primary,
                                   width: 24,
                                   height: 24,
-                                  "&:hover": { bgcolor: `rgba(0, 157, 201, 0.1)` },
+                                  "&:hover": { bgcolor: `rgba(61, 128, 120, 0.1)` },
                                 }}
                               >
                                 <InfoIcon sx={{ fontSize: 18 }} />
@@ -769,7 +769,7 @@ export default function HomePage() {
                       cursor: "pointer",
                       height: "100%",
                       borderRadius: "8px",
-                      border: isPreviewMode && paper.published === false ? "2px solid #E65100" : "none",
+                      border: isPreviewMode && paper.published === false ? "2px solid #f59e0b" : "none",
                       backgroundColor: colors.cardBg,
                       boxShadow: colors.cardShadow,
                       transition: "all 0.3s cubic-bezier(0.4, 0, 0.2, 1)",
@@ -789,7 +789,7 @@ export default function HomePage() {
                         width: "100%",
                         paddingBottom: "66.67%",
                         overflow: "hidden",
-                        bgcolor: "#f5f5f5",
+                        bgcolor: "#FDF9F1",
                       }}
                     >
                       {paper.thumbnailDataUrl ? (
@@ -808,10 +808,10 @@ export default function HomePage() {
                             display: "flex",
                             alignItems: "center",
                             justifyContent: "center",
-                            bgcolor: "#e8f4f8",
+                            bgcolor: "#E5E1D7",
                           }}
                         >
-                          <ImageIcon sx={{ color: "#b0c4cc", fontSize: 40 }} />
+                          <ImageIcon sx={{ color: "#C2BDB1", fontSize: 40 }} />
                         </Box>
                       )}
                     </Box>
@@ -839,7 +839,7 @@ export default function HomePage() {
                                 color: colors.primary,
                                 width: 24,
                                 height: 24,
-                                "&:hover": { bgcolor: `rgba(0, 157, 201, 0.1)` },
+                                "&:hover": { bgcolor: `rgba(61, 128, 120, 0.1)` },
                               }}
                             >
                               <InfoIcon sx={{ fontSize: 18 }} />
@@ -961,7 +961,7 @@ export default function HomePage() {
                       cursor: "pointer",
                       height: "100%",
                       borderRadius: "8px",
-                      border: isPreviewMode && colour.published === false ? "2px solid #E65100" : "none",
+                      border: isPreviewMode && colour.published === false ? "2px solid #f59e0b" : "none",
                       backgroundColor: colors.cardBg,
                       boxShadow: colors.cardShadow,
                       transition: "all 0.3s cubic-bezier(0.4, 0, 0.2, 1)",
@@ -981,7 +981,7 @@ export default function HomePage() {
                         width: "100%",
                         paddingBottom: "66.67%",
                         overflow: "hidden",
-                        bgcolor: "#f5f5f5",
+                        bgcolor: "#FDF9F1",
                       }}
                     >
                       {colour.thumbnailDataUrl ? (
@@ -1000,10 +1000,10 @@ export default function HomePage() {
                             display: "flex",
                             alignItems: "center",
                             justifyContent: "center",
-                            bgcolor: "#e8f4f8",
+                            bgcolor: "#E5E1D7",
                           }}
                         >
-                          <ImageIcon sx={{ color: "#b0c4cc", fontSize: 40 }} />
+                          <ImageIcon sx={{ color: "#C2BDB1", fontSize: 40 }} />
                         </Box>
                       )}
                     </Box>
@@ -1187,7 +1187,7 @@ export default function HomePage() {
                         onClick={() => setEnlargedStepImageUrl(step.imageDataUrl)}
                         sx={{
                           position: "relative", width: "100%", paddingBottom: "60%",
-                          overflow: "hidden", borderRadius: 1, bgcolor: "#f5f5f5",
+                          overflow: "hidden", borderRadius: 1, bgcolor: "#FDF9F1",
                           cursor: "pointer", transition: "all 0.2s ease",
                           "&:hover": { boxShadow: colors.cardShadowHover },
                         }}

@@ -128,14 +128,14 @@ export default function LoginPage() {
         display: "flex",
         alignItems: "center",
         justifyContent: "center",
-        backgroundColor: "#f5f5f5",
+        backgroundColor: "#FDF9F1",
       }}
     >
       <Box
         sx={{
           width: "100%",
           maxWidth: 400,
-          backgroundColor: "white",
+          backgroundColor: "#FFFFFF",
           borderRadius: 2,
           boxShadow: "0 2px 8px rgba(0,0,0,0.1)",
           overflow: "hidden",
@@ -150,7 +150,7 @@ export default function LoginPage() {
             setRegSuccess(false);
           }}
           variant="fullWidth"
-          sx={{ borderBottom: "1px solid #e0e0e0" }}
+          sx={{ borderBottom: "1px solid #E5E1D7" }}
         >
           <Tab label="Login" />
           <Tab label="Register" />
