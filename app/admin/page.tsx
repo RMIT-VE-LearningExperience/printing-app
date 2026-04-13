@@ -464,7 +464,7 @@ export default function AdminPage() {
   const [slugUpdatedIds, setSlugUpdatedIds] = useState<Set<string>>(new Set());
 
   // Sidebar state
-  const [_expandedPrinterList, setExpandedPrinterList] = useState(true);
+  const [, setExpandedPrinterList] = useState(true);
   const [expandedSteps, setExpandedSteps] = useState<string | null>(null);
   const [enlargedStepImageUrl, setEnlargedStepImageUrl] = useState<string | null>(null);
 
