@@ -94,5 +94,5 @@ function initAdminApp() {
 const app = initAdminApp();
 
 export const auth = getAuth(app);
-export const db = getFirestore(app);
+export const db = getFirestore(app, process.env.FIREBASE_DATABASE_ID || "(default)");
 export const bucket = getStorage(app).bucket();
