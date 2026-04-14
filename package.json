@@ -10,6 +10,7 @@
     "build": "next build",
     "start": "next start",
     "lint": "next lint",
+    "dev:staging": "dotenv -e .env.staging.local -- next dev",
     "seed-admins": "node --env-file=.env.local scripts/seed-admins.js"
   },
   "dependencies": {
@@ -30,6 +31,7 @@
     "@types/qrcode": "^1.5.6",
     "@types/react": "^18.2.0",
     "@types/react-dom": "^18.2.0",
+    "dotenv-cli": "^11.0.0",
     "eslint": "^8.57.0",
     "eslint-config-next": "^14.2.0",
     "typescript": "^5.4.0"
