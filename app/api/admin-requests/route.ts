@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
-import { auth, db } from "../../../lib/firebase-admin";
+import { auth, adminDb } from "../../../lib/firebase-admin";
 
 export async function GET(req: NextRequest) {
   try {
@@ -12,7 +12,7 @@ export async function GET(req: NextRequest) {
     }
 
     const decoded = await auth.verifyIdToken(idToken);
-    const adminDoc = await db.collection("admins").doc(decoded.uid).get();
+    const adminDoc = await adminDb.collection("admins").doc(decoded.uid).get();
     const adminData = adminDoc.data() as { role?: string; active?: boolean } | undefined;
 
     if (!adminDoc.exists || !adminData?.active || adminData.role !== "superadmin") {

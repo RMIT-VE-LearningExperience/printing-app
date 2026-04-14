@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
-import { auth, db } from "../../../lib/firebase-admin";
+import { auth, adminDb } from "../../../lib/firebase-admin";
 
 export async function POST(req: NextRequest) {
   try {
@@ -19,7 +19,7 @@ export async function POST(req: NextRequest) {
     }
 
     // Fetch the request document
-    const requestRef = db.collection("adminRequests").doc(requestId);
+    const requestRef = adminDb.collection("adminRequests").doc(requestId);
     const requestDoc = await requestRef.get();
 
     if (!requestDoc.exists) {
@@ -65,7 +65,7 @@ export async function POST(req: NextRequest) {
     }
 
     // Write to admins collection
-    await db.collection("admins").doc(uid).set(
+    await adminDb.collection("admins").doc(uid).set(
       {
         name: requestData.name,
         email: requestData.email,

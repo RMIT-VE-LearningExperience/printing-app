@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
-import { auth, db } from "../../../lib/firebase-admin";
+import { auth, adminDb } from "../../../lib/firebase-admin";
 
 export async function POST(req: NextRequest) {
   try {
@@ -11,7 +11,7 @@ export async function POST(req: NextRequest) {
     }
 
     // Look up admin by staffNumber in Firestore
-    const snapshot = await db
+    const snapshot = await adminDb
       .collection("admins")
       .where("staffNumber", "==", staffNumber.trim())
       .where("active", "==", true)

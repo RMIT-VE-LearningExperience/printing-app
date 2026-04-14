@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
-import { db } from "../../../lib/firebase-admin";
+import { adminDb } from "../../../lib/firebase-admin";
 
 export async function POST(req: NextRequest) {
   try {
@@ -48,7 +48,7 @@ export async function POST(req: NextRequest) {
     }
 
     // Write to adminRequests collection
-    await db.collection("adminRequests").add({
+    await adminDb.collection("adminRequests").add({
       name: cleanName,
       email: cleanEmail,
       staffNumber: cleanStaffNumber,

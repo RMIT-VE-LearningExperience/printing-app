@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
-import { auth, db } from "../../../lib/firebase-admin";
+import { auth, adminDb } from "../../../lib/firebase-admin";
 
 export async function POST(req: NextRequest) {
   try {
@@ -24,7 +24,7 @@ export async function POST(req: NextRequest) {
     }
 
     // Check if user is in the admins allowlist
-    const adminDocRef = db.collection("admins").doc(decodedToken.uid);
+    const adminDocRef = adminDb.collection("admins").doc(decodedToken.uid);
     const adminDoc = await adminDocRef.get();
 
     if (!adminDoc.exists) {
