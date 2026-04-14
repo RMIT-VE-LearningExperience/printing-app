@@ -19,7 +19,7 @@ export async function POST(req: NextRequest) {
     const cleanName = name.trim();
 
     // Check if staffNumber already exists in active admins
-    const existingAdmin = await db
+    const existingAdmin = await adminDb
       .collection("admins")
       .where("staffNumber", "==", cleanStaffNumber)
       .limit(1)
@@ -33,7 +33,7 @@ export async function POST(req: NextRequest) {
     }
 
     // Check if a pending request already exists for this staffNumber
-    const existingRequest = await db
+    const existingRequest = await adminDb
       .collection("adminRequests")
       .where("staffNumber", "==", cleanStaffNumber)
       .where("status", "==", "pending")

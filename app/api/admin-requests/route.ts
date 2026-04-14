@@ -19,7 +19,7 @@ export async function GET(req: NextRequest) {
       return NextResponse.json({ error: "Forbidden" }, { status: 403 });
     }
 
-    const snapshot = await db
+    const snapshot = await adminDb
       .collection("adminRequests")
       .where("status", "==", "pending")
       .get();
