@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
-import { auth } from "../../../lib/firebase-admin";
+import { auth, adminDb } from "../../../lib/firebase-admin";
 
 import {
   addColour,
@@ -350,7 +350,9 @@ export async function POST(req: NextRequest) {
       if (role !== "admin" && role !== "superadmin") {
         return NextResponse.json({ error: "Forbidden" }, { status: 403 });
       }
-      modifiedBy = decoded.email || decoded.uid || "system";
+      const adminDoc = await adminDb.collection("admins").doc(decoded.uid).get();
+      const adminName = (adminDoc.data() as { name?: string } | undefined)?.name;
+      modifiedBy = adminName || decoded.email || decoded.uid || "system";
     } catch {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
