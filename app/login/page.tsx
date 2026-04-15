@@ -153,7 +153,7 @@ export default function LoginPage() {
           sx={{ borderBottom: "1px solid #E5E1D7" }}
         >
           <Tab label="Login" />
-          <Tab label="Register" />
+          <Tab label="Request" />
         </Tabs>
 
         <Box sx={{ padding: 4 }}>
@@ -194,13 +194,13 @@ export default function LoginPage() {
           {tab === 1 && (
             <Stack spacing={2}>
               <Typography variant="h5" fontWeight={700} textAlign="center">
-                Register for Access
+                Request for Access
               </Typography>
 
               {regSuccess ? (
                 <Stack spacing={2}>
                   <Alert severity="success">
-                    Your request has been submitted. A superadmin will review it shortly.
+                    Your request has been submitted. Please contact dmd.cove@rmit.edu.au for approvals.
                   </Alert>
                   <Button onClick={() => setTab(0)}>Back to Login</Button>
                 </Stack>

@@ -1,6 +1,6 @@
 # Print App CMS - Progress Log
 
-**Last Updated:** April 15, 2026 (Session 11)
+**Last Updated:** April 15, 2026 (Session 12)
 **Project:** Print App CMS System
 **User:** Arielle Lee (arielle.lee@rmit.edu.au)
 
@@ -299,7 +299,8 @@ When fetching data in `getTutorialState()`:
 - Information dialogs — Name, Last Modified, Modified By for all item types
 - Modified By tracking — admin email stored server-side on create/edit (all types)
 - Embed in Canvas LMS — generates iframe code per printer with configurable dimensions
-- Copy Link + QR code download per printer
+- Copy Link — opens dialog with direct URL and one-click copy
+- QR code — opens preview dialog before downloading PNG
 - Success alert auto-closes after 3 seconds
 - Staging environment deployed and isolated from production
 
@@ -455,6 +456,40 @@ When testing after any changes:
   - ✅ **Identity source:** The API route (`app/api/tutorial/route.ts`) extracts the signed-in admin's email from the verified Firebase JWT (`decoded.email || decoded.uid`) server-side and passes it as `modifiedBy` to all store functions — no client-side trust required
   - ✅ Existing items that predate this change show `"N/A"` (Printer/Colour/Step) or `"system"` (Paper) until re-saved by an admin
   - Files Modified: `lib/tutorial-store.ts`, `app/api/tutorial/route.ts`, `app/admin/page.tsx`
+
+- **Feature: Copy Link dialog**
+  - ✅ Clicking the "Copy Link" icon (`ContentCopyIcon`) in the printer table now opens a dialog instead of silently copying to clipboard
+  - ✅ Dialog shows the printer name as a subtitle and the direct URL (`/?printer=[slug]`) in a styled read-only code block
+  - ✅ "Copy Link" button copies the URL and briefly shows "Copied!" (auto-resets after 2 seconds)
+  - ✅ "Close" button dismisses the dialog
+  - ✅ State managed via `copyLinkPrinter` and `copyLinkCopied`
+  - Files Modified: `app/admin/page.tsx`
+
+- **Feature: QR code preview dialog**
+  - ✅ Clicking the QR code icon in the printer table now opens a preview dialog instead of immediately downloading
+  - ✅ Dialog shows the printer name as a subtitle and a full preview of the generated QR image (canvas-rendered with printer name below the code)
+  - ✅ "Download" button triggers the PNG download and closes the dialog; amber warning state for updated slugs is preserved
+  - ✅ "Close" button dismisses the dialog without downloading
+  - ✅ `generateAndDownloadQR` refactored into `openQrDialog` (generates + opens dialog) and `downloadQR` (triggers file save)
+  - ✅ State managed via `qrPrinter` and `qrCanvasDataUrl`
+  - Files Modified: `app/admin/page.tsx`
+
+- **UI: Remove Chip badges and printer link from section headers**
+  - ✅ Removed `<Chip>` showing printer name from Papers section header
+  - ✅ Removed `<Chip>` showing paper name from Colours section header
+  - ✅ Removed `<Chip>` showing colour name from Steps section header
+  - ✅ Removed `<Link>` showing `/?printer=[slug]` from Papers section header (redundant now that Copy Link dialog exists)
+  - Files Modified: `app/admin/page.tsx`
+
+- **UI: Steps section heading now shows colour name inline**
+  - ✅ Steps section heading changed from static `"Steps:"` + Chip to `"Steps: {selectedColor.name}"` (e.g. `Steps: "in Gamut" (i.e. skin tones)`)
+  - Files Modified: `app/admin/page.tsx`
+
+- **UI: Login/Register page text updates**
+  - ✅ Tab label: `"Register"` → `"Request"`
+  - ✅ Page heading: `"Register for Access"` → `"Request for Access"`
+  - ✅ Success message: `"Your request has been submitted. A superadmin will review it shortly."` → `"Your request has been submitted. Please contact dmd.cove@rmit.edu.au for approvals."`
+  - Files Modified: `app/login/page.tsx`
 
 - **Feature: Embed in Canvas LMS dialog**
   - ✅ New `<SettingsEthernetIcon>` button added next to the QR code icon in the printer table (imported `SettingsEthernet as SettingsEthernetIcon` from `@mui/icons-material`)

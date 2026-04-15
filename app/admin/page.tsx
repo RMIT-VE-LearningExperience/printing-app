@@ -502,6 +502,14 @@ export default function AdminPage() {
   const [embedHeight, setEmbedHeight] = useState("600");
   const [embedCopied, setEmbedCopied] = useState(false);
 
+  // Copy link dialog state
+  const [copyLinkPrinter, setCopyLinkPrinter] = useState<Printer | null>(null);
+  const [copyLinkCopied, setCopyLinkCopied] = useState(false);
+
+  // QR preview dialog state
+  const [qrPrinter, setQrPrinter] = useState<Printer | null>(null);
+  const [qrCanvasDataUrl, setQrCanvasDataUrl] = useState<string | null>(null);
+
   // Context menu states
   const [printerMenuAnchor, setPrinterMenuAnchor] = useState<HTMLElement | null>(null);
   const [selectedPrinterForMenu, setSelectedPrinterForMenu] = useState<string | null>(null);
@@ -1436,11 +1444,11 @@ export default function AdminPage() {
   };
 
   const copyPrinterLink = (printer: Printer) => {
-    const url = `${window.location.origin}/?printer=${printer.slug}`;
-    void navigator.clipboard.writeText(url);
+    setCopyLinkPrinter(printer);
+    setCopyLinkCopied(false);
   };
 
-  const generateAndDownloadQR = async (printer: Printer) => {
+  const openQrDialog = async (printer: Printer) => {
     const url = `${window.location.origin}/?printer=${printer.slug}`;
     const qrDataUrl = await QRCode.toDataURL(url, { width: 300, margin: 2, color: { dark: "#000000", light: "#ffffff" } });
 
@@ -1462,18 +1470,24 @@ export default function AdminPage() {
       ctx.textAlign = "center";
       ctx.fillText(printer.name, canvas.width / 2, qrSize + padding + textHeight / 2 + 6);
 
-      const link = document.createElement("a");
-      link.download = `${printer.slug}-qr.png`;
-      link.href = canvas.toDataURL("image/png");
-      link.click();
-
-      setSlugUpdatedIds((prev) => {
-        const next = new Set(prev);
-        next.delete(printer.id);
-        return next;
-      });
+      setQrCanvasDataUrl(canvas.toDataURL("image/png"));
+      setQrPrinter(printer);
     };
     img.src = qrDataUrl;
+  };
+
+  const downloadQR = () => {
+    if (!qrPrinter || !qrCanvasDataUrl) return;
+    const link = document.createElement("a");
+    link.download = `${qrPrinter.slug}-qr.png`;
+    link.href = qrCanvasDataUrl;
+    link.click();
+
+    setSlugUpdatedIds((prev) => {
+      const next = new Set(prev);
+      next.delete(qrPrinter.id);
+      return next;
+    });
   };
 
   const handlePrinterMenuEdit = () => {
@@ -2832,7 +2846,7 @@ export default function AdminPage() {
                                 </IconButton>
                               </Tooltip>
                               <Tooltip title={slugUpdatedIds.has(printer.id) ? "Link updated — download new QR code" : "Download QR code"}>
-                                <IconButton size="small" onClick={(e) => { e.stopPropagation(); void generateAndDownloadQR(printer); }} sx={slugUpdatedIds.has(printer.id) ? { color: "#f59e0b" } : {}}>
+                                <IconButton size="small" onClick={(e) => { e.stopPropagation(); void openQrDialog(printer); }} sx={slugUpdatedIds.has(printer.id) ? { color: "#f59e0b" } : {}}>
                                   <QrCodeIcon fontSize="small" />
                                 </IconButton>
                               </Tooltip>
@@ -2895,17 +2909,6 @@ export default function AdminPage() {
                   InputProps={{ endAdornment: <InputAdornment position="end"><Typography variant="caption" color="text.secondary">{sectionSettings.papers.title.length}/50</Typography></InputAdornment> }}
                   sx={{ minWidth: 260, maxWidth: "50%" }}
                 />
-                <Chip label={selectedPrinter.name} variant="outlined" size="small" sx={{ fontWeight: 700, fontSize: "1rem", borderColor: "#45443F", color: "#45443F", height: "auto", "& .MuiChip-label": { py: 0.25, px: 1 } }} />
-                <Link
-                  href={`/?printer=${selectedPrinter.slug}`}
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  underline="hover"
-                  variant="caption"
-                  sx={{ color: "#3D8078", fontFamily: "monospace", whiteSpace: "nowrap" }}
-                >
-                  {`/?printer=${selectedPrinter.slug}`}
-                </Link>
               </Box>
               <Box sx={{ display: "flex", alignItems: "center", justifyContent: "space-between" }}>
                 <TextField
@@ -3066,7 +3069,6 @@ export default function AdminPage() {
                   InputProps={{ endAdornment: <InputAdornment position="end"><Typography variant="caption" color="text.secondary">{sectionSettings.colours.title.length}/50</Typography></InputAdornment> }}
                   sx={{ minWidth: 260, maxWidth: "50%" }}
                 />
-                <Chip label={selectedPaper.name} variant="outlined" size="small" sx={{ fontWeight: 700, fontSize: "1rem", borderColor: "#45443F", color: "#45443F", height: "auto", "& .MuiChip-label": { py: 0.25, px: 1 } }} />
               </Box>
               <Box sx={{ display: "flex", alignItems: "center", justifyContent: "space-between" }}>
                 <TextField
@@ -3246,8 +3248,7 @@ export default function AdminPage() {
             <Box sx={{ display: "flex", justifyContent: "space-between", alignItems: "center", mb: 3 }}>
               <Box>
                 <Box sx={{ display: "flex", alignItems: "center", gap: 1, mb: 0.5 }}>
-                  <Typography variant="h5" sx={{ color: "#45443F", fontWeight: 700 }}>Steps:</Typography>
-                  <Chip label={selectedColor.name} variant="outlined" size="small" sx={{ fontWeight: 700, fontSize: "1rem", borderColor: "#45443F", color: "#45443F", height: "auto", "& .MuiChip-label": { py: 0.25, px: 1 } }} />
+                  <Typography variant="h5" sx={{ color: "#45443F", fontWeight: 700 }}>Steps: {selectedColor.name}</Typography>
                 </Box>
               </Box>
               <Button
@@ -4927,6 +4928,97 @@ export default function AdminPage() {
               </>
             );
           })()}
+        </DialogActions>
+      </Dialog>
+
+      {/* QR Code Preview Dialog */}
+      <Dialog
+        open={Boolean(qrPrinter)}
+        onClose={() => { setQrPrinter(null); setQrCanvasDataUrl(null); }}
+        maxWidth="xs"
+        fullWidth
+        PaperProps={{ sx: { borderRadius: 2, boxShadow: "0 8px 32px rgba(0,0,0,0.12)" } }}
+      >
+        <DialogTitle sx={{ backgroundColor: "#FDF9F1", borderBottom: "2px solid #E5E1D7", py: 2.5 }}>
+          <Box sx={{ display: "flex", alignItems: "center", justifyContent: "space-between" }}>
+            <Box>
+              <Typography variant="h6" sx={{ fontWeight: 700, color: "#3D8078", fontSize: "1.1rem" }}>
+                QR Code
+              </Typography>
+              {qrPrinter && (
+                <Typography variant="body2" color="text.secondary">{qrPrinter.name}</Typography>
+              )}
+            </Box>
+          </Box>
+        </DialogTitle>
+        <DialogContent sx={{ paddingTop: "24px !important", backgroundColor: "#ffffff", display: "flex", justifyContent: "center" }}>
+          {qrCanvasDataUrl && (
+            <Box component="img" src={qrCanvasDataUrl} alt="QR Code preview" sx={{ width: "100%", maxWidth: 340, borderRadius: 1, border: "1px solid #E5E1D7" }} />
+          )}
+        </DialogContent>
+        <DialogActions sx={{ borderTop: "1px solid #E5E1D7", pt: 2, pb: 2, px: 3, backgroundColor: "#FDF9F1", gap: 1 }}>
+          <Button
+            variant="contained"
+            sx={{ flex: 1, backgroundColor: "#3D8078", "&:hover": { backgroundColor: "#2e6159" }, textTransform: "none", fontWeight: 600 }}
+            onClick={() => { downloadQR(); setQrPrinter(null); setQrCanvasDataUrl(null); }}
+          >
+            Download
+          </Button>
+          <Button onClick={() => { setQrPrinter(null); setQrCanvasDataUrl(null); }} sx={{ color: "#3D8078", fontWeight: 600, textTransform: "none" }}>
+            Close
+          </Button>
+        </DialogActions>
+      </Dialog>
+
+      {/* Copy Link Dialog */}
+      <Dialog
+        open={Boolean(copyLinkPrinter)}
+        onClose={() => setCopyLinkPrinter(null)}
+        maxWidth="sm"
+        fullWidth
+        PaperProps={{ sx: { borderRadius: 2, boxShadow: "0 8px 32px rgba(0,0,0,0.12)" } }}
+      >
+        <DialogTitle sx={{ backgroundColor: "#FDF9F1", borderBottom: "2px solid #E5E1D7", py: 2.5 }}>
+          <Box sx={{ display: "flex", alignItems: "center", justifyContent: "space-between" }}>
+            <Box>
+              <Typography variant="h6" sx={{ fontWeight: 700, color: "#3D8078", fontSize: "1.1rem" }}>
+                Copy Link
+              </Typography>
+              {copyLinkPrinter && (
+                <Typography variant="body2" color="text.secondary">{copyLinkPrinter.name}</Typography>
+              )}
+            </Box>
+          </Box>
+        </DialogTitle>
+        <DialogContent sx={{ paddingTop: "24px !important", backgroundColor: "#ffffff" }}>
+          {copyLinkPrinter && (
+            <Box sx={{ backgroundColor: "#f9f9f9", borderRadius: 2, border: "1px solid #E5E1D7", p: 2 }}>
+              <Typography variant="body2" sx={{ fontFamily: "monospace", fontSize: "0.75rem", wordBreak: "break-all", color: "#45443F" }}>
+                {`${typeof window !== "undefined" ? window.location.origin : ""}/?printer=${copyLinkPrinter.slug}`}
+              </Typography>
+            </Box>
+          )}
+        </DialogContent>
+        <DialogActions sx={{ borderTop: "1px solid #E5E1D7", pt: 2, pb: 2, px: 3, backgroundColor: "#FDF9F1", gap: 1 }}>
+          {copyLinkPrinter && (
+            <>
+              <Button
+                variant="contained"
+                sx={{ flex: 1, backgroundColor: "#3D8078", "&:hover": { backgroundColor: "#2e6159" }, textTransform: "none", fontWeight: 600 }}
+                onClick={() => {
+                  const url = `${window.location.origin}/?printer=${copyLinkPrinter.slug}`;
+                  void navigator.clipboard.writeText(url);
+                  setCopyLinkCopied(true);
+                  setTimeout(() => setCopyLinkCopied(false), 2000);
+                }}
+              >
+                {copyLinkCopied ? "Copied!" : "Copy Link"}
+              </Button>
+              <Button onClick={() => setCopyLinkPrinter(null)} sx={{ color: "#3D8078", fontWeight: 600, textTransform: "none" }}>
+                Close
+              </Button>
+            </>
+          )}
         </DialogActions>
       </Dialog>
 
