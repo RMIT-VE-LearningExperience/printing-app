@@ -1,6 +1,6 @@
 # Print App CMS - Progress Log
 
-**Last Updated:** April 2, 2026 (Session 10)
+**Last Updated:** April 15, 2026 (Session 11)
 **Project:** Print App CMS System
 **User:** Arielle Lee (arielle.lee@rmit.edu.au)
 
@@ -286,8 +286,9 @@ When fetching data in `getTutorialState()`:
 - Add/Edit/Delete Printers
 - Add/Edit/Delete Papers (global and per-printer)
 - Add/Edit/Delete Colours (global and per-printer)
-- Add/Edit/Delete Steps
-- Reorder Steps
+- Add/Edit/Delete Steps (with image or video URL)
+- Video playback in step cards (YouTube, Vimeo, direct file — full width)
+- Reorder Steps (drag-and-drop)
 - Publish/Unpublish Printers (affects entire printer visibility)
 - Publish/Unpublish Papers (affects paper visibility in specific printer)
 - Publish/Unpublish Colours (affects colour visibility in specific printer)
@@ -295,6 +296,12 @@ When fetching data in `getTutorialState()`:
 - Restore deleted items
 - Permanently delete items
 - Client-side sorting (no composite indexes needed)
+- Information dialogs — Name, Last Modified, Modified By for all item types
+- Modified By tracking — admin email stored server-side on create/edit (all types)
+- Embed in Canvas LMS — generates iframe code per printer with configurable dimensions
+- Copy Link + QR code download per printer
+- Success alert auto-closes after 3 seconds
+- Staging environment deployed and isolated from production
 
 ### 🟡 Known Limitations
 - TypeScript errors in admin/page.tsx (pre-existing) - types need realignment but don't affect runtime
@@ -391,6 +398,77 @@ When testing after any changes:
 ---
 
 ## Session History
+
+### Current Session (April 15, 2026) — Session 11
+
+#### Staging Environment
+- **Staging branch now active and deploying**
+  - ✅ Staging environment fully set up (see `STAGING_SETUP_LOG.md` for full detail)
+  - ✅ Git workflow: `feature branch → staging → main (production)`
+  - ✅ Push to `staging` branch → auto-deploys to staging App Hosting backend
+  - ✅ Push to `main` branch → auto-deploys to production
+  - ✅ Staging Firestore database (`staging`), Storage bucket (`printer-app-531a8-staging`) isolated from production
+  - ✅ Admin list shared between staging and production via `adminDb` (reads from `(default)` DB in both environments)
+  - ⚠️ `FIREBASE_PRIVATE_KEY` still pending via Cloud Secret Manager + `apphosting.yaml` — required for `createCustomToken()` on deployed staging (login works locally via `.env.staging.local`)
+  - Files involved: `lib/firebase-admin.ts`, all `app/api/admin-*` routes, `apphosting.yaml`, `.env.staging.local`, `package.json`
+
+---
+
+#### CMS Bug Fixes & Feature Updates
+
+- **Bug Fix: Steps video not displaying after save**
+  - ✅ `getTutorialState()` was mapping step data but omitting `videoUrl` in both the paper-path and printer-path step mappings — URL was saved to Firestore but never returned to the frontend
+  - ✅ Added `videoUrl: stepData.videoUrl || ""` to both step mapping locations in `getTutorialState()`
+  - ✅ Added video rendering to the step card in the CMS admin view — uses `<video controls>` for direct files (`.mp4`/`.webm`/`.ogg`) and a 16:9 responsive `<iframe>` embed for YouTube/Vimeo, matching the existing logic in the Add/Edit step modals
+  - ✅ Video renders full-width in the step card (no `maxWidth` cap)
+  - Files Modified: `lib/tutorial-store.ts`, `app/admin/page.tsx`
+
+- **Feature: Auto-close success alert after 3 seconds**
+  - ✅ `setSuccess("Action completed successfully")` in `runAction()` was never cleared automatically
+  - ✅ Added `setTimeout(() => setSuccess(null), 3000)` immediately after the `setSuccess` call
+  - Files Modified: `app/admin/page.tsx`
+
+- **Feature: Action menu — icon, label, and divider updates**
+  - ✅ All 5 action menu `⋯` text buttons replaced with `<MoreVertIcon fontSize="small" />` (vertical ellipsis) — imported `MoreVert as MoreVertIcon` from `@mui/icons-material`
+  - ✅ `Info` renamed to `Information` in all 4 menus (Printer, Paper ×2, Colour, Step)
+  - ✅ `<Divider />` added before the Delete item in all 4 menus to visually separate it from Edit / Information
+  - ✅ The "More printers" sidebar navigation button (different context) intentionally left unchanged
+  - Files Modified: `app/admin/page.tsx`
+
+- **Feature: Information dialog — consistent Name / Last Modified / Modified By fields**
+  - ✅ All 4 Information dialogs (Paper, Printer, Colour, Step) now show the same three fields: **Name**, **Last Modified**, **Modified By**
+  - ✅ Paper Info: already had all 3 fields — no structural change needed
+  - ✅ Printer Info: added Missing **Modified By** row
+  - ✅ Colour Info: added missing **Modified By** row
+  - ✅ Step Info: previously showed only "Title" — now shows **Name** (step title), **Last Modified**, **Modified By**
+  - ✅ `paddingTop: "24px !important"` applied to all 4 info dialog `DialogContent` elements to fix top padding being overridden by MUI internal styles (same fix as the existing crop modal)
+  - Files Modified: `app/admin/page.tsx`
+
+- **Feature: Modified By tracking — all item types**
+  - ✅ `modifiedBy` field added to `Step`, `Colour`, and `Printer` type definitions in both `lib/tutorial-store.ts` and `app/admin/page.tsx`
+  - ✅ `lastModified` and `modifiedBy` added to `Step` type (steps had neither field previously)
+  - ✅ Both fields now saved to Firestore on `addStep()` and `updateStep()`
+  - ✅ `modifiedBy` now saved on `addPrinter()`, `updatePrinter()`, `addColour()`, `updateColour()`
+  - ✅ `modifiedBy` now saved on `addPaper()` and `updatePaper()` — previously hardcoded as `"system"`
+  - ✅ All `getTutorialState()` step mappings (paper path and printer path) now include `videoUrl`, `lastModified`, and `modifiedBy`
+  - ✅ `getTutorialState()` printer and colour return objects now include `modifiedBy`
+  - ✅ **Identity source:** The API route (`app/api/tutorial/route.ts`) extracts the signed-in admin's email from the verified Firebase JWT (`decoded.email || decoded.uid`) server-side and passes it as `modifiedBy` to all store functions — no client-side trust required
+  - ✅ Existing items that predate this change show `"N/A"` (Printer/Colour/Step) or `"system"` (Paper) until re-saved by an admin
+  - Files Modified: `lib/tutorial-store.ts`, `app/api/tutorial/route.ts`, `app/admin/page.tsx`
+
+- **Feature: Embed in Canvas LMS dialog**
+  - ✅ New `<SettingsEthernetIcon>` button added next to the QR code icon in the printer table (imported `SettingsEthernet as SettingsEthernetIcon` from `@mui/icons-material`)
+  - ✅ Clicking the button opens a dialog scoped to that printer with:
+    - Printer name as subtitle
+    - **Width** / **Height (px)** / **Preset** controls (Full width, 800×600, 1280×720 HD, Full width short)
+    - Generated `<iframe>` embed code block (uses the printer's existing `/?printer=[slug]` URL)
+    - Canvas LMS embedding instructions (Insert → Embed → paste → save)
+    - **Copy Embed Code** button with "Copied!" confirmation (auto-resets after 2 seconds)
+    - **Close** button
+  - ✅ Embed state managed via `embedPrinter`, `embedWidth`, `embedHeight`, `embedCopied` state variables
+  - Files Modified: `app/admin/page.tsx`
+
+---
 
 ### Current Session (April 1, 2026) - Session 9
 

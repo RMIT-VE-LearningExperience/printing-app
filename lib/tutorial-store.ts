@@ -16,6 +16,8 @@ export type Step = {
   imageDataUrl: string;
   videoUrl?: string;
   order: number;
+  lastModified?: Date;
+  modifiedBy?: string;
 };
 
 export type Colour = {
@@ -25,6 +27,7 @@ export type Colour = {
   thumbnailDataUrl: string;
   lastModified: Date;
   createdAt?: Date;
+  modifiedBy?: string;
   steps: Step[];
   published?: boolean; // Per-printer publish status (when part of printer.paper.colours)
 };
@@ -66,6 +69,7 @@ export type Printer = {
   published: boolean;
   lastModified: Date;
   createdAt?: Date;
+  modifiedBy?: string;
   papers: Paper[];
 };
 
@@ -246,7 +250,10 @@ export async function getTutorialState(): Promise<TutorialState> {
                   title: stepData.title,
                   contentHtml: stepData.contentHtml,
                   imageDataUrl: stepData.imageDataUrl,
+                  videoUrl: stepData.videoUrl || "",
                   order: stepData.order ?? 0,
+                  lastModified: stepData.lastModified?.toDate?.() || undefined,
+                  modifiedBy: stepData.modifiedBy || undefined,
                 };
               })
               .sort((a, b) => a.order - b.order);
@@ -258,6 +265,7 @@ export async function getTutorialState(): Promise<TutorialState> {
               thumbnailDataUrl: colourData.thumbnailDataUrl || "",
               lastModified: colourData.lastModified?.toDate() || new Date(),
               createdAt: colourData.createdAt?.toDate() || new Date(),
+              modifiedBy: colourData.modifiedBy || undefined,
               steps,
             };
           }),
@@ -328,7 +336,10 @@ export async function getTutorialState(): Promise<TutorialState> {
                       title: stepData.title,
                       contentHtml: stepData.contentHtml,
                       imageDataUrl: stepData.imageDataUrl,
+                      videoUrl: stepData.videoUrl || "",
                       order: stepData.order ?? 0,
+                      lastModified: stepData.lastModified?.toDate?.() || undefined,
+                      modifiedBy: stepData.modifiedBy || undefined,
                     };
                   })
                   .sort((a, b) => a.order - b.order);
@@ -340,6 +351,7 @@ export async function getTutorialState(): Promise<TutorialState> {
                   thumbnailDataUrl: globalColourData?.thumbnailDataUrl ?? printerColourData?.thumbnailDataUrl ?? "",
                   lastModified: globalColourData?.lastModified?.toDate() || printerColourData?.lastModified?.toDate?.() || new Date(),
                   createdAt: globalColourData?.createdAt?.toDate() || printerColourData?.createdAt?.toDate?.() || new Date(),
+                  modifiedBy: globalColourData?.modifiedBy || undefined,
                   steps,
                   published: printerColourData.published ?? true,
                 };
@@ -371,6 +383,7 @@ export async function getTutorialState(): Promise<TutorialState> {
           published: data.published ?? true,
           lastModified: data.lastModified?.toDate() || new Date(),
           createdAt: data.createdAt?.toDate() || data.lastModified?.toDate() || new Date(),
+          modifiedBy: data.modifiedBy || undefined,
           papers,
         };
       }),
@@ -480,6 +493,7 @@ export async function addPrinter(
   name: string,
   description?: string,
   thumbnailDataUrl?: string,
+  modifiedBy?: string,
 ): Promise<TutorialState> {
   try {
     const normalizedName = normalizeName(name, "Printer name");
@@ -495,6 +509,7 @@ export async function addPrinter(
       published: true,
       lastModified: now,
       createdAt: FieldValue.serverTimestamp(),
+      modifiedBy: modifiedBy || "system",
     });
 
     return getTutorialState();
@@ -509,6 +524,7 @@ export async function updatePrinter(
   description?: string,
   thumbnailDataUrl?: string,
   published?: boolean,
+  modifiedBy?: string,
 ): Promise<TutorialState> {
   try {
     const printerRef = await assertDocExists(printersCollection(), printerId, "Printer");
@@ -527,6 +543,7 @@ export async function updatePrinter(
     }
 
     updates.lastModified = new Date();
+    updates.modifiedBy = modifiedBy || "system";
 
     await printerRef.update(updates);
     return getTutorialState();
@@ -542,6 +559,7 @@ export async function addPaper(
   description?: string,
   thumbnailDataUrl?: string,
   printerIds?: string[],
+  modifiedBy?: string,
 ): Promise<TutorialState> {
   try {
     const normalizedName = normalizeName(name, "Paper name");
@@ -562,7 +580,7 @@ export async function addPaper(
       thumbnailDataUrl: thumbnailDataUrl || "",
       lastModified: now,
       createdAt: FieldValue.serverTimestamp(),
-      modifiedBy: "system",
+      modifiedBy: modifiedBy || "system",
     });
 
     // Add paper to selected printers
@@ -587,6 +605,7 @@ export async function updatePaper(
   name?: string,
   description?: string,
   thumbnailDataUrl?: string,
+  modifiedBy?: string,
 ): Promise<TutorialState> {
   try {
     const paperRef = await assertDocExists(papersCollection(), paperId, "Paper");
@@ -597,7 +616,7 @@ export async function updatePaper(
     if (thumbnailDataUrl !== undefined) updates.thumbnailDataUrl = thumbnailDataUrl;
 
     updates.lastModified = new Date();
-    updates.modifiedBy = "system";
+    updates.modifiedBy = modifiedBy || "system";
 
     await paperRef.update(updates);
 
@@ -747,6 +766,7 @@ export async function addColour(
   name: string,
   thumbnailDataUrl?: string,
   description?: string,
+  modifiedBy?: string,
 ): Promise<TutorialState> {
   try {
     const printerRef = await assertDocExists(printersCollection(), printerId, "Printer");
@@ -776,6 +796,7 @@ export async function addColour(
       lastModified: now,
       createdAt: FieldValue.serverTimestamp(),
       order: globalColourOrder,
+      modifiedBy: modifiedBy || "system",
     });
 
     // Create colour reference in printer's paper (contains publish status)
@@ -800,6 +821,7 @@ export async function updateColour(
   thumbnailDataUrl?: string,
   published?: boolean,
   description?: string,
+  modifiedBy?: string,
 ): Promise<TutorialState> {
   try {
     const printerRef = await assertDocExists(printersCollection(), printerId, "Printer");
@@ -819,6 +841,7 @@ export async function updateColour(
       if (thumbnailDataUrl !== undefined) globalUpdates.thumbnailDataUrl = thumbnailDataUrl;
       if (description !== undefined) globalUpdates.description = normalizeDescription(description);
       globalUpdates.lastModified = new Date();
+      globalUpdates.modifiedBy = modifiedBy || "system";
 
       await globalColourRef.update(globalUpdates);
     }
@@ -936,6 +959,7 @@ export async function addStep(
   contentHtml: string,
   imageDataUrl: string,
   videoUrl?: string,
+  modifiedBy?: string,
 ): Promise<TutorialState> {
   try {
     const printerRef = await assertDocExists(printersCollection(), printerId, "Printer");
@@ -989,6 +1013,8 @@ export async function addStep(
       imageDataUrl: imageDataUrl || "",
       videoUrl: videoUrl || "",
       order: nextOrder + 1,
+      lastModified: new Date(),
+      modifiedBy: modifiedBy || "system",
     });
 
     await updatePrinterLastModified(printerId);
@@ -1007,6 +1033,7 @@ export async function updateStep(
   contentHtml?: string,
   imageDataUrl?: string,
   videoUrl?: string,
+  modifiedBy?: string,
 ): Promise<TutorialState> {
   try {
     const printerRef = await assertDocExists(printersCollection(), printerId, "Printer");
@@ -1061,6 +1088,8 @@ export async function updateStep(
     }
     if (imageDataUrl !== undefined) updates.imageDataUrl = imageDataUrl;
     if (videoUrl !== undefined) updates.videoUrl = videoUrl;
+    updates.lastModified = new Date();
+    updates.modifiedBy = modifiedBy || "system";
 
     await stepRef.update(updates);
     await updatePrinterLastModified(printerId);

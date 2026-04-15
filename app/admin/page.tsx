@@ -70,6 +70,8 @@ import {
   Settings as SettingsIcon,
   CheckCircleOutline as ApproveIcon,
   CancelOutlined as RejectIcon,
+  MoreVert as MoreVertIcon,
+  SettingsEthernet as SettingsEthernetIcon,
 } from "@mui/icons-material";
 import QRCode from "qrcode";
 import { DragDropContext, Droppable, Draggable, type DropResult } from "@hello-pangea/dnd";
@@ -86,6 +88,8 @@ type Step = {
   imageDataUrl: string;
   videoUrl?: string;
   order: number;
+  lastModified?: Date;
+  modifiedBy?: string;
 };
 
 type Colour = {
@@ -95,6 +99,7 @@ type Colour = {
   thumbnailDataUrl: string;
   lastModified: Date;
   createdAt?: Date;
+  modifiedBy?: string;
   steps: Step[];
   published?: boolean; // Per-printer publish status (when part of printer.paper.colours)
 };
@@ -120,6 +125,7 @@ type Printer = {
   published: boolean;
   lastModified: Date;
   createdAt?: Date;
+  modifiedBy?: string;
   papers: Paper[];
 };
 
@@ -490,6 +496,12 @@ export default function AdminPage() {
   const cropCanvasRef = useRef<HTMLCanvasElement | null>(null);
   const cropContainerRef = useRef<HTMLDivElement | null>(null);
 
+  // Embed dialog state
+  const [embedPrinter, setEmbedPrinter] = useState<Printer | null>(null);
+  const [embedWidth, setEmbedWidth] = useState("100%");
+  const [embedHeight, setEmbedHeight] = useState("600");
+  const [embedCopied, setEmbedCopied] = useState(false);
+
   // Context menu states
   const [printerMenuAnchor, setPrinterMenuAnchor] = useState<HTMLElement | null>(null);
   const [selectedPrinterForMenu, setSelectedPrinterForMenu] = useState<string | null>(null);
@@ -679,6 +691,7 @@ export default function AdminPage() {
       const result = (await response.json()) as { state: TutorialState };
       setTutorialState(result.state);
       setSuccess("Action completed successfully");
+      setTimeout(() => setSuccess(null), 3000);
       return result.state;
     } catch (err) {
       const errorMsg = err instanceof Error ? err.message : "An error occurred";
@@ -2466,7 +2479,7 @@ export default function AdminPage() {
                           }}
                           sx={{ ml: 1, color: "inherit", "&:hover": { color: "#3D8078" } }}
                         >
-                          ⋯
+                          <MoreVertIcon fontSize="small" />
                         </IconButton>
                       </ListItemButton>
                     </ListItem>
@@ -2803,7 +2816,7 @@ export default function AdminPage() {
                           <TableCell align="center">
                             <Stack direction="row" alignItems="center" justifyContent="center">
                               <IconButton size="small" onClick={(e) => { e.stopPropagation(); handlePrinterMenuOpen(e, printer.id); }}>
-                                ⋯
+                                <MoreVertIcon fontSize="small" />
                               </IconButton>
                               <Tooltip title="Copy link">
                                 <IconButton size="small" onClick={(e) => { e.stopPropagation(); copyPrinterLink(printer); }}>
@@ -2813,6 +2826,11 @@ export default function AdminPage() {
                               <Tooltip title={slugUpdatedIds.has(printer.id) ? "Link updated — download new QR code" : "Download QR code"}>
                                 <IconButton size="small" onClick={(e) => { e.stopPropagation(); void generateAndDownloadQR(printer); }} sx={slugUpdatedIds.has(printer.id) ? { color: "#f59e0b" } : {}}>
                                   <QrCodeIcon fontSize="small" />
+                                </IconButton>
+                              </Tooltip>
+                              <Tooltip title="Embed in Canvas LMS">
+                                <IconButton size="small" onClick={(e) => { e.stopPropagation(); setEmbedPrinter(printer); setEmbedWidth("100%"); setEmbedHeight("600"); setEmbedCopied(false); }}>
+                                  <SettingsEthernetIcon fontSize="small" />
                                 </IconButton>
                               </Tooltip>
                             </Stack>
@@ -2987,7 +3005,7 @@ export default function AdminPage() {
                               handlePaperMenuOpen(e, paper.id, "papers");
                             }}
                           >
-                            ⋯
+                            <MoreVertIcon fontSize="small" />
                           </IconButton>
                         </TableCell>
                         <TableCell align="center">
@@ -3174,7 +3192,7 @@ export default function AdminPage() {
                                 handleColourMenuOpen(e, colour.id);
                               }}
                             >
-                              ⋯
+                              <MoreVertIcon fontSize="small" />
                             </IconButton>
                           </TableCell>
                           <TableCell align="center">
@@ -3332,6 +3350,23 @@ export default function AdminPage() {
                                             }}
                                           />
                                         )}
+                                        {step.videoUrl && getVideoEmbedUrl(step.videoUrl) && (
+                                          <Box sx={{ mt: 1 }}>
+                                            {/\.(mp4|webm|ogg)(\?.*)?$/i.test(step.videoUrl) ? (
+                                              <Box component="video" controls src={step.videoUrl} sx={{ width: "100%", borderRadius: 1 }} />
+                                            ) : (
+                                              <Box sx={{ position: "relative", width: "100%", paddingBottom: "56.25%", borderRadius: 1, overflow: "hidden" }}>
+                                                <Box
+                                                  component="iframe"
+                                                  src={getVideoEmbedUrl(step.videoUrl)!}
+                                                  allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
+                                                  allowFullScreen
+                                                  sx={{ position: "absolute", top: 0, left: 0, width: "100%", height: "100%", border: "none" }}
+                                                />
+                                              </Box>
+                                            )}
+                                          </Box>
+                                        )}
                                       </Box>
                                     </Collapse>
                                   </Box>
@@ -3346,7 +3381,7 @@ export default function AdminPage() {
                                   title="More options"
                                   sx={{ ml: 1 }}
                                 >
-                                  ⋯
+                                  <MoreVertIcon fontSize="small" />
                                 </IconButton>
                               </Box>
                             </Paper>
@@ -3463,7 +3498,7 @@ export default function AdminPage() {
                           size="small"
                           onClick={(e) => handlePaperMenuOpen(e, paper.id, "fulllist")}
                         >
-                          ⋯
+                          <MoreVertIcon fontSize="small" />
                         </IconButton>
                       </TableCell>
                     </TableRow>
@@ -4642,7 +4677,7 @@ export default function AdminPage() {
         PaperProps={{ sx: { borderRadius: 2, boxShadow: "0 8px 32px rgba(0, 0, 0, 0.12)" } }}
       >
         <DialogTitle sx={{ backgroundColor: "#FDF9F1", borderBottom: "2px solid #E5E1D7", fontWeight: 700, color: "#3D8078", fontSize: "1.1rem", py: 2.5 }}>PAPER INFO</DialogTitle>
-        <DialogContent sx={{ pt: 16, backgroundColor: "#ffffff" }}>
+        <DialogContent sx={{ paddingTop: "24px !important", backgroundColor: "#ffffff" }}>
           {infoPaperId && (() => {
             const paper = allPapers.find((p) => p.id === infoPaperId);
             return paper ? (
@@ -4690,7 +4725,7 @@ export default function AdminPage() {
         PaperProps={{ sx: { borderRadius: 2, boxShadow: "0 8px 32px rgba(0, 0, 0, 0.12)" } }}
       >
         <DialogTitle sx={{ backgroundColor: "#FDF9F1", borderBottom: "2px solid #E5E1D7", fontWeight: 700, color: "#3D8078", fontSize: "1.1rem", py: 2.5 }}>PRINTER INFO</DialogTitle>
-        <DialogContent sx={{ pt: 16, backgroundColor: "#ffffff" }}>
+        <DialogContent sx={{ paddingTop: "24px !important", backgroundColor: "#ffffff" }}>
           {infoPrinterId && (() => {
             const printer = tutorialState.printers.find((p) => p.id === infoPrinterId);
             return printer ? (
@@ -4708,6 +4743,12 @@ export default function AdminPage() {
                   <Typography variant="body1">
                     {printer.lastModified ? new Date(printer.lastModified).toLocaleString() : "N/A"}
                   </Typography>
+                </Box>
+                <Box>
+                  <Typography variant="body2" color="text.secondary">
+                    Modified By
+                  </Typography>
+                  <Typography variant="body1">{printer.modifiedBy || "N/A"}</Typography>
                 </Box>
               </Stack>
             ) : null;
@@ -4732,7 +4773,7 @@ export default function AdminPage() {
         PaperProps={{ sx: { borderRadius: 2, boxShadow: "0 8px 32px rgba(0, 0, 0, 0.12)" } }}
       >
         <DialogTitle sx={{ backgroundColor: "#FDF9F1", borderBottom: "2px solid #E5E1D7", fontWeight: 700, color: "#3D8078", fontSize: "1.1rem", py: 2.5 }}>COLOUR INFO</DialogTitle>
-        <DialogContent sx={{ pt: 16, backgroundColor: "#ffffff" }}>
+        <DialogContent sx={{ paddingTop: "24px !important", backgroundColor: "#ffffff" }}>
           {infoColourId && (() => {
             // Look up the colour from the global papers list
             let colour = null;
@@ -4759,6 +4800,12 @@ export default function AdminPage() {
                     {colour.lastModified ? new Date(colour.lastModified).toLocaleString() : "N/A"}
                   </Typography>
                 </Box>
+                <Box>
+                  <Typography variant="body2" color="text.secondary">
+                    Modified By
+                  </Typography>
+                  <Typography variant="body1">{colour.modifiedBy || "N/A"}</Typography>
+                </Box>
               </Stack>
             ) : null;
           })()}
@@ -4773,6 +4820,108 @@ export default function AdminPage() {
         </DialogActions>
       </Dialog>
 
+      {/* Embed in Canvas LMS Dialog */}
+      <Dialog
+        open={Boolean(embedPrinter)}
+        onClose={() => setEmbedPrinter(null)}
+        maxWidth="sm"
+        fullWidth
+        PaperProps={{ sx: { borderRadius: 2, boxShadow: "0 8px 32px rgba(0,0,0,0.12)" } }}
+      >
+        <DialogTitle sx={{ backgroundColor: "#FDF9F1", borderBottom: "2px solid #E5E1D7", py: 2.5 }}>
+          <Box sx={{ display: "flex", alignItems: "center", justifyContent: "space-between" }}>
+            <Box>
+              <Typography variant="h6" sx={{ fontWeight: 700, color: "#3D8078", fontSize: "1.1rem" }}>
+                Embed in Canvas LMS
+              </Typography>
+              {embedPrinter && (
+                <Typography variant="body2" color="text.secondary">{embedPrinter.name}</Typography>
+              )}
+            </Box>
+          </Box>
+        </DialogTitle>
+        <DialogContent sx={{ paddingTop: "24px !important", backgroundColor: "#ffffff" }}>
+          {embedPrinter && (() => {
+            const embedUrl = `${typeof window !== "undefined" ? window.location.origin : ""}/?printer=${embedPrinter.slug}`;
+            const iframeCode = `<iframe src="${embedUrl}" width="${embedWidth}" height="${embedHeight}px" frameborder="0" allowfullscreen allow="fullscreen; accelerometer; gyroscope; vr" style="border:none;"></iframe>`;
+            const handlePreset = (value: string) => {
+              const [w, h] = value.split("x");
+              setEmbedWidth(w);
+              setEmbedHeight(h);
+            };
+            return (
+              <Stack spacing={2}>
+                <Stack direction="row" spacing={2}>
+                  <Box sx={{ flex: 1 }}>
+                    <Typography variant="caption" color="text.secondary" sx={{ fontWeight: 600, display: "block", mb: 0.5 }}>Width</Typography>
+                    <TextField size="small" fullWidth value={embedWidth} onChange={(e) => setEmbedWidth(e.target.value)} />
+                  </Box>
+                  <Box sx={{ flex: 1 }}>
+                    <Typography variant="caption" color="text.secondary" sx={{ fontWeight: 600, display: "block", mb: 0.5 }}>Height (px)</Typography>
+                    <TextField size="small" fullWidth value={embedHeight} onChange={(e) => setEmbedHeight(e.target.value)} />
+                  </Box>
+                  <Box sx={{ flex: 1 }}>
+                    <Typography variant="caption" color="text.secondary" sx={{ fontWeight: 600, display: "block", mb: 0.5 }}>Preset</Typography>
+                    <TextField
+                      select
+                      size="small"
+                      fullWidth
+                      value={`${embedWidth}x${embedHeight}`}
+                      onChange={(e) => handlePreset(e.target.value)}
+                    >
+                      <MenuItem value="100%x600">Full width</MenuItem>
+                      <MenuItem value="800x600">800×600</MenuItem>
+                      <MenuItem value="1280x720">1280×720 (HD)</MenuItem>
+                      <MenuItem value="100%x500">Full width short</MenuItem>
+                    </TextField>
+                  </Box>
+                </Stack>
+                <Box sx={{ backgroundColor: "#f9f9f9", borderRadius: 2, border: "1px solid #E5E1D7", p: 2 }}>
+                  <Typography variant="body2" sx={{ fontFamily: "monospace", fontSize: "0.75rem", wordBreak: "break-all", whiteSpace: "pre-wrap", color: "#45443F" }}>
+                    {iframeCode}
+                  </Typography>
+                </Box>
+                <Box sx={{ backgroundColor: "#EEF2FF", borderRadius: 2, p: 2 }}>
+                  <Typography variant="body2" sx={{ fontWeight: 600, color: "#3730a3", mb: 1 }}>How to embed in Canvas LMS:</Typography>
+                  <Box component="ol" sx={{ pl: 2, m: 0, color: "#3730a3" }}>
+                    <Typography component="li" variant="body2" sx={{ mb: 0.5 }}>Open your Canvas page or assignment in Edit mode</Typography>
+                    <Typography component="li" variant="body2" sx={{ mb: 0.5 }}>Click <strong>Insert → Embed</strong> (or the HTML editor <code>&lt;/&gt;</code> button)</Typography>
+                    <Typography component="li" variant="body2">Paste the code and save</Typography>
+                  </Box>
+                  <Typography variant="body2" sx={{ color: "#4338ca", mt: 1, fontSize: "0.8rem" }}>
+                    This URL is permanent — uploading a new version won&apos;t break existing embeds.
+                  </Typography>
+                </Box>
+              </Stack>
+            );
+          })()}
+        </DialogContent>
+        <DialogActions sx={{ borderTop: "1px solid #E5E1D7", pt: 2, pb: 2, px: 3, backgroundColor: "#FDF9F1", gap: 1 }}>
+          {embedPrinter && (() => {
+            const embedUrl = `${typeof window !== "undefined" ? window.location.origin : ""}/?printer=${embedPrinter.slug}`;
+            const iframeCode = `<iframe src="${embedUrl}" width="${embedWidth}" height="${embedHeight}px" frameborder="0" allowfullscreen allow="fullscreen; accelerometer; gyroscope; vr" style="border:none;"></iframe>`;
+            return (
+              <>
+                <Button
+                  variant="contained"
+                  sx={{ flex: 1, backgroundColor: "#3D8078", "&:hover": { backgroundColor: "#2e6159" }, textTransform: "none", fontWeight: 600 }}
+                  onClick={() => {
+                    void navigator.clipboard.writeText(iframeCode);
+                    setEmbedCopied(true);
+                    setTimeout(() => setEmbedCopied(false), 2000);
+                  }}
+                >
+                  {embedCopied ? "Copied!" : "Copy Embed Code"}
+                </Button>
+                <Button onClick={() => setEmbedPrinter(null)} sx={{ color: "#3D8078", fontWeight: 600, textTransform: "none" }}>
+                  Close
+                </Button>
+              </>
+            );
+          })()}
+        </DialogActions>
+      </Dialog>
+
       {/* Step Info Modal */}
       <Dialog
         open={showStepInfoModal}
@@ -4782,16 +4931,30 @@ export default function AdminPage() {
         PaperProps={{ sx: { borderRadius: 2, boxShadow: "0 8px 32px rgba(0, 0, 0, 0.12)" } }}
       >
         <DialogTitle sx={{ backgroundColor: "#FDF9F1", borderBottom: "2px solid #E5E1D7", fontWeight: 700, color: "#3D8078", fontSize: "1.1rem", py: 2.5 }}>STEP INFO</DialogTitle>
-        <DialogContent sx={{ pt: 16, backgroundColor: "#ffffff" }}>
+        <DialogContent sx={{ paddingTop: "24px !important", backgroundColor: "#ffffff" }}>
           {infoStepId && (() => {
             const step = selectedColor?.steps.find((s) => s.id === infoStepId);
             return step ? (
               <Stack spacing={2}>
                 <Box>
                   <Typography variant="body2" color="text.secondary">
-                    Title
+                    Name
                   </Typography>
                   <Typography variant="body1">{step.title}</Typography>
+                </Box>
+                <Box>
+                  <Typography variant="body2" color="text.secondary">
+                    Last Modified
+                  </Typography>
+                  <Typography variant="body1">
+                    {step.lastModified ? new Date(step.lastModified).toLocaleString() : "N/A"}
+                  </Typography>
+                </Box>
+                <Box>
+                  <Typography variant="body2" color="text.secondary">
+                    Modified By
+                  </Typography>
+                  <Typography variant="body1">{step.modifiedBy || "N/A"}</Typography>
                 </Box>
               </Stack>
             ) : null;
@@ -5659,7 +5822,8 @@ export default function AdminPage() {
         onClose={handlePrinterMenuClose}
       >
         <MenuItem onClick={handlePrinterMenuEdit}>Edit</MenuItem>
-        <MenuItem onClick={handlePrinterMenuInfo}>Info</MenuItem>
+        <MenuItem onClick={handlePrinterMenuInfo}>Information</MenuItem>
+        <Divider />
         <MenuItem onClick={handlePrinterMenuDelete} sx={{ color: "error.main" }}>
           Delete
         </MenuItem>
@@ -5673,7 +5837,8 @@ export default function AdminPage() {
         {paperMenuSource === "papers" ? (
           <>
             <MenuItem onClick={handlePaperMenuEdit}>Edit</MenuItem>
-            <MenuItem onClick={handlePaperMenuInfo}>Info</MenuItem>
+            <MenuItem onClick={handlePaperMenuInfo}>Information</MenuItem>
+            <Divider />
             <MenuItem onClick={handlePaperMenuDelete} sx={{ color: "error.main" }}>
               Delete
             </MenuItem>
@@ -5681,7 +5846,8 @@ export default function AdminPage() {
         ) : (
           <>
             <MenuItem onClick={handlePaperMenuEdit}>Edit</MenuItem>
-            <MenuItem onClick={handlePaperMenuInfo}>Info</MenuItem>
+            <MenuItem onClick={handlePaperMenuInfo}>Information</MenuItem>
+            <Divider />
             <MenuItem onClick={handlePaperMenuDelete} sx={{ color: "error.main" }}>
               Delete
             </MenuItem>
@@ -5695,7 +5861,8 @@ export default function AdminPage() {
         onClose={handleColourMenuClose}
       >
         <MenuItem onClick={handleColourMenuEdit}>Edit</MenuItem>
-        <MenuItem onClick={handleColourMenuInfo}>Info</MenuItem>
+        <MenuItem onClick={handleColourMenuInfo}>Information</MenuItem>
+        <Divider />
         <MenuItem onClick={handleColourMenuDelete} sx={{ color: "error.main" }}>
           Delete
         </MenuItem>
@@ -5707,7 +5874,8 @@ export default function AdminPage() {
         onClose={handleStepMenuClose}
       >
         <MenuItem onClick={handleStepMenuEdit}>Edit</MenuItem>
-        <MenuItem onClick={handleStepMenuInfo}>Info</MenuItem>
+        <MenuItem onClick={handleStepMenuInfo}>Information</MenuItem>
+        <Divider />
         <MenuItem onClick={handleStepMenuDelete} sx={{ color: "error.main" }}>
           Delete
         </MenuItem>

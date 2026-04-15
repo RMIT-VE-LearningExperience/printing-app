@@ -177,10 +177,10 @@ type ActionPayload =
       subtitle: string;
     };
 
-async function executeAction(payload: ActionPayload): Promise<TutorialState> {
+async function executeAction(payload: ActionPayload, modifiedBy?: string): Promise<TutorialState> {
   switch (payload.action) {
     case "addPrinter":
-      return addPrinter(payload.name, payload.description, payload.thumbnailDataUrl);
+      return addPrinter(payload.name, payload.description, payload.thumbnailDataUrl, modifiedBy);
 
     case "updatePrinter":
       return updatePrinter(
@@ -189,6 +189,7 @@ async function executeAction(payload: ActionPayload): Promise<TutorialState> {
         payload.description,
         payload.thumbnailDataUrl,
         payload.published,
+        modifiedBy,
       );
 
     case "deletePrinter":
@@ -200,6 +201,7 @@ async function executeAction(payload: ActionPayload): Promise<TutorialState> {
         payload.description,
         payload.thumbnailDataUrl,
         payload.printerIds,
+        modifiedBy,
       );
 
     case "updatePaper":
@@ -208,6 +210,7 @@ async function executeAction(payload: ActionPayload): Promise<TutorialState> {
         payload.name,
         payload.description,
         payload.thumbnailDataUrl,
+        modifiedBy,
       );
 
     case "deletePaper":
@@ -233,6 +236,7 @@ async function executeAction(payload: ActionPayload): Promise<TutorialState> {
         payload.name,
         payload.thumbnailDataUrl,
         payload.description,
+        modifiedBy,
       );
 
     case "updateColour":
@@ -244,6 +248,7 @@ async function executeAction(payload: ActionPayload): Promise<TutorialState> {
         payload.thumbnailDataUrl,
         payload.published,
         payload.description,
+        modifiedBy,
       );
 
     case "deleteColour":
@@ -266,6 +271,7 @@ async function executeAction(payload: ActionPayload): Promise<TutorialState> {
         payload.contentHtml,
         payload.imageDataUrl,
         payload.videoUrl,
+        modifiedBy,
       );
 
     case "updateStep":
@@ -278,6 +284,7 @@ async function executeAction(payload: ActionPayload): Promise<TutorialState> {
         payload.contentHtml,
         payload.imageDataUrl,
         payload.videoUrl,
+        modifiedBy,
       );
 
     case "deleteStep":
@@ -336,12 +343,14 @@ export async function POST(req: NextRequest) {
     if (!token) {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
+    let modifiedBy: string = "system";
     try {
       const decoded = await auth.verifyIdToken(token);
       const role = decoded.role as string | undefined;
       if (role !== "admin" && role !== "superadmin") {
         return NextResponse.json({ error: "Forbidden" }, { status: 403 });
       }
+      modifiedBy = decoded.email || decoded.uid || "system";
     } catch {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
@@ -359,7 +368,7 @@ export async function POST(req: NextRequest) {
 
     // Merge action into payload for executeAction
     const actionPayload = { ...(body.payload as Record<string, unknown>), action: body.action } as ActionPayload;
-    const state = await executeAction(actionPayload);
+    const state = await executeAction(actionPayload, modifiedBy);
 
     return NextResponse.json({ state });
   } catch (error) {
