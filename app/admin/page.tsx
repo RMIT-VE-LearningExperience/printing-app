@@ -2734,7 +2734,7 @@ export default function AdminPage() {
                     label="Section Title"
                     inputProps={{ maxLength: 50 }}
                     InputProps={{ endAdornment: <InputAdornment position="end"><Typography variant="caption" color="text.secondary">{sectionSettings.printers.title.length}/50</Typography></InputAdornment> }}
-                    sx={{ mb: 2, minWidth: 240 }}
+                    sx={{ mb: 2, minWidth: 260, maxWidth: "50%" }}
                   />
                   <Box sx={{ display: "flex", alignItems: "center", justifyContent: "space-between" }}>
                     <TextField
@@ -2744,7 +2744,7 @@ export default function AdminPage() {
                       label="Subtitle"
                       inputProps={{ maxLength: 100 }}
                       InputProps={{ endAdornment: <InputAdornment position="end"><Typography variant="caption" color="text.secondary">{sectionSettings.printers.subtitle.length}/100</Typography></InputAdornment> }}
-                      sx={{ width: "50%" }}
+                      sx={{ minWidth: 260, maxWidth: "50%" }}
                     />
                     <Button
                       variant="contained"
@@ -2893,7 +2893,7 @@ export default function AdminPage() {
                   label="Section Title"
                   inputProps={{ maxLength: 50 }}
                   InputProps={{ endAdornment: <InputAdornment position="end"><Typography variant="caption" color="text.secondary">{sectionSettings.papers.title.length}/50</Typography></InputAdornment> }}
-                  sx={{ minWidth: 220 }}
+                  sx={{ minWidth: 260, maxWidth: "50%" }}
                 />
                 <Chip label={selectedPrinter.name} variant="outlined" size="small" sx={{ fontWeight: 700, fontSize: "1rem", borderColor: "#45443F", color: "#45443F", height: "auto", "& .MuiChip-label": { py: 0.25, px: 1 } }} />
                 <Link
@@ -2915,7 +2915,7 @@ export default function AdminPage() {
                   label="Subtitle"
                   inputProps={{ maxLength: 100 }}
                   InputProps={{ endAdornment: <InputAdornment position="end"><Typography variant="caption" color="text.secondary">{sectionSettings.papers.subtitle.length}/100</Typography></InputAdornment> }}
-                  sx={{ width: "50%" }}
+                  sx={{ minWidth: 260, maxWidth: "50%" }}
                 />
                 <Button
                   variant="contained"
@@ -3064,7 +3064,7 @@ export default function AdminPage() {
                   label="Section Title"
                   inputProps={{ maxLength: 50 }}
                   InputProps={{ endAdornment: <InputAdornment position="end"><Typography variant="caption" color="text.secondary">{sectionSettings.colours.title.length}/50</Typography></InputAdornment> }}
-                  sx={{ minWidth: 220 }}
+                  sx={{ minWidth: 260, maxWidth: "50%" }}
                 />
                 <Chip label={selectedPaper.name} variant="outlined" size="small" sx={{ fontWeight: 700, fontSize: "1rem", borderColor: "#45443F", color: "#45443F", height: "auto", "& .MuiChip-label": { py: 0.25, px: 1 } }} />
               </Box>
@@ -3076,7 +3076,7 @@ export default function AdminPage() {
                   label="Subtitle"
                   inputProps={{ maxLength: 100 }}
                   InputProps={{ endAdornment: <InputAdornment position="end"><Typography variant="caption" color="text.secondary">{sectionSettings.colours.subtitle.length}/100</Typography></InputAdornment> }}
-                  sx={{ width: "50%" }}
+                  sx={{ minWidth: 260, maxWidth: "50%" }}
                 />
                 <Button
                   variant="contained"
