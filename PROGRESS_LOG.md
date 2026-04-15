@@ -1532,4 +1532,49 @@ Added a `cropImgReady` boolean state (starts `false`). The modal's `<img>` eleme
 
 ---
 
+---
+
+## Session 12 — April 13–15, 2026: Staging Environment Setup
+
+### 🚀 Staging Environment — Complete
+
+**Overview:** Set up a full staging environment for the Print App to enable testing changes before pushing to production. Full details documented in [STAGING_SETUP_LOG.md](STAGING_SETUP_LOG.md).
+
+**Approach chosen:** Single Firebase project with a named Firestore database (`staging`) and a separate Storage bucket — avoids the overhead of a separate Firebase project while providing sufficient data isolation.
+
+**What was set up:**
+
+| Component | Detail |
+|-----------|--------|
+| Firestore database | Named `staging` — isolated content data |
+| Storage bucket | `printer-app-531a8-staging` — isolated files |
+| App Hosting backend | `print-app-staging` — auto-deploys on push to `staging` branch |
+| Git branch | `staging` — merges to `main` for production |
+| Local dev command | `npm run dev:staging` |
+
+**Admin list shared between staging and production:**
+- `adminDb` export added to `lib/firebase-admin.ts` — always reads from `(default)` database
+- All 5 admin routes updated to use `adminDb` so the same superadmins/admins can log in to both environments without separate seeding
+
+**FIREBASE_PRIVATE_KEY:**
+- Required for `createCustomToken()` in the login flow — `applicationDefault()` alone is insufficient on Firebase App Hosting
+- Added to Cloud Secret Manager, App Hosting service account granted Secret Accessor role
+- Referenced in `apphosting.yaml` so both staging and production backends pull it at runtime
+
+**Files changed:**
+- `lib/firebase-admin.ts` — `FIREBASE_DATABASE_ID` env var + `adminDb` export
+- `app/api/verify-auth/route.ts` — use `adminDb`
+- `app/api/admin-login/route.ts` — use `adminDb`
+- `app/api/admin-register/route.ts` — use `adminDb`
+- `app/api/admin-approve/route.ts` — use `adminDb`
+- `app/api/admin-requests/route.ts` — use `adminDb`
+- `app/admin/page.tsx` — ESLint fix (unused state)
+- `apphosting.yaml` — `FIREBASE_PRIVATE_KEY` secret reference
+- `package.json` — `dev:staging` script + `dotenv-cli` dev dependency
+- `.env.staging.local` — local dev credentials pointing to staging database and bucket
+
+**Status:** ✅ Staging environment fully operational
+
+---
+
 **End of Progress Log**
