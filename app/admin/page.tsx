@@ -1992,7 +1992,7 @@ export default function AdminPage() {
         }}
       >
         {/* Toggle Button and Title */}
-        <Box sx={{ display: "flex", alignItems: "center", justifyContent: "space-between", mb: 3 }}>
+        <Box sx={{ display: "flex", alignItems: "center", justifyContent: sidebarCollapsed ? "center" : "space-between", mb: 3 }}>
           {!sidebarCollapsed && (
             <Link
               component="button"
@@ -2276,8 +2276,11 @@ export default function AdminPage() {
         )}
 
         {/* Printer List */}
+        {sidebarCollapsed && (
+          <Divider sx={{ my: 1.5, borderColor: "rgba(255, 255, 255, 0.15)" }} />
+        )}
         {sidebarCollapsed ? (
-              <Stack spacing={1.5} sx={{ mt: 1.5 }}>
+              <Stack spacing={1.5} sx={{ mt: 0 }}>
                 {/* Printers Section */}
                 <Stack spacing={1.5}>
                   {tutorialState.printers.slice(0, 3).map((printer) => (
