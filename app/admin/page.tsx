@@ -47,8 +47,8 @@ import {
   Palette as PaletteIcon,
   DeleteOutline as DeleteOutlineIcon,
   Visibility as VisibilityIcon,
-  ChevronLeft as ChevronLeftIcon,
-  ChevronRight as ChevronRightIcon,
+  ArrowLeftRounded as ArrowLeftRoundedIcon,
+  ArrowRightRounded as ArrowRightRoundedIcon,
   Add as AddIcon,
   Info as InfoIcon,
   Check as CheckIcon,
@@ -1996,7 +1996,7 @@ export default function AdminPage() {
           {!sidebarCollapsed && (
             <Link
               component="button"
-              variant="subtitle1"
+              variant="h6"
               onClick={(e) => {
                 e.preventDefault();
                 goHome();
@@ -2009,12 +2009,15 @@ export default function AdminPage() {
                 textAlign: "left",
                 textDecoration: "none",
                 color: "#E5E1D7",
-                fontSize: "0.95rem",
+                display: "flex",
+                alignItems: "center",
+                gap: 0.75,
                 "&:hover": {
                   color: "#3D8078",
                 },
               }}
             >
+              <HomeIcon sx={{ fontSize: 22 }} />
               Print Room Dashboard
             </Link>
           )}
@@ -2027,7 +2030,7 @@ export default function AdminPage() {
               "&:hover": { bgcolor: "rgba(255, 255, 255, 0.1)" },
             }}
           >
-            {sidebarCollapsed ? <ChevronRightIcon /> : <ChevronLeftIcon />}
+            {sidebarCollapsed ? <ArrowRightRoundedIcon /> : <ArrowLeftRoundedIcon />}
           </IconButton>
         </Box>
 
