@@ -2334,6 +2334,8 @@ export default function AdminPage() {
                   )}
                 </Stack>
 
+                <Divider sx={{ borderColor: "rgba(255, 255, 255, 0.15)" }} />
+
                 {/* Full Paper List Section */}
                 <Box sx={{ display: "flex", justifyContent: "center" }}>
                   <Tooltip title="Full Paper List" placement="right">
