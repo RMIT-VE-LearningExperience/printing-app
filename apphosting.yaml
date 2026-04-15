@@ -3,3 +3,6 @@
 scripts:
   buildCommand: npm run build
   runCommand: npm run start
+env:
+  - variable: FIREBASE_PRIVATE_KEY
+    secret: FIREBASE_PRIVATE_KEY
