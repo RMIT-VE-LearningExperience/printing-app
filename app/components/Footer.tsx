@@ -57,8 +57,6 @@ export default function Footer({ year }: { year: number }) {
   return (
     <footer
       style={{
-        position: "fixed",
-        bottom: 0,
         width: "100%",
         backgroundColor: FOOTER_BG,
         padding: "10px 24px",
@@ -67,7 +65,6 @@ export default function Footer({ year }: { year: number }) {
         color: FOOTER_TEXT,
         fontWeight: 500,
         letterSpacing: "0.3px",
-        zIndex: 10,
         boxSizing: "border-box",
       }}
     >

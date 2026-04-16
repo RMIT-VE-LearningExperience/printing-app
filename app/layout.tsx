@@ -18,8 +18,10 @@ export default function RootLayout({ children }: RootLayoutProps) {
 
   return (
     <html lang="en">
-      <body style={{ margin: 0 }}>
-        <Providers>{children}</Providers>
+      <body style={{ margin: 0, display: "flex", flexDirection: "column", minHeight: "100vh" }}>
+        <div style={{ flex: 1 }}>
+          <Providers>{children}</Providers>
+        </div>
         <Footer year={currentYear} />
       </body>
     </html>
