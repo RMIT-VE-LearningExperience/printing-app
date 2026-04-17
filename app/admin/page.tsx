@@ -168,6 +168,18 @@ type AppSettings = {
   colourManagementList: boolean;
 };
 
+type AnalyticsData = {
+  summary: {
+    pageViews: number;
+    activeUsers: number;
+    sessions: number;
+    bounceRate: number;
+    avgSessionDuration: number;
+  };
+  topPages: { path: string; views: number }[];
+  dailyViews: { date: string; views: number }[];
+};
+
 const defaultAppSettings: AppSettings = {
   copyLink: true,
   qrCode: true,
@@ -406,6 +418,10 @@ export default function AdminPage() {
   const [changedRoles, setChangedRoles] = useState<Record<string, "admin" | "superadmin">>({});
   const [adminManageError, setAdminManageError] = useState("");
 
+  const [analyticsData, setAnalyticsData] = useState<AnalyticsData | null>(null);
+  const [analyticsLoading, setAnalyticsLoading] = useState(false);
+  const [analyticsError, setAnalyticsError] = useState("");
+
   const loadPendingRequests = useCallback(async () => {
     setPendingLoading(true);
     setPendingError("");
@@ -462,6 +478,32 @@ export default function AdminPage() {
       void loadAdminList();
     }
   }, [showSuperadminModal, role, loadAdminList]);
+
+  const loadAnalytics = useCallback(async () => {
+    setAnalyticsLoading(true);
+    setAnalyticsError("");
+    try {
+      const token = await getAuthToken();
+      const res = await fetch("/api/analytics", { headers: { Authorization: `Bearer ${token}` } });
+      if (!res.ok) {
+        const d = await res.json() as { error?: string };
+        setAnalyticsError(d.error ?? "Failed to load analytics");
+        return;
+      }
+      const data = await res.json() as AnalyticsData;
+      setAnalyticsData(data);
+    } catch {
+      setAnalyticsError("Failed to load analytics");
+    } finally {
+      setAnalyticsLoading(false);
+    }
+  }, [getAuthToken]);
+
+  useEffect(() => {
+    if (superadminTab === 2 && showSuperadminModal && !analyticsData && !analyticsLoading) {
+      void loadAnalytics();
+    }
+  }, [superadminTab, showSuperadminModal, analyticsData, analyticsLoading, loadAnalytics]);
 
   const handleReview = async (requestId: string, action: "approve" | "reject") => {
     setReviewingId(requestId);
@@ -4316,13 +4358,111 @@ export default function AdminPage() {
 
           {/* ── Statistics Tab ── */}
           {superadminTab === 2 && (
-            <Box textAlign="center" py={4}>
-              <Typography variant="subtitle1" fontWeight={600} color="text.secondary" mb={1}>
-                Statistics — Coming Soon
-              </Typography>
-              <Typography variant="body2" color="text.secondary">
-                Google Analytics (GA4) integration is planned for this tab. Once a GA4 property is configured, page views, printer selections, and user drop-off points will be surfaced here.
-              </Typography>
+            <Box>
+              {analyticsLoading && (
+                <Box display="flex" justifyContent="center" alignItems="center" py={6}>
+                  <CircularProgress size={32} />
+                </Box>
+              )}
+
+              {!analyticsLoading && analyticsError && (
+                <Alert severity="error" sx={{ mb: 2 }}>{analyticsError}</Alert>
+              )}
+
+              {!analyticsLoading && !analyticsError && analyticsData && (
+                <Box>
+                  {/* Summary cards */}
+                  <Typography variant="subtitle1" fontWeight={600} mb={2}>Last 30 Days</Typography>
+                  <Box display="grid" gridTemplateColumns="repeat(auto-fill, minmax(140px, 1fr))" gap={2} mb={4}>
+                    {[
+                      { label: "Page Views", value: analyticsData.summary.pageViews.toLocaleString() },
+                      { label: "Active Users", value: analyticsData.summary.activeUsers.toLocaleString() },
+                      { label: "Sessions", value: analyticsData.summary.sessions.toLocaleString() },
+                      { label: "Bounce Rate", value: `${(analyticsData.summary.bounceRate * 100).toFixed(1)}%` },
+                      { label: "Avg Session", value: `${Math.floor(analyticsData.summary.avgSessionDuration / 60)}m ${Math.floor(analyticsData.summary.avgSessionDuration % 60)}s` },
+                    ].map(({ label, value }) => (
+                      <Box key={label} sx={{ border: "1px solid #E5E1D7", borderRadius: 2, p: 2, backgroundColor: "#FDF9F1" }}>
+                        <Typography variant="h5" fontWeight={700} color="#3D8078">{value}</Typography>
+                        <Typography variant="caption" color="text.secondary">{label}</Typography>
+                      </Box>
+                    ))}
+                  </Box>
+
+                  {/* Daily trend — last 14 days */}
+                  <Typography variant="subtitle1" fontWeight={600} mb={1.5}>Daily Page Views (14 days)</Typography>
+                  <Box sx={{ border: "1px solid #E5E1D7", borderRadius: 2, p: 2, mb: 4, backgroundColor: "#FDF9F1" }}>
+                    {analyticsData.dailyViews.length === 0 ? (
+                      <Typography variant="body2" color="text.secondary" textAlign="center" py={2}>No data yet</Typography>
+                    ) : (() => {
+                      const max = Math.max(...analyticsData.dailyViews.map(d => d.views), 1);
+                      return (
+                        <Box display="flex" alignItems="flex-end" gap={0.5} height={80}>
+                          {analyticsData.dailyViews.map(({ date, views }) => (
+                            <Tooltip key={date} title={`${date}: ${views} views`} arrow>
+                              <Box
+                                flex={1}
+                                sx={{
+                                  height: `${Math.max((views / max) * 100, 4)}%`,
+                                  backgroundColor: "#3D8078",
+                                  borderRadius: "3px 3px 0 0",
+                                  opacity: 0.85,
+                                  cursor: "default",
+                                  "&:hover": { opacity: 1 },
+                                }}
+                              />
+                            </Tooltip>
+                          ))}
+                        </Box>
+                      );
+                    })()}
+                  </Box>
+
+                  {/* Top pages */}
+                  <Typography variant="subtitle1" fontWeight={600} mb={1.5}>Top Pages (Last 30 Days)</Typography>
+                  {analyticsData.topPages.length === 0 ? (
+                    <Typography variant="body2" color="text.secondary">No page data yet</Typography>
+                  ) : (
+                    <TableContainer sx={{ border: "1px solid #E5E1D7", borderRadius: 2 }}>
+                      <Table size="small">
+                        <TableHead>
+                          <TableRow sx={{ backgroundColor: "#FDF9F1" }}>
+                            <TableCell sx={{ fontWeight: 600 }}>Page</TableCell>
+                            <TableCell align="right" sx={{ fontWeight: 600 }}>Views</TableCell>
+                            <TableCell align="right" sx={{ fontWeight: 600, width: 120 }}>Share</TableCell>
+                          </TableRow>
+                        </TableHead>
+                        <TableBody>
+                          {analyticsData.topPages.map(({ path, views }) => {
+                            const pct = analyticsData.summary.pageViews > 0
+                              ? Math.round((views / analyticsData.summary.pageViews) * 100)
+                              : 0;
+                            return (
+                              <TableRow key={path} hover>
+                                <TableCell sx={{ fontFamily: "monospace", fontSize: "0.8rem" }}>{path}</TableCell>
+                                <TableCell align="right">{views.toLocaleString()}</TableCell>
+                                <TableCell align="right">
+                                  <Box display="flex" alignItems="center" gap={1} justifyContent="flex-end">
+                                    <Box sx={{ width: 60, height: 6, backgroundColor: "#E5E1D7", borderRadius: 1, overflow: "hidden" }}>
+                                      <Box sx={{ width: `${pct}%`, height: "100%", backgroundColor: "#3D8078", borderRadius: 1 }} />
+                                    </Box>
+                                    <Typography variant="caption">{pct}%</Typography>
+                                  </Box>
+                                </TableCell>
+                              </TableRow>
+                            );
+                          })}
+                        </TableBody>
+                      </Table>
+                    </TableContainer>
+                  )}
+                </Box>
+              )}
+
+              {!analyticsLoading && !analyticsError && !analyticsData && (
+                <Typography variant="body2" color="text.secondary" textAlign="center" py={4}>
+                  No analytics data available.
+                </Typography>
+              )}
             </Box>
           )}
 
@@ -4348,6 +4488,17 @@ export default function AdminPage() {
               sx={{ mr: "auto" }}
             >
               {appSettingsSaved ? "✓ Saved" : "Save"}
+            </Button>
+          )}
+          {superadminTab === 2 && (
+            <Button
+              onClick={() => { setAnalyticsData(null); void loadAnalytics(); }}
+              startIcon={analyticsLoading ? <CircularProgress size={14} /> : <RefreshIcon />}
+              disabled={analyticsLoading}
+              size="small"
+              sx={{ mr: "auto" }}
+            >
+              Refresh
             </Button>
           )}
           <Button
