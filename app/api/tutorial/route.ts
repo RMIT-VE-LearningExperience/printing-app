@@ -391,19 +391,11 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ state });
   } catch (error) {
     const errorMessage = error instanceof Error ? error.message : "Unknown error";
-    const errorStack = error instanceof Error ? error.stack : "";
 
-    console.error("API Error:", {
-      message: errorMessage,
-      stack: errorStack,
-      error,
-    });
+    console.error("API Error:", error);
 
     return NextResponse.json(
-      {
-        error: errorMessage,
-        details: process.env.NODE_ENV === "development" ? errorStack : undefined,
-      },
+      { error: errorMessage },
       { status: 500 },
     );
   }

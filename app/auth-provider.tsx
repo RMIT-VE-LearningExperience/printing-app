@@ -78,8 +78,10 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       if (elapsed >= SESSION_DURATION_MS) {
         clearSession();
         const auth = getAuthInstance();
-        void firebaseSignOut(auth).finally(() => {
-          router.push("/login");
+        void fetch("/api/logout", { method: "POST" }).finally(() => {
+          void firebaseSignOut(auth).finally(() => {
+            router.push("/login");
+          });
         });
       }
     }, CHECK_INTERVAL_MS);
@@ -92,6 +94,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       const auth = getAuthInstance();
       await firebaseSignOut(auth);
       clearSession();
+      await fetch("/api/logout", { method: "POST" });
       router.push("/login");
     } catch (err) {
       console.error("Sign out error:", err);
