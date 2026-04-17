@@ -500,10 +500,10 @@ export default function AdminPage() {
   }, [getAuthToken]);
 
   useEffect(() => {
-    if (superadminTab === 2 && showSuperadminModal && !analyticsData && !analyticsLoading) {
+    if (superadminTab === 2 && showSuperadminModal && !analyticsData && !analyticsLoading && !analyticsError) {
       void loadAnalytics();
     }
-  }, [superadminTab, showSuperadminModal, analyticsData, analyticsLoading, loadAnalytics]);
+  }, [superadminTab, showSuperadminModal, analyticsData, analyticsLoading, analyticsError, loadAnalytics]);
 
   const handleReview = async (requestId: string, action: "approve" | "reject") => {
     setReviewingId(requestId);
