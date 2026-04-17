@@ -482,9 +482,14 @@ export default function AdminPage() {
   const loadAnalytics = useCallback(async () => {
     setAnalyticsLoading(true);
     setAnalyticsError("");
+    const controller = new AbortController();
+    const timeout = setTimeout(() => controller.abort(), 15000);
     try {
       const token = await getAuthToken();
-      const res = await fetch("/api/analytics", { headers: { Authorization: `Bearer ${token}` } });
+      const res = await fetch("/api/analytics", {
+        headers: { Authorization: `Bearer ${token}` },
+        signal: controller.signal,
+      });
       if (!res.ok) {
         const d = await res.json() as { error?: string };
         setAnalyticsError(d.error ?? "Failed to load analytics");
@@ -492,9 +497,10 @@ export default function AdminPage() {
       }
       const data = await res.json() as AnalyticsData;
       setAnalyticsData(data);
-    } catch {
-      setAnalyticsError("Failed to load analytics");
+    } catch (e) {
+      setAnalyticsError(e instanceof Error && e.name === "AbortError" ? "Request timed out" : "Failed to load analytics");
     } finally {
+      clearTimeout(timeout);
       setAnalyticsLoading(false);
     }
   }, [getAuthToken]);

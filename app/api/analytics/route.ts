@@ -1,39 +1,56 @@
 import { NextRequest, NextResponse } from "next/server";
-import { GoogleAuth } from "google-auth-library";
 import { auth, adminDb } from "../../../lib/firebase-admin";
+import { getApps } from "firebase-admin/app";
 
 const GA_PROPERTY_ID = process.env.GA_PROPERTY_ID;
+const TIMEOUT_MS = 10000;
+
+function withTimeout<T>(promise: Promise<T>, ms: number, label: string): Promise<T> {
+  return Promise.race([
+    promise,
+    new Promise<never>((_, reject) =>
+      setTimeout(() => reject(new Error(`${label} timed out after ${ms}ms`)), ms),
+    ),
+  ]);
+}
 
 async function getToken(): Promise<string> {
-  const googleAuth = new GoogleAuth({
-    scopes: ["https://www.googleapis.com/auth/analytics.readonly"],
-  });
-  const token = await googleAuth.getAccessToken();
-  if (!token) throw new Error("Failed to obtain Analytics token");
-  return token;
+  // Reuse the credential already initialised by firebase-admin to avoid hanging
+  // on ADC discovery. Firebase Admin creds include cloud-platform scope which
+  // GA4 Data API accepts.
+  const app = getApps()[0];
+  const credential = (app as unknown as { options: { credential?: { getAccessToken: () => Promise<{ access_token: string }> } } })
+    .options?.credential;
+
+  if (credential?.getAccessToken) {
+    const result = await withTimeout(credential.getAccessToken(), TIMEOUT_MS, "getAccessToken");
+    return result.access_token;
+  }
+
+  throw new Error("No Firebase credential available to authenticate Analytics requests");
 }
 
 async function runReport(token: string, body: object) {
   if (!GA_PROPERTY_ID) throw new Error("GA_PROPERTY_ID is not configured");
-  const res = await fetch(
-    `https://analyticsdata.googleapis.com/v1beta/properties/${GA_PROPERTY_ID}:runReport`,
-    {
+  const res = await withTimeout(
+    fetch(`https://analyticsdata.googleapis.com/v1beta/properties/${GA_PROPERTY_ID}:runReport`, {
       method: "POST",
       headers: { Authorization: `Bearer ${token}`, "Content-Type": "application/json" },
       body: JSON.stringify(body),
-    },
+    }),
+    TIMEOUT_MS,
+    "GA4 runReport",
   );
   const json = await res.json() as {
     rows?: { dimensionValues?: { value: string }[]; metricValues?: { value: string }[] }[];
-    error?: { message: string };
+    error?: { message: string; code?: number };
   };
-  if (json.error) throw new Error(json.error.message);
+  if (json.error) throw new Error(`GA4 error ${json.error.code ?? ""}: ${json.error.message}`);
   return json;
 }
 
 export async function GET(req: NextRequest) {
   try {
-    // Verify superadmin caller
     const authHeader = req.headers.get("Authorization");
     const idToken = authHeader?.replace("Bearer ", "");
     if (!idToken) return NextResponse.json({ error: "Unauthorised" }, { status: 401 });
@@ -46,7 +63,7 @@ export async function GET(req: NextRequest) {
     }
 
     if (!GA_PROPERTY_ID) {
-      return NextResponse.json({ error: "Analytics not configured" }, { status: 503 });
+      return NextResponse.json({ error: "Analytics not configured on this environment" }, { status: 503 });
     }
 
     const token = await getToken();
