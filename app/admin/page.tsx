@@ -195,6 +195,15 @@ type RichHtmlEditorProps = {
   onChange: (value: string) => void;
 };
 
+function sanitizeStepHtml(content: string): string {
+  return content
+    .replace(/<(?!\/?(p|br|ul|ol|li|b|strong|i|em|h3|a)(\s+[^>]*)?>)[^>]*>/gi, "")
+    .replace(/<a\s+[^>]*href=(\"|')(.*?)\1[^>]*>/gi, (_match, _quote, href: string) => {
+      const safeHref = /^(https?:\/\/|mailto:)/i.test(href) ? href : "#";
+      return `<a href="${safeHref}" target="_blank" rel="noreferrer">`;
+    });
+}
+
 function generateSlugLocal(name: string): string {
   return name
     .toLowerCase()
@@ -336,9 +345,9 @@ export default function AdminPage() {
     try {
       const firebaseAuth = getAuthInstance();
       const token = await firebaseAuth.currentUser?.getIdToken();
-      return token ?? window.localStorage.getItem("adminAuthToken") ?? "";
+      return token ?? "";
     } catch {
-      return window.localStorage.getItem("adminAuthToken") ?? "";
+      return "";
     }
   }, []);
 
@@ -3575,7 +3584,7 @@ export default function AdminPage() {
                                               "& p": { mb: 1 },
                                               "& ul": { pl: 2, mb: 1 },
                                             }}
-                                            dangerouslySetInnerHTML={{ __html: step.contentHtml }}
+                                            dangerouslySetInnerHTML={{ __html: sanitizeStepHtml(step.contentHtml) }}
                                           />
                                         )}
                                         {step.imageDataUrl && (

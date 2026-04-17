@@ -73,10 +73,8 @@ export default function LoginPage() {
       }
 
       const verifyData = await verifyResponse.json() as { role?: string };
-      window.localStorage.setItem("adminAuthToken", idToken);
       window.localStorage.setItem("adminRole", verifyData.role || "admin");
       window.localStorage.setItem("adminLoginTime", Date.now().toString());
-      document.cookie = "adminSession=1; path=/; SameSite=Strict; Max-Age=28800";
 
       window.location.href = "/admin";
     } catch (err) {

@@ -62,10 +62,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   }, []);
 
   const clearSession = useCallback(() => {
-    window.localStorage.removeItem("adminAuthToken");
     window.localStorage.removeItem("adminRole");
     window.localStorage.removeItem("adminLoginTime");
-    document.cookie = "adminSession=; path=/; expires=Thu, 01 Jan 1970 00:00:00 GMT";
   }, []);
 
   // Enforce 8-hour hard session limit

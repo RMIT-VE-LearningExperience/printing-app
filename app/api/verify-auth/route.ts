@@ -68,7 +68,12 @@ export async function POST(req: NextRequest) {
       // Continue anyway — this is not critical
     }
 
-    return NextResponse.json({ role, email: userEmail }, { status: 200 });
+    const response = NextResponse.json({ role, email: userEmail }, { status: 200 });
+    response.headers.set(
+      "Set-Cookie",
+      `adminSession=1; HttpOnly; Secure; SameSite=Strict; Max-Age=28800; Path=/`,
+    );
+    return response;
   } catch (error) {
     const errorMessage = error instanceof Error ? error.message : "Unknown error";
     console.error("Verify auth error:", errorMessage);
