@@ -1,6 +1,6 @@
 # Print App CMS - Progress Log
 
-**Last Updated:** April 15, 2026 (Session 12)
+**Last Updated:** April 17, 2026 (Session 14)
 **Project:** Print App CMS System
 **User:** Arielle Lee (arielle.lee@rmit.edu.au)
 
@@ -400,7 +400,117 @@ When testing after any changes:
 
 ## Session History
 
-### Current Session (April 15, 2026) — Session 11
+### Current Session (April 17, 2026) — Session 14
+
+#### Phase 2b — Items 5–8: Full admin list, Add admin directly, Deactivate/reactivate, Change role + App Settings updates
+
+- **Feature: Full admin list (Admins tab — Admin Users section)**
+  - ✅ New `app/api/admin-list/route.ts` — GET endpoint, superadmin-only (verifies Bearer token + Firestore `admins` doc); returns all docs from `admins` collection sorted by name with uid, name, email, staffNumber, role, active, addedAt, lastLogin
+  - ✅ `AdminUser` type added to `app/admin/page.tsx`
+  - ✅ Admin Users section added to Admins tab below Pending Requests, separated by a `<Divider>`
+  - ✅ Table columns: Name, Email, E-number, Role (Select), Status (Active/Inactive), Last Login, Actions
+  - ✅ Admin list loaded automatically when superadmin modal opens (`useEffect` on `showSuperadminModal`)
+  - ✅ Inactive rows dimmed to 55% opacity for at-a-glance status
+  - Files Modified: `app/api/admin-list/route.ts` (new), `app/admin/page.tsx`
+
+- **Feature: Add admin directly**
+  - ✅ New `app/api/admin-manage/route.ts` — POST endpoint, superadmin-only; handles `addDirect`, `deactivate`, `reactivate`, `changeRole` actions
+  - ✅ `addDirect`: gets or creates Firebase Auth user by email; rejects with `409` if already in `admins` collection; writes name, email, staffNumber, role, active, addedAt to Firestore
+  - ✅ "Add Admin" button in Admins tab toggles a `<Collapse>` inline form (Full Name, Email, E-number, Role dropdown)
+  - ✅ Refreshes admin list on success; clears and hides form
+  - Files Modified: `app/api/admin-manage/route.ts` (new), `app/admin/page.tsx`
+
+- **Feature: Deactivate / reactivate admin**
+  - ✅ `deactivate` / `reactivate` actions in `/api/admin-manage` — update `active` field in Firestore; self-deactivation blocked with `400`
+  - ✅ Toggle icon button per row (red X when active, green tick when inactive); own row disabled with tooltip
+  - ✅ Optimistic UI: updates `adminList` state immediately on success without a full reload
+  - Files Modified: `app/api/admin-manage/route.ts`, `app/admin/page.tsx`
+
+- **Feature: Change role**
+  - ✅ `changeRole` action in `/api/admin-manage` — updates `role` in Firestore; self-change blocked with `400`; takes effect on admin's next token refresh
+  - ✅ Role `Select` dropdown per row; changing value shows a Save icon button; own row dropdown disabled
+  - ✅ On save: updates `adminList` state immediately and clears the pending role change
+  - Files Modified: `app/api/admin-manage/route.ts`, `app/admin/page.tsx`
+
+- **UX: Pending Requests section hidden when empty**
+  - ✅ Entire "Pending Access Requests" section (heading, table, divider) is wrapped in a conditional — only shown when `pendingLoading || !!pendingError || pendingRequests.length > 0`
+  - ✅ Admins tab opens directly on Admin Users when there are no pending requests
+  - Files Modified: `app/admin/page.tsx`
+
+- **Feature: Printer List toggle in App Settings**
+  - ✅ `printerList: boolean` added to `AppSettings` type in `lib/tutorial-store.ts` and `app/admin/page.tsx`; defaults to `true`
+  - ✅ Expanded sidebar: PRINTER LIST section (heading, list, More button, Divider) wrapped in `{appSettings.printerList && ...}`
+  - ✅ Collapsed sidebar: printer avatar stack and its Divider wrapped in `{appSettings.printerList && ...}`
+  - Files Modified: `lib/tutorial-store.ts`, `app/admin/page.tsx`
+
+- **UI: App Settings tab — 2-column layout**
+  - ✅ Settings now displayed in a `display: grid; grid-template-columns: 1fr 1fr` layout — **Printer Table** group on the left (Copy Link, QR Code, Canvas Embed), **Sidebar** group on the right (Printer List, Full Paper List, Colour Management List)
+  - ✅ No new MUI imports needed; uses `Box` with CSS grid
+  - Files Modified: `app/admin/page.tsx`
+
+- **Refresh button** — Admins tab Refresh now reloads both pending requests and admin list simultaneously
+  - Files Modified: `app/admin/page.tsx`
+
+---
+
+### Previous Session (April 17, 2026) — Session 13
+
+#### Phase 2b — Items 4–9: Cogwheel modal redesign + App Settings tab + Statistics placeholder
+
+- **Redesign: Superadmin Settings modal → multi-tab panel**
+  - ✅ Dialog now has three tabs: **Admins**, **App Settings**, **Statistics** — rendered via MUI `Tabs` / `Tab` between `DialogTitle` and `DialogContent`
+  - ✅ `superadminTab` state (default `0`) drives active tab; resets to `0` on modal close
+  - ✅ Dialog widened to `maxWidth="md"` to accommodate the App Settings content
+  - ✅ Title, tabs bar, content, and action bar all styled to match the app style guide
+  - ✅ Refresh button in `DialogActions` only shown on the Admins tab; Close button always present
+  - Files Modified: `app/admin/page.tsx`
+
+- **Feature: App Settings tab — 5 feature toggles**
+  - ✅ `AppSettings` type added to `lib/tutorial-store.ts` and local types in `app/admin/page.tsx`
+  - ✅ `settings/appSettings` Firestore document stores 5 boolean flags; defaults all `true` if document absent
+  - ✅ `updateAppSettings()` function added to `lib/tutorial-store.ts`
+  - ✅ `updateAppSettings` action added to `app/api/tutorial/route.ts` with superadmin-only gate (`403` if role is not `superadmin`)
+  - ✅ `decodedRole` variable stored after token verification so superadmin gate can reference it outside the try block
+  - ✅ `appSettings` fetched in `getTutorialState()` and included in `TutorialState` return
+  - ✅ Admin page initialises `appSettings` state from tutorial state on load; falls back to `defaultAppSettings`
+  - ✅ `handleToggleAppSetting()` saves immediately on toggle via direct fetch (no loading overlay); reverts state on error; shows inline `✓ Saved` confirmation for 2 seconds
+  - ✅ App Settings tab renders two groups: **Printer Table** (Copy Link, QR Code, Canvas LMS Embed) and **Sidebar** (Full Paper List, Colour Management List)
+  - ✅ All 5 feature areas in the CMS conditionally rendered based on `appSettings` flags
+  - Files Modified: `lib/tutorial-store.ts`, `app/api/tutorial/route.ts`, `app/admin/page.tsx`
+
+- **Feature: Statistics tab — placeholder**
+  - ✅ Statistics tab renders a "Coming Soon" message explaining GA4 integration is planned
+  - Files Modified: `app/admin/page.tsx`
+
+---
+
+### Previous Session (April 16, 2026) — Session 12
+
+#### Phase 2b — Items 1–3
+
+- **Security fix: `/api/preview-token` now requires admin auth**
+  - ✅ Added `Authorization: Bearer <token>` check — same pattern as all other admin API routes
+  - ✅ Returns 401 if no token present; 403 if token is valid but role is not `admin` or `superadmin`
+  - ✅ Renamed internal variable to `bearerToken` to avoid shadowing the `previewToken` return value
+  - Files Modified: `app/api/preview-token/route.ts`
+
+- **Feature: Pending request badge on cog icon**
+  - ✅ Added `Badge` to MUI imports in `app/admin/page.tsx`
+  - ✅ `SettingsIcon` wrapped in `<Badge variant="dot" color="error">` — red dot visible when `pendingRequests.length > 0`, hidden otherwise via `invisible` prop
+  - ✅ Added `useEffect` that calls `loadPendingRequests()` on page load when `role === "superadmin"` and auth is ready — badge now appears immediately on login without needing to open the modal
+  - Files Modified: `app/admin/page.tsx`
+
+- **Feature: Role selector during approval**
+  - ✅ Added `Select` to MUI imports in `app/admin/page.tsx`
+  - ✅ Added `pendingRoles` state (`Record<string, "admin" | "superadmin">`) keyed by request ID
+  - ✅ New **Role** column added to the pending requests table with a `Select` dropdown per row (Admin / Superadmin), defaulting to `"admin"`
+  - ✅ `handleReview` passes selected role to API on approve; cleans up `pendingRoles` entry after review
+  - ✅ `app/api/admin-approve/route.ts` — accepts optional `role` field in request body; defaults to `"admin"` if not provided; was previously hardcoded to `"admin"`
+  - Files Modified: `app/admin/page.tsx`, `app/api/admin-approve/route.ts`
+
+---
+
+### Previous Session (April 15, 2026) — Session 11
 
 #### Staging Environment
 - **Staging branch now active and deploying**
@@ -1609,6 +1719,38 @@ Added a `cropImgReady` boolean state (starts `false`). The modal's `<img>` eleme
 - `.env.staging.local` — local dev credentials pointing to staging database and bucket
 
 **Status:** ✅ Staging environment fully operational
+
+---
+
+## Session 13 — April 16, 2026: Production Deployment & Login Fix
+
+### 🚀 Merged Staging to Main (Production)
+
+- Performed a **regular merge** of `staging` → `main` via SourceTree (24 commits)
+- Regular merge chosen over squash merge to preserve full commit history and maintain linked branch ancestry for cleaner future merges
+- Push to `main` triggered an automatic redeploy on Firebase App Hosting (production)
+
+### 🐛 Production Login Issue — Resolved
+
+After deployment, login failed on production. Two issues were identified and fixed by adding missing environment variables to the production App Hosting backend:
+
+| Issue | Symptom | Root Cause | Fix |
+|-------|---------|------------|-----|
+| Client-side Firebase init failed | `auth/invalid-api-key` in browser console | `NEXT_PUBLIC_FIREBASE_*` variables not set on production backend — these are baked in at build time | Added all 6 `NEXT_PUBLIC_FIREBASE_*` vars to production App Hosting environment variables + redeployed |
+| Server-side custom token signing failed | `500` on `/api/admin-login` | `FIREBASE_PROJECT_ID` and `FIREBASE_CLIENT_EMAIL` not set — Firebase Admin fell back to `applicationDefault()` which cannot sign custom tokens | Added `FIREBASE_PROJECT_ID` and `FIREBASE_CLIENT_EMAIL` to production App Hosting environment variables + redeployed |
+
+**Note for future deployments:** When deploying this app to a new environment, the following environment variables must be set on the App Hosting backend before the first deploy:
+- `NEXT_PUBLIC_FIREBASE_API_KEY`
+- `NEXT_PUBLIC_FIREBASE_AUTH_DOMAIN`
+- `NEXT_PUBLIC_FIREBASE_PROJECT_ID`
+- `NEXT_PUBLIC_FIREBASE_STORAGE_BUCKET`
+- `NEXT_PUBLIC_FIREBASE_MESSAGING_SENDER_ID`
+- `NEXT_PUBLIC_FIREBASE_APP_ID`
+- `FIREBASE_PROJECT_ID`
+- `FIREBASE_CLIENT_EMAIL`
+- `FIREBASE_PRIVATE_KEY` (via Cloud Secret Manager)
+
+**Status:** ✅ Production fully operational
 
 ---
 

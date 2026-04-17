@@ -26,8 +26,10 @@ import {
   removeInvalidPapersFromPrinter,
   updateHomepageSettings,
   updateSectionSettings,
+  updateAppSettings,
   validatePreviewToken,
   type TutorialState,
+  type AppSettings,
 } from "../../../lib/tutorial-store";
 
 type ActionPayload =
@@ -175,6 +177,10 @@ type ActionPayload =
       section: "printers" | "papers" | "colours";
       title: string;
       subtitle: string;
+    }
+  | {
+      action: "updateAppSettings";
+      settings: Partial<AppSettings>;
     };
 
 async function executeAction(payload: ActionPayload, modifiedBy?: string): Promise<TutorialState> {
@@ -330,6 +336,10 @@ async function executeAction(payload: ActionPayload, modifiedBy?: string): Promi
       await updateSectionSettings(payload.section, payload.title, payload.subtitle);
       return getTutorialState();
 
+    case "updateAppSettings":
+      await updateAppSettings(payload.settings);
+      return getTutorialState();
+
     default:
       throw new Error(`Unknown action: ${(payload as { action: string }).action}`);
   }
@@ -344,10 +354,11 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
     let modifiedBy: string = "system";
+    let decodedRole: string = "";
     try {
       const decoded = await auth.verifyIdToken(token);
-      const role = decoded.role as string | undefined;
-      if (role !== "admin" && role !== "superadmin") {
+      decodedRole = (decoded.role as string | undefined) ?? "";
+      if (decodedRole !== "admin" && decodedRole !== "superadmin") {
         return NextResponse.json({ error: "Forbidden" }, { status: 403 });
       }
       const adminDoc = await adminDb.collection("admins").doc(decoded.uid).get();
@@ -367,6 +378,11 @@ export async function POST(req: NextRequest) {
     }
 
     console.log(`[API] Processing action: ${body.action}`);
+
+    // Superadmin-only actions
+    if (body.action === "updateAppSettings" && decodedRole !== "superadmin") {
+      return NextResponse.json({ error: "Forbidden — superadmin only" }, { status: 403 });
+    }
 
     // Merge action into payload for executeAction
     const actionPayload = { ...(body.payload as Record<string, unknown>), action: body.action } as ActionPayload;

@@ -3,6 +3,7 @@
 import {
   Alert,
   Avatar,
+  Badge,
   Box,
   Breadcrumbs,
   Button,
@@ -23,6 +24,9 @@ import {
   ListItemText,
   Menu,
   MenuItem,
+  Select,
+  Tab,
+  Tabs,
   Modal,
   Paper,
   Stack,
@@ -128,6 +132,17 @@ type Printer = {
   papers: Paper[];
 };
 
+type AdminUser = {
+  uid: string;
+  name: string;
+  email: string;
+  staffNumber: string;
+  role: "admin" | "superadmin";
+  active: boolean;
+  addedAt: string;
+  lastLogin: string;
+};
+
 type DeletedItem = {
   id: string;
   type: "printer" | "paper" | "colour" | "step";
@@ -144,6 +159,24 @@ type SectionSettings = {
   colours: SectionSetting;
 };
 
+type AppSettings = {
+  copyLink: boolean;
+  qrCode: boolean;
+  canvasEmbed: boolean;
+  printerList: boolean;
+  fullPaperList: boolean;
+  colourManagementList: boolean;
+};
+
+const defaultAppSettings: AppSettings = {
+  copyLink: true,
+  qrCode: true,
+  canvasEmbed: true,
+  printerList: true,
+  fullPaperList: true,
+  colourManagementList: true,
+};
+
 type TutorialState = {
   papers: Paper[];
   printers: Printer[];
@@ -151,6 +184,7 @@ type TutorialState = {
   homepageTitle?: string;
   homepageDescription?: string;
   sectionSettings?: SectionSettings;
+  appSettings?: AppSettings;
 };
 
 const emptyState: TutorialState = { papers: [], printers: [] };
@@ -345,6 +379,22 @@ export default function AdminPage() {
   const [pendingLoading, setPendingLoading] = useState(false);
   const [pendingError, setPendingError] = useState("");
   const [reviewingId, setReviewingId] = useState<string | null>(null);
+  const [pendingRoles, setPendingRoles] = useState<Record<string, "admin" | "superadmin">>({});
+  const [superadminTab, setSuperadminTab] = useState(0);
+  const [appSettings, setAppSettings] = useState<AppSettings>(defaultAppSettings);
+  const [appSettingsSaving, setAppSettingsSaving] = useState(false);
+  const [appSettingsSaved, setAppSettingsSaved] = useState(false);
+  // Admin Users state
+  const [adminList, setAdminList] = useState<AdminUser[]>([]);
+  const [adminListLoading, setAdminListLoading] = useState(false);
+  const [adminListError, setAdminListError] = useState("");
+  const [showAddAdminForm, setShowAddAdminForm] = useState(false);
+  const [addAdminForm, setAddAdminForm] = useState<{ name: string; email: string; staffNumber: string; role: "admin" | "superadmin" }>({ name: "", email: "", staffNumber: "", role: "admin" });
+  const [addAdminSaving, setAddAdminSaving] = useState(false);
+  const [addAdminError, setAddAdminError] = useState("");
+  const [managingId, setManagingId] = useState<string | null>(null);
+  const [changedRoles, setChangedRoles] = useState<Record<string, "admin" | "superadmin">>({});
+  const [adminManageError, setAdminManageError] = useState("");
 
   const loadPendingRequests = useCallback(async () => {
     setPendingLoading(true);
@@ -367,6 +417,42 @@ export default function AdminPage() {
     }
   }, [getAuthToken]);
 
+  // Background fetch pending requests so badge appears on load
+  useEffect(() => {
+    if (!authLoading && user && role === "superadmin") {
+      void loadPendingRequests();
+    }
+  }, [authLoading, user, role, loadPendingRequests]);
+
+  const loadAdminList = useCallback(async () => {
+    setAdminListLoading(true);
+    setAdminListError("");
+    try {
+      const token = await getAuthToken();
+      const response = await fetch("/api/admin-list", {
+        headers: { Authorization: `Bearer ${token}` },
+      });
+      if (!response.ok) {
+        setAdminListError("Failed to load admin list");
+        return;
+      }
+      const data = await response.json() as { admins: AdminUser[] };
+      setAdminList(data.admins);
+      setChangedRoles({});
+    } catch {
+      setAdminListError("Failed to load admin list");
+    } finally {
+      setAdminListLoading(false);
+    }
+  }, [getAuthToken]);
+
+  // Load admin list when superadmin modal opens
+  useEffect(() => {
+    if (showSuperadminModal && role === "superadmin") {
+      void loadAdminList();
+    }
+  }, [showSuperadminModal, role, loadAdminList]);
+
   const handleReview = async (requestId: string, action: "approve" | "reject") => {
     setReviewingId(requestId);
     try {
@@ -374,19 +460,143 @@ export default function AdminPage() {
       const response = await fetch("/api/admin-approve", {
         method: "POST",
         headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` },
-        body: JSON.stringify({ requestId, action, reviewerUid: user?.uid }),
+        body: JSON.stringify({
+          requestId,
+          action,
+          reviewerUid: user?.uid,
+          ...(action === "approve" && { role: pendingRoles[requestId] ?? "admin" }),
+        }),
       });
       if (!response.ok) {
         const data = await response.json() as { error?: string };
         setPendingError(data.error || "Action failed");
         return;
       }
-      // Remove reviewed request from the list
+      // Remove reviewed request and its role selection from state
       setPendingRequests((prev) => prev.filter((r) => r.id !== requestId));
+      setPendingRoles((prev) => { const next = { ...prev }; delete next[requestId]; return next; });
     } catch {
       setPendingError("Action failed");
     } finally {
       setReviewingId(null);
+    }
+  };
+
+  const handleToggleAppSetting = async (key: keyof AppSettings, value: boolean) => {
+    const newSettings = { ...appSettings, [key]: value };
+    setAppSettings(newSettings);
+    setAppSettingsSaving(true);
+    setAppSettingsSaved(false);
+    try {
+      const token = await getAuthToken();
+      await fetch("/api/tutorial", {
+        method: "POST",
+        headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` },
+        body: JSON.stringify({ action: "updateAppSettings", payload: { settings: newSettings } }),
+      });
+      setAppSettingsSaved(true);
+      setTimeout(() => setAppSettingsSaved(false), 2000);
+    } catch {
+      setAppSettings(appSettings); // revert on error
+    } finally {
+      setAppSettingsSaving(false);
+    }
+  };
+
+  const handleAddAdmin = async () => {
+    setAddAdminSaving(true);
+    setAddAdminError("");
+    try {
+      const token = await getAuthToken();
+      const response = await fetch("/api/admin-manage", {
+        method: "POST",
+        headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` },
+        body: JSON.stringify({ action: "addDirect", ...addAdminForm }),
+      });
+      const data = await response.json() as { error?: string };
+      if (!response.ok) {
+        setAddAdminError(data.error || "Failed to add admin");
+        return;
+      }
+      setShowAddAdminForm(false);
+      setAddAdminForm({ name: "", email: "", staffNumber: "", role: "admin" });
+      await loadAdminList();
+    } catch {
+      setAddAdminError("Failed to add admin");
+    } finally {
+      setAddAdminSaving(false);
+    }
+  };
+
+  const handleDeactivate = async (uid: string) => {
+    setManagingId(uid);
+    setAdminManageError("");
+    try {
+      const token = await getAuthToken();
+      const response = await fetch("/api/admin-manage", {
+        method: "POST",
+        headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` },
+        body: JSON.stringify({ action: "deactivate", uid }),
+      });
+      if (!response.ok) {
+        const data = await response.json() as { error?: string };
+        setAdminManageError(data.error || "Failed to deactivate admin");
+        return;
+      }
+      setAdminList((prev) => prev.map((a) => a.uid === uid ? { ...a, active: false } : a));
+    } catch {
+      setAdminManageError("Failed to deactivate admin");
+    } finally {
+      setManagingId(null);
+    }
+  };
+
+  const handleReactivate = async (uid: string) => {
+    setManagingId(uid);
+    setAdminManageError("");
+    try {
+      const token = await getAuthToken();
+      const response = await fetch("/api/admin-manage", {
+        method: "POST",
+        headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` },
+        body: JSON.stringify({ action: "reactivate", uid }),
+      });
+      if (!response.ok) {
+        const data = await response.json() as { error?: string };
+        setAdminManageError(data.error || "Failed to reactivate admin");
+        return;
+      }
+      setAdminList((prev) => prev.map((a) => a.uid === uid ? { ...a, active: true } : a));
+    } catch {
+      setAdminManageError("Failed to reactivate admin");
+    } finally {
+      setManagingId(null);
+    }
+  };
+
+  const handleChangeRole = async (uid: string) => {
+    const newRole = changedRoles[uid];
+    if (!newRole) return;
+    setManagingId(uid);
+    setAdminManageError("");
+    try {
+      const token = await getAuthToken();
+      const response = await fetch("/api/admin-manage", {
+        method: "POST",
+        headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` },
+        body: JSON.stringify({ action: "changeRole", uid, newRole }),
+      });
+      if (!response.ok) {
+        const data = await response.json() as { error?: string };
+        setAdminManageError(data.error || "Failed to update role");
+        return;
+      }
+      setAdminList((prev) => prev.map((a) => a.uid === uid ? { ...a, role: newRole } : a));
+      setChangedRoles((prev) => { const next = { ...prev }; delete next[uid]; return next; });
+    } catch {
+      setAdminManageError("Failed to update role");
+    } finally {
+      setManagingId(null);
     }
   };
 
@@ -607,6 +817,9 @@ export default function AdminPage() {
           };
           setSectionSettings(loaded);
           setSavedSectionSettings(loaded);
+        }
+        if (data.state.appSettings) {
+          setAppSettings({ ...defaultAppSettings, ...data.state.appSettings });
         }
       } catch {
         setError("Could not load tutorial data.");
@@ -2295,59 +2508,63 @@ export default function AdminPage() {
         {sidebarCollapsed ? (
               <Stack spacing={1.5} sx={{ mt: 0 }}>
                 {/* Printers Section */}
-                <Stack spacing={1.5}>
-                  {tutorialState.printers.slice(0, 3).map((printer) => (
-                    <Tooltip key={printer.id} title={printer.name} placement="right">
-                      <Box
-                        onClick={() => goToPrinterPapers(printer.id)}
-                        sx={{
-                          display: "flex",
-                          justifyContent: "center",
-                          cursor: "pointer",
-                        }}
-                      >
-                        <Avatar
-                          src={printer.thumbnailDataUrl || undefined}
-                          alt={printer.name}
-                          sx={{
-                            width: 40,
-                            height: 40,
-                            border: selectedPrinterId === printer.id && !showFullPaperList ? "2px solid" : "1px solid transparent",
-                            borderColor: "#3D8078",
-                            bgcolor: selectedPrinterId === printer.id && !showFullPaperList ? "rgba(61, 128, 120, 0.25)" : "#62615C",
-                            transition: "all 180ms ease",
-                            "&:hover": {
-                              boxShadow: "0 0 0 2px rgba(61, 128, 120, 0.4)",
-                            },
-                          }}
-                        >
-                          {printer.name.charAt(0).toUpperCase()}
-                        </Avatar>
-                      </Box>
-                    </Tooltip>
-                  ))}
-                  {tutorialState.printers.length > 3 && (
-                    <Box sx={{ display: "flex", justifyContent: "center" }}>
-                      <Tooltip title="More printers" placement="right">
-                        <IconButton
-                          onClick={goHome}
-                          size="small"
-                          sx={{
-                            width: 40,
-                            height: 40,
-                            borderRadius: 1,
-                            color: "#3D8078",
-                            "&:hover": { bgcolor: "rgba(61, 128, 120, 0.25)" },
-                          }}
-                        >
-                          ⋯
-                        </IconButton>
-                      </Tooltip>
-                    </Box>
-                  )}
-                </Stack>
+                {appSettings.printerList && (
+                  <>
+                    <Stack spacing={1.5}>
+                      {tutorialState.printers.slice(0, 3).map((printer) => (
+                        <Tooltip key={printer.id} title={printer.name} placement="right">
+                          <Box
+                            onClick={() => goToPrinterPapers(printer.id)}
+                            sx={{
+                              display: "flex",
+                              justifyContent: "center",
+                              cursor: "pointer",
+                            }}
+                          >
+                            <Avatar
+                              src={printer.thumbnailDataUrl || undefined}
+                              alt={printer.name}
+                              sx={{
+                                width: 40,
+                                height: 40,
+                                border: selectedPrinterId === printer.id && !showFullPaperList ? "2px solid" : "1px solid transparent",
+                                borderColor: "#3D8078",
+                                bgcolor: selectedPrinterId === printer.id && !showFullPaperList ? "rgba(61, 128, 120, 0.25)" : "#62615C",
+                                transition: "all 180ms ease",
+                                "&:hover": {
+                                  boxShadow: "0 0 0 2px rgba(61, 128, 120, 0.4)",
+                                },
+                              }}
+                            >
+                              {printer.name.charAt(0).toUpperCase()}
+                            </Avatar>
+                          </Box>
+                        </Tooltip>
+                      ))}
+                      {tutorialState.printers.length > 3 && (
+                        <Box sx={{ display: "flex", justifyContent: "center" }}>
+                          <Tooltip title="More printers" placement="right">
+                            <IconButton
+                              onClick={goHome}
+                              size="small"
+                              sx={{
+                                width: 40,
+                                height: 40,
+                                borderRadius: 1,
+                                color: "#3D8078",
+                                "&:hover": { bgcolor: "rgba(61, 128, 120, 0.25)" },
+                              }}
+                            >
+                              ⋯
+                            </IconButton>
+                          </Tooltip>
+                        </Box>
+                      )}
+                    </Stack>
 
-                <Divider sx={{ borderColor: "rgba(255, 255, 255, 0.15)" }} />
+                    <Divider sx={{ borderColor: "rgba(255, 255, 255, 0.15)" }} />
+                  </>
+                )}
 
                 {/* Full Paper List Section */}
                 <Box sx={{ display: "flex", justifyContent: "center" }}>
@@ -2428,164 +2645,172 @@ export default function AdminPage() {
               </Stack>
             ) : (
               <Stack spacing={1.5}>
-                <Box>
-              <Stack direction="row" alignItems="center" justifyContent="space-between" sx={{ mb: 1 }}>
-                <Typography
-                  variant="subtitle2"
-                  fontWeight={600}
-                  onClick={goHome}
-                  sx={{
-                    color: "#E5E1D7",
-                    textTransform: "uppercase",
-                    fontSize: "0.75rem",
-                    letterSpacing: "0.5px",
-                    cursor: "pointer",
-                    "&:hover": { color: "#3D8078" },
-                  }}
-                >
-                  PRINTER LIST
-                </Typography>
-                <IconButton
-                  size="small"
-                  onClick={() => { setImageUploadError(null); setImageCompressed(false); setShowAddPrinterModal(true); }}
-                  sx={{
-                    minWidth: "auto",
-                    p: 0.5,
-                    color: "#3D8078",
-                    "&:hover": { bgcolor: "rgba(61, 128, 120, 0.25)" }
-                  }}
-                >
-                  <AddIcon sx={{ fontSize: 20 }} />
-                </IconButton>
-              </Stack>
-
-              {tutorialState.printers.length > 0 && (
-                <List sx={{ p: 0, borderRadius: 1 }}>
-                  {tutorialState.printers.slice(0, 3).map((printer) => (
-                    <ListItem key={printer.id} disablePadding>
-                      <ListItemButton
-                        selected={selectedPrinterId === printer.id && !showFullPaperList}
-                        onClick={() => goToPrinterPapers(printer.id)}
+              {appSettings.printerList && (
+                <>
+                  <Box>
+                    <Stack direction="row" alignItems="center" justifyContent="space-between" sx={{ mb: 1 }}>
+                      <Typography
+                        variant="subtitle2"
+                        fontWeight={600}
+                        onClick={goHome}
                         sx={{
-                          borderRadius: 1,
-                          transition: "all 180ms ease",
-                          bgcolor: selectedPrinterId === printer.id && !showFullPaperList ? "rgba(61, 128, 120, 0.25)" : "transparent",
-                          color: selectedPrinterId === printer.id && !showFullPaperList ? "#FDF9F1" : "#E5E1D7",
-                          "&:hover": { bgcolor: "rgba(255, 255, 255, 0.1)" },
+                          color: "#E5E1D7",
+                          textTransform: "uppercase",
+                          fontSize: "0.75rem",
+                          letterSpacing: "0.5px",
+                          cursor: "pointer",
+                          "&:hover": { color: "#3D8078" },
                         }}
                       >
-                        <ListItemAvatar sx={{ minWidth: 40 }}>
-                          <Avatar
-                            src={printer.thumbnailDataUrl || undefined}
-                            alt={printer.name}
-                            sx={{
-                              width: 32,
-                              height: 32,
-                              bgcolor: "#62615C",
-                              border: selectedPrinterId === printer.id && !showFullPaperList ? "2px solid #3D8078" : "1px solid transparent",
-                            }}
-                          >
-                            {printer.name.charAt(0).toUpperCase()}
-                          </Avatar>
-                        </ListItemAvatar>
-                        <ListItemText
-                          primary={printer.name}
-                          sx={{ "& .MuiListItemText-primary": { color: "inherit" } }}
-                        />
-                        <IconButton
-                          size="small"
-                          onClick={(e) => {
-                            e.stopPropagation();
-                            handlePrinterMenuOpen(e, printer.id);
-                          }}
-                          sx={{ ml: 1, color: "inherit", "&:hover": { color: "#3D8078" } }}
-                        >
-                          <MoreVertIcon fontSize="small" />
-                        </IconButton>
-                      </ListItemButton>
-                    </ListItem>
-                  ))}
-                </List>
-              )}
+                        PRINTER LIST
+                      </Typography>
+                      <IconButton
+                        size="small"
+                        onClick={() => { setImageUploadError(null); setImageCompressed(false); setShowAddPrinterModal(true); }}
+                        sx={{
+                          minWidth: "auto",
+                          p: 0.5,
+                          color: "#3D8078",
+                          "&:hover": { bgcolor: "rgba(61, 128, 120, 0.25)" }
+                        }}
+                      >
+                        <AddIcon sx={{ fontSize: 20 }} />
+                      </IconButton>
+                    </Stack>
 
-              {tutorialState.printers.length > 3 && (
-                <Button
-                  fullWidth
-                  size="small"
-                  onClick={goHome}
-                  sx={{
-                    mt: 0.5,
-                    textTransform: "none",
-                    color: "#3D8078",
-                    borderColor: "rgba(61, 128, 120, 0.25)",
-                    "&:hover": {
-                      bgcolor: "rgba(61, 128, 120, 0.1)",
-                      borderColor: "rgba(61, 128, 120, 0.4)",
-                    },
-                  }}
-                >
-                  More
-                </Button>
-              )}
+                    {tutorialState.printers.length > 0 && (
+                      <List sx={{ p: 0, borderRadius: 1 }}>
+                        {tutorialState.printers.slice(0, 3).map((printer) => (
+                          <ListItem key={printer.id} disablePadding>
+                            <ListItemButton
+                              selected={selectedPrinterId === printer.id && !showFullPaperList}
+                              onClick={() => goToPrinterPapers(printer.id)}
+                              sx={{
+                                borderRadius: 1,
+                                transition: "all 180ms ease",
+                                bgcolor: selectedPrinterId === printer.id && !showFullPaperList ? "rgba(61, 128, 120, 0.25)" : "transparent",
+                                color: selectedPrinterId === printer.id && !showFullPaperList ? "#FDF9F1" : "#E5E1D7",
+                                "&:hover": { bgcolor: "rgba(255, 255, 255, 0.1)" },
+                              }}
+                            >
+                              <ListItemAvatar sx={{ minWidth: 40 }}>
+                                <Avatar
+                                  src={printer.thumbnailDataUrl || undefined}
+                                  alt={printer.name}
+                                  sx={{
+                                    width: 32,
+                                    height: 32,
+                                    bgcolor: "#62615C",
+                                    border: selectedPrinterId === printer.id && !showFullPaperList ? "2px solid #3D8078" : "1px solid transparent",
+                                  }}
+                                >
+                                  {printer.name.charAt(0).toUpperCase()}
+                                </Avatar>
+                              </ListItemAvatar>
+                              <ListItemText
+                                primary={printer.name}
+                                sx={{ "& .MuiListItemText-primary": { color: "inherit" } }}
+                              />
+                              <IconButton
+                                size="small"
+                                onClick={(e) => {
+                                  e.stopPropagation();
+                                  handlePrinterMenuOpen(e, printer.id);
+                                }}
+                                sx={{ ml: 1, color: "inherit", "&:hover": { color: "#3D8078" } }}
+                              >
+                                <MoreVertIcon fontSize="small" />
+                              </IconButton>
+                            </ListItemButton>
+                          </ListItem>
+                        ))}
+                      </List>
+                    )}
 
-              {tutorialState.printers.length === 0 && (
-                <Typography
-                  variant="body2"
-                  sx={{ p: 2, textAlign: "center", color: "rgba(255, 255, 255, 0.38)" }}
-                >
-                  No printers yet
-                </Typography>
-              )}
-          </Box>
+                    {tutorialState.printers.length > 3 && (
+                      <Button
+                        fullWidth
+                        size="small"
+                        onClick={goHome}
+                        sx={{
+                          mt: 0.5,
+                          textTransform: "none",
+                          color: "#3D8078",
+                          borderColor: "rgba(61, 128, 120, 0.25)",
+                          "&:hover": {
+                            bgcolor: "rgba(61, 128, 120, 0.1)",
+                            borderColor: "rgba(61, 128, 120, 0.4)",
+                          },
+                        }}
+                      >
+                        More
+                      </Button>
+                    )}
 
-          <Divider sx={{ my: 2, borderColor: "rgba(255, 255, 255, 0.15)" }} />
+                    {tutorialState.printers.length === 0 && (
+                      <Typography
+                        variant="body2"
+                        sx={{ p: 2, textAlign: "center", color: "rgba(255, 255, 255, 0.38)" }}
+                      >
+                        No printers yet
+                      </Typography>
+                    )}
+                  </Box>
+
+                  <Divider sx={{ my: 2, borderColor: "rgba(255, 255, 255, 0.15)" }} />
+                </>
+              )}
 
           {/* Full Paper List Button */}
-          <Button
-            fullWidth
-            startIcon={<InventoryIcon />}
-            variant={showFullPaperList ? "contained" : "outlined"}
-            onClick={goToFullPaperList}
-            sx={{
-              justifyContent: "flex-start",
-              mb: 1,
-              bgcolor: showFullPaperList ? "#3D8078" : "transparent",
-              color: showFullPaperList ? "#ffffff" : "#E5E1D7",
-              borderColor: "rgba(255, 255, 255, 0.2)",
-              "&:hover": {
-                bgcolor: showFullPaperList ? "#2D6059" : "rgba(255, 255, 255, 0.1)",
-              },
-            }}
-          >
-            Full Paper List
-          </Button>
+          {appSettings.fullPaperList && (
+            <Button
+              fullWidth
+              startIcon={<InventoryIcon />}
+              variant={showFullPaperList ? "contained" : "outlined"}
+              onClick={goToFullPaperList}
+              sx={{
+                justifyContent: "flex-start",
+                mb: 1,
+                bgcolor: showFullPaperList ? "#3D8078" : "transparent",
+                color: showFullPaperList ? "#ffffff" : "#E5E1D7",
+                borderColor: "rgba(255, 255, 255, 0.2)",
+                "&:hover": {
+                  bgcolor: showFullPaperList ? "#2D6059" : "rgba(255, 255, 255, 0.1)",
+                },
+              }}
+            >
+              Full Paper List
+            </Button>
+          )}
 
           {/* Colour Management Button */}
-          <Button
-            fullWidth
-            startIcon={<PaletteIcon />}
-            variant={showAllColoursView ? "contained" : "outlined"}
-            onClick={() => {
-              setShowAllColoursView(true);
-              setShowFullPaperList(false);
-              setSelectedPrinterId(null);
-              setSelectedPaperId(null);
-              setSelectedColorId(null);
-              setSelectedStepId(null);
-              setShowDeletedItems(false);
-            }}
-            sx={{
-              justifyContent: "flex-start",
-              bgcolor: showAllColoursView ? "#3D8078" : "transparent",
-              color: showAllColoursView ? "#ffffff" : "#E5E1D7",
-              borderColor: "rgba(255, 255, 255, 0.2)",
-              "&:hover": {
-                bgcolor: showAllColoursView ? "#2D6059" : "rgba(255, 255, 255, 0.1)",
-              },
-            }}
-          >
-            Colour Management
-          </Button>
+          {appSettings.colourManagementList && (
+            <Button
+              fullWidth
+              startIcon={<PaletteIcon />}
+              variant={showAllColoursView ? "contained" : "outlined"}
+              onClick={() => {
+                setShowAllColoursView(true);
+                setShowFullPaperList(false);
+                setSelectedPrinterId(null);
+                setSelectedPaperId(null);
+                setSelectedColorId(null);
+                setSelectedStepId(null);
+                setShowDeletedItems(false);
+              }}
+              sx={{
+                justifyContent: "flex-start",
+                bgcolor: showAllColoursView ? "#3D8078" : "transparent",
+                color: showAllColoursView ? "#ffffff" : "#E5E1D7",
+                borderColor: "rgba(255, 255, 255, 0.2)",
+                "&:hover": {
+                  bgcolor: showAllColoursView ? "#2D6059" : "rgba(255, 255, 255, 0.1)",
+                },
+              }}
+            >
+              Colour Management
+            </Button>
+          )}
 
           <Divider sx={{ my: 2, borderColor: "rgba(255, 255, 255, 0.15)" }} />
 
@@ -2718,7 +2943,9 @@ export default function AdminPage() {
                   size="small"
                   sx={{ color: "#666", "&:hover": { color: "#333" } }}
                 >
-                  <SettingsIcon fontSize="small" />
+                  <Badge variant="dot" color="error" invisible={pendingRequests.length === 0}>
+                    <SettingsIcon fontSize="small" />
+                  </Badge>
                 </IconButton>
               </Tooltip>
             )}
@@ -2839,21 +3066,27 @@ export default function AdminPage() {
                               <IconButton size="small" onClick={(e) => { e.stopPropagation(); handlePrinterMenuOpen(e, printer.id); }}>
                                 <MoreVertIcon fontSize="small" />
                               </IconButton>
-                              <Tooltip title="Copy link">
-                                <IconButton size="small" onClick={(e) => { e.stopPropagation(); copyPrinterLink(printer); }}>
-                                  <ContentCopyIcon fontSize="small" />
-                                </IconButton>
-                              </Tooltip>
-                              <Tooltip title={slugUpdatedIds.has(printer.id) ? "Link updated — download new QR code" : "Download QR code"}>
-                                <IconButton size="small" onClick={(e) => { e.stopPropagation(); void openQrDialog(printer); }} sx={slugUpdatedIds.has(printer.id) ? { color: "#f59e0b" } : {}}>
-                                  <QrCodeIcon fontSize="small" />
-                                </IconButton>
-                              </Tooltip>
-                              <Tooltip title="Embed in Canvas LMS">
-                                <IconButton size="small" onClick={(e) => { e.stopPropagation(); setEmbedPrinter(printer); setEmbedWidth("100%"); setEmbedHeight("600"); setEmbedCopied(false); }}>
-                                  <SettingsEthernetIcon fontSize="small" />
-                                </IconButton>
-                              </Tooltip>
+                              {appSettings.copyLink && (
+                                <Tooltip title="Copy link">
+                                  <IconButton size="small" onClick={(e) => { e.stopPropagation(); copyPrinterLink(printer); }}>
+                                    <ContentCopyIcon fontSize="small" />
+                                  </IconButton>
+                                </Tooltip>
+                              )}
+                              {appSettings.qrCode && (
+                                <Tooltip title={slugUpdatedIds.has(printer.id) ? "Link updated — download new QR code" : "Download QR code"}>
+                                  <IconButton size="small" onClick={(e) => { e.stopPropagation(); void openQrDialog(printer); }} sx={slugUpdatedIds.has(printer.id) ? { color: "#f59e0b" } : {}}>
+                                    <QrCodeIcon fontSize="small" />
+                                  </IconButton>
+                                </Tooltip>
+                              )}
+                              {appSettings.canvasEmbed && (
+                                <Tooltip title="Embed in Canvas LMS">
+                                  <IconButton size="small" onClick={(e) => { e.stopPropagation(); setEmbedPrinter(printer); setEmbedWidth("100%"); setEmbedHeight("600"); setEmbedCopied(false); }}>
+                                    <SettingsEthernetIcon fontSize="small" />
+                                  </IconButton>
+                                </Tooltip>
+                              )}
                             </Stack>
                           </TableCell>
                           <TableCell align="center">
@@ -3732,94 +3965,376 @@ export default function AdminPage() {
         open={showSuperadminModal}
         onClose={() => {
           setShowSuperadminModal(false);
+          setSuperadminTab(0);
           setPendingError("");
         }}
-        maxWidth="sm"
+        maxWidth="md"
         fullWidth
       >
-        <DialogTitle sx={{ fontWeight: 700 }}>Superadmin Settings</DialogTitle>
-        <DialogContent dividers>
-          <Typography variant="subtitle1" fontWeight={600} mb={2}>
-            Pending Access Requests
-          </Typography>
+        <DialogTitle sx={{ fontWeight: 700, backgroundColor: "#FDF9F1", borderBottom: "2px solid #E5E1D7", py: 2.5 }}>
+          <Typography variant="h6" fontWeight={700} color="#3D8078" fontSize="1.1rem">Superadmin Settings</Typography>
+        </DialogTitle>
+        <Box sx={{ borderBottom: 1, borderColor: "#E5E1D7", px: 3, backgroundColor: "#FDF9F1" }}>
+          <Tabs value={superadminTab} onChange={(_, v: number) => setSuperadminTab(v)} textColor="primary">
+            <Tab label="Admins" />
+            <Tab label="App Settings" />
+            <Tab label="Statistics" />
+          </Tabs>
+        </Box>
 
-          {pendingLoading && (
-            <Box display="flex" justifyContent="center" py={3}>
-              <CircularProgress size={28} />
+        <DialogContent sx={{ paddingTop: "24px !important", backgroundColor: "#ffffff" }}>
+
+          {/* ── Admins Tab ── */}
+          {superadminTab === 0 && (
+            <Box>
+              {(pendingLoading || !!pendingError || pendingRequests.length > 0) && (
+                <>
+                  <Typography variant="subtitle1" fontWeight={600} mb={2}>
+                    Pending Access Requests
+                  </Typography>
+
+                  {pendingLoading && (
+                    <Box display="flex" justifyContent="center" py={3}>
+                      <CircularProgress size={28} />
+                    </Box>
+                  )}
+
+                  {pendingError && (
+                    <Alert severity="error" sx={{ mb: 2 }}>{pendingError}</Alert>
+                  )}
+
+              {!pendingLoading && pendingRequests.length > 0 && (
+                <TableContainer component={Paper} elevation={0} sx={{ border: "1px solid #E5E1D7", borderRadius: 2 }}>
+                  <Table size="small">
+                    <TableHead>
+                      <TableRow sx={{ backgroundColor: "#FDF9F1" }}>
+                        <TableCell sx={{ fontWeight: 700 }}>Name</TableCell>
+                        <TableCell sx={{ fontWeight: 700 }}>Email</TableCell>
+                        <TableCell sx={{ fontWeight: 700 }}>E-number</TableCell>
+                        <TableCell sx={{ fontWeight: 700 }}>Role</TableCell>
+                        <TableCell align="right" sx={{ fontWeight: 700 }}>Actions</TableCell>
+                      </TableRow>
+                    </TableHead>
+                    <TableBody>
+                      {pendingRequests.map((req) => (
+                        <TableRow key={req.id}>
+                          <TableCell>{req.name}</TableCell>
+                          <TableCell>{req.email}</TableCell>
+                          <TableCell>{req.staffNumber}</TableCell>
+                          <TableCell>
+                            <Select
+                              size="small"
+                              value={pendingRoles[req.id] ?? "admin"}
+                              onChange={(e) => setPendingRoles((prev) => ({ ...prev, [req.id]: e.target.value as "admin" | "superadmin" }))}
+                              disabled={reviewingId === req.id}
+                              sx={{ fontSize: "0.8rem", minWidth: 120 }}
+                            >
+                              <MenuItem value="admin">Admin</MenuItem>
+                              <MenuItem value="superadmin">Superadmin</MenuItem>
+                            </Select>
+                          </TableCell>
+                          <TableCell align="right">
+                            <Stack direction="row" spacing={0.5} justifyContent="flex-end">
+                              <Tooltip title="Approve">
+                                <span>
+                                  <IconButton
+                                    size="small"
+                                    color="success"
+                                    disabled={reviewingId === req.id}
+                                    onClick={() => void handleReview(req.id, "approve")}
+                                  >
+                                    {reviewingId === req.id ? (
+                                      <CircularProgress size={16} />
+                                    ) : (
+                                      <ApproveIcon fontSize="small" />
+                                    )}
+                                  </IconButton>
+                                </span>
+                              </Tooltip>
+                              <Tooltip title="Reject">
+                                <span>
+                                  <IconButton
+                                    size="small"
+                                    color="error"
+                                    disabled={reviewingId === req.id}
+                                    onClick={() => void handleReview(req.id, "reject")}
+                                  >
+                                    <RejectIcon fontSize="small" />
+                                  </IconButton>
+                                </span>
+                              </Tooltip>
+                            </Stack>
+                          </TableCell>
+                        </TableRow>
+                      ))}
+                    </TableBody>
+                  </Table>
+                </TableContainer>
+              )}
+
+                  <Divider sx={{ my: 3 }} />
+                </>
+              )}
+
+              {/* ── Admin Users section ── */}
+              <Stack direction="row" alignItems="center" justifyContent="space-between" mb={2}>
+                <Typography variant="subtitle1" fontWeight={600}>
+                  Admin Users
+                </Typography>
+                <Button
+                  size="small"
+                  startIcon={<AddIcon />}
+                  onClick={() => { setShowAddAdminForm((v) => !v); setAddAdminError(""); }}
+                  sx={{ textTransform: "none" }}
+                >
+                  Add Admin
+                </Button>
+              </Stack>
+
+              <Collapse in={showAddAdminForm}>
+                <Box sx={{ border: "1px solid #E5E1D7", borderRadius: 2, p: 2, mb: 2, backgroundColor: "#FDF9F1" }}>
+                  <Stack spacing={1.5}>
+                    <Stack direction="row" spacing={1.5}>
+                      <TextField
+                        size="small"
+                        label="Full Name"
+                        value={addAdminForm.name}
+                        onChange={(e) => setAddAdminForm((p) => ({ ...p, name: e.target.value }))}
+                        sx={{ flex: 1 }}
+                      />
+                      <TextField
+                        size="small"
+                        label="Email"
+                        value={addAdminForm.email}
+                        onChange={(e) => setAddAdminForm((p) => ({ ...p, email: e.target.value }))}
+                        sx={{ flex: 1 }}
+                      />
+                    </Stack>
+                    <Stack direction="row" spacing={1.5}>
+                      <TextField
+                        size="small"
+                        label="E-number"
+                        value={addAdminForm.staffNumber}
+                        onChange={(e) => setAddAdminForm((p) => ({ ...p, staffNumber: e.target.value }))}
+                        sx={{ flex: 1 }}
+                      />
+                      <Select
+                        size="small"
+                        value={addAdminForm.role}
+                        onChange={(e) => setAddAdminForm((p) => ({ ...p, role: e.target.value as "admin" | "superadmin" }))}
+                        sx={{ flex: 1 }}
+                      >
+                        <MenuItem value="admin">Admin</MenuItem>
+                        <MenuItem value="superadmin">Superadmin</MenuItem>
+                      </Select>
+                    </Stack>
+                    {addAdminError && <Alert severity="error">{addAdminError}</Alert>}
+                    <Stack direction="row" spacing={1} justifyContent="flex-end">
+                      <Button
+                        size="small"
+                        onClick={() => { setShowAddAdminForm(false); setAddAdminForm({ name: "", email: "", staffNumber: "", role: "admin" }); setAddAdminError(""); }}
+                        sx={{ textTransform: "none" }}
+                      >
+                        Cancel
+                      </Button>
+                      <Button
+                        size="small"
+                        variant="contained"
+                        onClick={() => void handleAddAdmin()}
+                        disabled={addAdminSaving}
+                        sx={{ backgroundColor: "#3D8078", "&:hover": { backgroundColor: "#2e6159" }, textTransform: "none" }}
+                      >
+                        {addAdminSaving ? <CircularProgress size={16} sx={{ color: "#fff" }} /> : "Add Admin"}
+                      </Button>
+                    </Stack>
+                  </Stack>
+                </Box>
+              </Collapse>
+
+              {adminManageError && (
+                <Alert severity="error" sx={{ mb: 2 }} onClose={() => setAdminManageError("")}>{adminManageError}</Alert>
+              )}
+
+              {adminListLoading && (
+                <Box display="flex" justifyContent="center" py={3}>
+                  <CircularProgress size={28} />
+                </Box>
+              )}
+
+              {adminListError && <Alert severity="error">{adminListError}</Alert>}
+
+              {!adminListLoading && adminList.length > 0 && (
+                <TableContainer component={Paper} elevation={0} sx={{ border: "1px solid #E5E1D7", borderRadius: 2 }}>
+                  <Table size="small">
+                    <TableHead>
+                      <TableRow sx={{ backgroundColor: "#FDF9F1" }}>
+                        <TableCell sx={{ fontWeight: 700 }}>Name</TableCell>
+                        <TableCell sx={{ fontWeight: 700 }}>Email</TableCell>
+                        <TableCell sx={{ fontWeight: 700 }}>E-number</TableCell>
+                        <TableCell sx={{ fontWeight: 700 }}>Role</TableCell>
+                        <TableCell sx={{ fontWeight: 700 }}>Status</TableCell>
+                        <TableCell sx={{ fontWeight: 700 }}>Last Login</TableCell>
+                        <TableCell align="right" sx={{ fontWeight: 700 }}>Actions</TableCell>
+                      </TableRow>
+                    </TableHead>
+                    <TableBody>
+                      {adminList.map((admin) => (
+                        <TableRow key={admin.uid} sx={{ opacity: admin.active ? 1 : 0.55 }}>
+                          <TableCell>{admin.name}</TableCell>
+                          <TableCell sx={{ fontSize: "0.75rem" }}>{admin.email}</TableCell>
+                          <TableCell>{admin.staffNumber}</TableCell>
+                          <TableCell>
+                            <Select
+                              size="small"
+                              value={changedRoles[admin.uid] ?? admin.role}
+                              onChange={(e) => setChangedRoles((prev) => ({ ...prev, [admin.uid]: e.target.value as "admin" | "superadmin" }))}
+                              disabled={managingId === admin.uid || admin.uid === user?.uid}
+                              sx={{ fontSize: "0.8rem", minWidth: 120 }}
+                            >
+                              <MenuItem value="admin">Admin</MenuItem>
+                              <MenuItem value="superadmin">Superadmin</MenuItem>
+                            </Select>
+                          </TableCell>
+                          <TableCell>
+                            <Typography variant="caption" sx={{ color: admin.active ? "#1A7A2E" : "#999", fontWeight: 600 }}>
+                              {admin.active ? "Active" : "Inactive"}
+                            </Typography>
+                          </TableCell>
+                          <TableCell sx={{ fontSize: "0.75rem", color: "text.secondary" }}>
+                            {admin.lastLogin ? new Date(admin.lastLogin).toLocaleDateString() : "Never"}
+                          </TableCell>
+                          <TableCell align="right">
+                            <Stack direction="row" spacing={0.5} justifyContent="flex-end">
+                              {changedRoles[admin.uid] && changedRoles[admin.uid] !== admin.role && (
+                                <Tooltip title="Save role change">
+                                  <span>
+                                    <IconButton
+                                      size="small"
+                                      color="primary"
+                                      disabled={managingId === admin.uid}
+                                      onClick={() => void handleChangeRole(admin.uid)}
+                                    >
+                                      {managingId === admin.uid ? <CircularProgress size={16} /> : <SaveIcon fontSize="small" />}
+                                    </IconButton>
+                                  </span>
+                                </Tooltip>
+                              )}
+                              <Tooltip title={admin.uid === user?.uid ? "Cannot modify your own account" : admin.active ? "Deactivate" : "Reactivate"}>
+                                <span>
+                                  <IconButton
+                                    size="small"
+                                    color={admin.active ? "error" : "success"}
+                                    disabled={managingId === admin.uid || admin.uid === user?.uid}
+                                    onClick={() => void (admin.active ? handleDeactivate(admin.uid) : handleReactivate(admin.uid))}
+                                  >
+                                    {managingId === admin.uid
+                                      ? <CircularProgress size={16} />
+                                      : admin.active
+                                        ? <RejectIcon fontSize="small" />
+                                        : <ApproveIcon fontSize="small" />
+                                    }
+                                  </IconButton>
+                                </span>
+                              </Tooltip>
+                            </Stack>
+                          </TableCell>
+                        </TableRow>
+                      ))}
+                    </TableBody>
+                  </Table>
+                </TableContainer>
+              )}
             </Box>
           )}
 
-          {pendingError && (
-            <Alert severity="error" sx={{ mb: 2 }}>{pendingError}</Alert>
+          {/* ── App Settings Tab ── */}
+          {superadminTab === 1 && (
+            <Box>
+              <Typography variant="body2" color="text.secondary" mb={3}>
+                Control which features are visible to admins in the CMS. The user-facing view is unaffected by all of these settings.
+              </Typography>
+
+              <Box sx={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 3, mb: 2 }}>
+                <Box>
+                  <Typography variant="subtitle2" fontWeight={700} color="#45443F" mb={1}>
+                    Printer Table
+                  </Typography>
+                  <Stack spacing={0.5}>
+                    <FormControlLabel
+                      control={<Switch checked={appSettings.copyLink} onChange={(e) => void handleToggleAppSetting("copyLink", e.target.checked)} />}
+                      label="Copy Link"
+                    />
+                    <FormControlLabel
+                      control={<Switch checked={appSettings.qrCode} onChange={(e) => void handleToggleAppSetting("qrCode", e.target.checked)} />}
+                      label="QR Code"
+                    />
+                    <FormControlLabel
+                      control={<Switch checked={appSettings.canvasEmbed} onChange={(e) => void handleToggleAppSetting("canvasEmbed", e.target.checked)} />}
+                      label="Canvas LMS Embed"
+                    />
+                  </Stack>
+                </Box>
+                <Box>
+                  <Typography variant="subtitle2" fontWeight={700} color="#45443F" mb={1}>
+                    Sidebar
+                  </Typography>
+                  <Stack spacing={0.5}>
+                    <FormControlLabel
+                      control={<Switch checked={appSettings.printerList} onChange={(e) => void handleToggleAppSetting("printerList", e.target.checked)} />}
+                      label="Printer List"
+                    />
+                    <FormControlLabel
+                      control={<Switch checked={appSettings.fullPaperList} onChange={(e) => void handleToggleAppSetting("fullPaperList", e.target.checked)} />}
+                      label="Full Paper List"
+                    />
+                    <FormControlLabel
+                      control={<Switch checked={appSettings.colourManagementList} onChange={(e) => void handleToggleAppSetting("colourManagementList", e.target.checked)} />}
+                      label="Colour Management List"
+                    />
+                  </Stack>
+                </Box>
+              </Box>
+
+              {appSettingsSaving && (
+                <Stack direction="row" spacing={1} alignItems="center">
+                  <CircularProgress size={14} />
+                  <Typography variant="caption" color="text.secondary">Saving…</Typography>
+                </Stack>
+              )}
+              {appSettingsSaved && (
+                <Typography variant="caption" sx={{ color: "#1A7A2E", fontWeight: 600 }}>✓ Saved</Typography>
+              )}
+            </Box>
           )}
 
-          {!pendingLoading && pendingRequests.length === 0 && (
-            <Typography variant="body2" color="text.secondary" textAlign="center" py={3}>
-              No pending requests
-            </Typography>
+          {/* ── Statistics Tab ── */}
+          {superadminTab === 2 && (
+            <Box textAlign="center" py={4}>
+              <Typography variant="subtitle1" fontWeight={600} color="text.secondary" mb={1}>
+                Statistics — Coming Soon
+              </Typography>
+              <Typography variant="body2" color="text.secondary">
+                Google Analytics (GA4) integration is planned for this tab. Once a GA4 property is configured, page views, printer selections, and user drop-off points will be surfaced here.
+              </Typography>
+            </Box>
           )}
 
-          {!pendingLoading && pendingRequests.length > 0 && (
-            <TableContainer>
-              <Table size="small">
-                <TableHead>
-                  <TableRow>
-                    <TableCell><strong>Name</strong></TableCell>
-                    <TableCell><strong>Email</strong></TableCell>
-                    <TableCell><strong>E-number</strong></TableCell>
-                    <TableCell align="right"><strong>Actions</strong></TableCell>
-                  </TableRow>
-                </TableHead>
-                <TableBody>
-                  {pendingRequests.map((req) => (
-                    <TableRow key={req.id}>
-                      <TableCell>{req.name}</TableCell>
-                      <TableCell>{req.email}</TableCell>
-                      <TableCell>{req.staffNumber}</TableCell>
-                      <TableCell align="right">
-                        <Stack direction="row" spacing={0.5} justifyContent="flex-end">
-                          <Tooltip title="Approve">
-                            <span>
-                              <IconButton
-                                size="small"
-                                color="success"
-                                disabled={reviewingId === req.id}
-                                onClick={() => void handleReview(req.id, "approve")}
-                              >
-                                {reviewingId === req.id ? (
-                                  <CircularProgress size={16} />
-                                ) : (
-                                  <ApproveIcon fontSize="small" />
-                                )}
-                              </IconButton>
-                            </span>
-                          </Tooltip>
-                          <Tooltip title="Reject">
-                            <span>
-                              <IconButton
-                                size="small"
-                                color="error"
-                                disabled={reviewingId === req.id}
-                                onClick={() => void handleReview(req.id, "reject")}
-                              >
-                                <RejectIcon fontSize="small" />
-                              </IconButton>
-                            </span>
-                          </Tooltip>
-                        </Stack>
-                      </TableCell>
-                    </TableRow>
-                  ))}
-                </TableBody>
-              </Table>
-            </TableContainer>
-          )}
         </DialogContent>
-        <DialogActions>
-          <Button onClick={() => void loadPendingRequests()} startIcon={<RefreshIcon />} size="small">
-            Refresh
+
+        <DialogActions sx={{ borderTop: "1px solid #E5E1D7", pt: 2, pb: 2, px: 3, backgroundColor: "#FDF9F1", gap: 1 }}>
+          {superadminTab === 0 && (
+            <Button
+              onClick={() => { void loadPendingRequests(); void loadAdminList(); }}
+              startIcon={<RefreshIcon />}
+              size="small"
+              sx={{ mr: "auto" }}
+            >
+              Refresh
+            </Button>
+          )}
+          <Button variant="contained" onClick={() => setShowSuperadminModal(false)} sx={{ backgroundColor: "#3D8078", "&:hover": { backgroundColor: "#2e6159" }, textTransform: "none" }}>
+            Close
           </Button>
-          <Button onClick={() => setShowSuperadminModal(false)}>Close</Button>
         </DialogActions>
       </Dialog>
 

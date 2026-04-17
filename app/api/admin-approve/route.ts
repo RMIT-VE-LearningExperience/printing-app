@@ -7,8 +7,9 @@ export async function POST(req: NextRequest) {
       requestId?: string;
       action?: "approve" | "reject";
       reviewerUid?: string;
+      role?: "admin" | "superadmin";
     };
-    const { requestId, action, reviewerUid } = body;
+    const { requestId, action, reviewerUid, role } = body;
 
     if (!requestId || !action) {
       return NextResponse.json({ error: "requestId and action are required" }, { status: 400 });
@@ -70,7 +71,7 @@ export async function POST(req: NextRequest) {
         name: requestData.name,
         email: requestData.email,
         staffNumber: requestData.staffNumber,
-        role: "admin",
+        role: role === "superadmin" ? "superadmin" : "admin",
         active: true,
         addedAt: new Date(),
       },

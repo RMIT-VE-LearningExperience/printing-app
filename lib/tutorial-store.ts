@@ -93,6 +93,24 @@ export type SectionSettings = {
   colours: SectionSetting;
 };
 
+export type AppSettings = {
+  copyLink: boolean;
+  qrCode: boolean;
+  canvasEmbed: boolean;
+  printerList: boolean;
+  fullPaperList: boolean;
+  colourManagementList: boolean;
+};
+
+const defaultAppSettings: AppSettings = {
+  copyLink: true,
+  qrCode: true,
+  canvasEmbed: true,
+  printerList: true,
+  fullPaperList: true,
+  colourManagementList: true,
+};
+
 export type TutorialState = {
   papers: Paper[];
   printers: Printer[];
@@ -100,6 +118,7 @@ export type TutorialState = {
   homepageTitle?: string;
   homepageDescription?: string;
   sectionSettings?: SectionSettings;
+  appSettings?: AppSettings;
 };
 
 // ============= UTILITY FUNCTIONS =============
@@ -435,8 +454,19 @@ export async function getTutorialState(): Promise<TutorialState> {
       console.warn("Failed to fetch section settings:", error);
     }
 
+    // Get app settings
+    let appSettings: AppSettings = defaultAppSettings;
+    try {
+      const appSettingsSnapshot = await db.collection("settings").doc("appSettings").get();
+      if (appSettingsSnapshot.exists) {
+        appSettings = { ...defaultAppSettings, ...(appSettingsSnapshot.data() as Partial<AppSettings>) };
+      }
+    } catch (error) {
+      console.warn("Failed to fetch app settings:", error);
+    }
+
     console.log("[getTutorialState] Successfully fetched all data");
-    return { papers, printers, deletedItems, homepageTitle, homepageDescription, sectionSettings };
+    return { papers, printers, deletedItems, homepageTitle, homepageDescription, sectionSettings, appSettings };
   } catch (error) {
     console.error("Error getting tutorial state:", error);
     throw new Error(`Failed to load tutorial state: ${error instanceof Error ? error.message : "Unknown error"}`);
@@ -485,6 +515,10 @@ export async function updateSectionSettings(
     console.error("Error updating section settings:", error);
     throw new Error(`Failed to save section settings: ${error instanceof Error ? error.message : "Unknown error"}`);
   }
+}
+
+export async function updateAppSettings(settings: Partial<AppSettings>): Promise<void> {
+  await db.collection("settings").doc("appSettings").set(settings, { merge: true });
 }
 
 // ============= PRINTER OPERATIONS =============
