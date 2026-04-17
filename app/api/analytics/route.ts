@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
+import { GoogleAuth } from "google-auth-library";
 import { auth, adminDb } from "../../../lib/firebase-admin";
-import { getApps } from "firebase-admin/app";
 
 const GA_PROPERTY_ID = process.env.GA_PROPERTY_ID;
 const TIMEOUT_MS = 10000;
@@ -15,19 +15,19 @@ function withTimeout<T>(promise: Promise<T>, ms: number, label: string): Promise
 }
 
 async function getToken(): Promise<string> {
-  // Reuse the credential already initialised by firebase-admin to avoid hanging
-  // on ADC discovery. Firebase Admin creds include cloud-platform scope which
-  // GA4 Data API accepts.
-  const app = getApps()[0];
-  const credential = (app as unknown as { options: { credential?: { getAccessToken: () => Promise<{ access_token: string }> } } })
-    .options?.credential;
+  const clientEmail = process.env.ANALYTICS_CLIENT_EMAIL;
+  const privateKey = process.env.ANALYTICS_PRIVATE_KEY?.replace(/\\n/g, "\n");
 
-  if (credential?.getAccessToken) {
-    const result = await withTimeout(credential.getAccessToken(), TIMEOUT_MS, "getAccessToken");
-    return result.access_token;
-  }
+  const googleAuth = new GoogleAuth({
+    scopes: ["https://www.googleapis.com/auth/analytics.readonly"],
+    ...(clientEmail && privateKey
+      ? { credentials: { client_email: clientEmail, private_key: privateKey } }
+      : {}),
+  });
 
-  throw new Error("No Firebase credential available to authenticate Analytics requests");
+  const token = await withTimeout(googleAuth.getAccessToken(), TIMEOUT_MS, "getAccessToken");
+  if (!token) throw new Error("Failed to obtain Analytics token");
+  return token;
 }
 
 async function runReport(token: string, body: object) {
