@@ -382,6 +382,7 @@ export default function AdminPage() {
   const [pendingRoles, setPendingRoles] = useState<Record<string, "admin" | "superadmin">>({});
   const [superadminTab, setSuperadminTab] = useState(0);
   const [appSettings, setAppSettings] = useState<AppSettings>(defaultAppSettings);
+  const [savedAppSettings, setSavedAppSettings] = useState<AppSettings>(defaultAppSettings);
   const [appSettingsSaving, setAppSettingsSaving] = useState(false);
   const [appSettingsSaved, setAppSettingsSaved] = useState(false);
   // Admin Users state
@@ -482,9 +483,11 @@ export default function AdminPage() {
     }
   };
 
-  const handleToggleAppSetting = async (key: keyof AppSettings, value: boolean) => {
-    const newSettings = { ...appSettings, [key]: value };
-    setAppSettings(newSettings);
+  const handleToggleAppSetting = (key: keyof AppSettings, value: boolean) => {
+    setAppSettings((prev) => ({ ...prev, [key]: value }));
+  };
+
+  const handleSaveAppSettings = async () => {
     setAppSettingsSaving(true);
     setAppSettingsSaved(false);
     try {
@@ -492,12 +495,13 @@ export default function AdminPage() {
       await fetch("/api/tutorial", {
         method: "POST",
         headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` },
-        body: JSON.stringify({ action: "updateAppSettings", payload: { settings: newSettings } }),
+        body: JSON.stringify({ action: "updateAppSettings", payload: { settings: appSettings } }),
       });
+      setSavedAppSettings(appSettings);
       setAppSettingsSaved(true);
       setTimeout(() => setAppSettingsSaved(false), 2000);
     } catch {
-      setAppSettings(appSettings); // revert on error
+      setAppSettings(savedAppSettings); // revert on error
     } finally {
       setAppSettingsSaving(false);
     }
@@ -819,7 +823,9 @@ export default function AdminPage() {
           setSavedSectionSettings(loaded);
         }
         if (data.state.appSettings) {
-          setAppSettings({ ...defaultAppSettings, ...data.state.appSettings });
+          const loaded = { ...defaultAppSettings, ...data.state.appSettings };
+          setAppSettings(loaded);
+          setSavedAppSettings(loaded);
         }
       } catch {
         setError("Could not load tutorial data.");
@@ -3967,6 +3973,7 @@ export default function AdminPage() {
           setShowSuperadminModal(false);
           setSuperadminTab(0);
           setPendingError("");
+          setAppSettings(savedAppSettings);
         }}
         maxWidth="md"
         fullWidth
@@ -4020,7 +4027,7 @@ export default function AdminPage() {
                         <TableRow key={req.id}>
                           <TableCell>{req.name}</TableCell>
                           <TableCell>{req.email}</TableCell>
-                          <TableCell>{req.staffNumber}</TableCell>
+                          <TableCell>{req.staffNumber.toUpperCase()}</TableCell>
                           <TableCell>
                             <Select
                               size="small"
@@ -4182,7 +4189,7 @@ export default function AdminPage() {
                         <TableRow key={admin.uid} sx={{ opacity: admin.active ? 1 : 0.55 }}>
                           <TableCell>{admin.name}</TableCell>
                           <TableCell sx={{ fontSize: "0.75rem" }}>{admin.email}</TableCell>
-                          <TableCell>{admin.staffNumber}</TableCell>
+                          <TableCell>{admin.staffNumber.toUpperCase()}</TableCell>
                           <TableCell>
                             <Select
                               size="small"
@@ -4261,15 +4268,15 @@ export default function AdminPage() {
                   </Typography>
                   <Stack spacing={0.5}>
                     <FormControlLabel
-                      control={<Switch checked={appSettings.copyLink} onChange={(e) => void handleToggleAppSetting("copyLink", e.target.checked)} />}
+                      control={<Switch checked={appSettings.copyLink} onChange={(e) => handleToggleAppSetting("copyLink", e.target.checked)} />}
                       label="Copy Link"
                     />
                     <FormControlLabel
-                      control={<Switch checked={appSettings.qrCode} onChange={(e) => void handleToggleAppSetting("qrCode", e.target.checked)} />}
+                      control={<Switch checked={appSettings.qrCode} onChange={(e) => handleToggleAppSetting("qrCode", e.target.checked)} />}
                       label="QR Code"
                     />
                     <FormControlLabel
-                      control={<Switch checked={appSettings.canvasEmbed} onChange={(e) => void handleToggleAppSetting("canvasEmbed", e.target.checked)} />}
+                      control={<Switch checked={appSettings.canvasEmbed} onChange={(e) => handleToggleAppSetting("canvasEmbed", e.target.checked)} />}
                       label="Canvas LMS Embed"
                     />
                   </Stack>
@@ -4280,30 +4287,21 @@ export default function AdminPage() {
                   </Typography>
                   <Stack spacing={0.5}>
                     <FormControlLabel
-                      control={<Switch checked={appSettings.printerList} onChange={(e) => void handleToggleAppSetting("printerList", e.target.checked)} />}
+                      control={<Switch checked={appSettings.printerList} onChange={(e) => handleToggleAppSetting("printerList", e.target.checked)} />}
                       label="Printer List"
                     />
                     <FormControlLabel
-                      control={<Switch checked={appSettings.fullPaperList} onChange={(e) => void handleToggleAppSetting("fullPaperList", e.target.checked)} />}
+                      control={<Switch checked={appSettings.fullPaperList} onChange={(e) => handleToggleAppSetting("fullPaperList", e.target.checked)} />}
                       label="Full Paper List"
                     />
                     <FormControlLabel
-                      control={<Switch checked={appSettings.colourManagementList} onChange={(e) => void handleToggleAppSetting("colourManagementList", e.target.checked)} />}
+                      control={<Switch checked={appSettings.colourManagementList} onChange={(e) => handleToggleAppSetting("colourManagementList", e.target.checked)} />}
                       label="Colour Management List"
                     />
                   </Stack>
                 </Box>
               </Box>
 
-              {appSettingsSaving && (
-                <Stack direction="row" spacing={1} alignItems="center">
-                  <CircularProgress size={14} />
-                  <Typography variant="caption" color="text.secondary">Saving…</Typography>
-                </Stack>
-              )}
-              {appSettingsSaved && (
-                <Typography variant="caption" sx={{ color: "#1A7A2E", fontWeight: 600 }}>✓ Saved</Typography>
-              )}
             </Box>
           )}
 
@@ -4332,7 +4330,22 @@ export default function AdminPage() {
               Refresh
             </Button>
           )}
-          <Button variant="contained" onClick={() => setShowSuperadminModal(false)} sx={{ backgroundColor: "#3D8078", "&:hover": { backgroundColor: "#2e6159" }, textTransform: "none" }}>
+          {superadminTab === 1 && (
+            <Button
+              size="small"
+              startIcon={appSettingsSaving ? <CircularProgress size={14} /> : <SaveIcon />}
+              onClick={() => void handleSaveAppSettings()}
+              disabled={appSettingsSaving || JSON.stringify(appSettings) === JSON.stringify(savedAppSettings)}
+              sx={{ mr: "auto" }}
+            >
+              {appSettingsSaved ? "✓ Saved" : "Save"}
+            </Button>
+          )}
+          <Button
+            variant="contained"
+            onClick={() => { setShowSuperadminModal(false); setSuperadminTab(0); setPendingError(""); setAppSettings(savedAppSettings); }}
+            sx={{ backgroundColor: "#3D8078", "&:hover": { backgroundColor: "#2e6159" }, textTransform: "none" }}
+          >
             Close
           </Button>
         </DialogActions>
