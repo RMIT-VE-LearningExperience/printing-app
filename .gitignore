@@ -4,3 +4,13 @@ node_modules
 .env.*.local
 firebase-credentials.json
 printer-app-531a8-firebase-adminsdk-*.json
+
+# Local planning & documentation (not for repo)
+*_LOG.md
+PROGRESS_LOG*.md
+*.bak
+*.bak-*
+FD_Dynamic Hierarchy.md
+FIREBASE_STORAGE_PLAN.md
+PHASE_2_IMPLEMENTATION_PLANS.md
+STYLE_GUIDE.md
