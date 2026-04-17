@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
-import { GoogleAuth } from "google-auth-library";
+import { JWT } from "google-auth-library";
 import { auth, adminDb } from "../../../lib/firebase-admin";
 
 const GA_PROPERTY_ID = process.env.GA_PROPERTY_ID;
@@ -15,19 +15,20 @@ function withTimeout<T>(promise: Promise<T>, ms: number, label: string): Promise
 }
 
 async function getToken(): Promise<string> {
-  const clientEmail = process.env.ANALYTICS_CLIENT_EMAIL;
-  const privateKey = process.env.ANALYTICS_PRIVATE_KEY?.replace(/\\n/g, "\n");
+  const email = process.env.ANALYTICS_CLIENT_EMAIL;
+  const key = process.env.ANALYTICS_PRIVATE_KEY?.replace(/\\n/g, "\n");
 
-  const googleAuth = new GoogleAuth({
+  if (!email || !key) throw new Error("ANALYTICS_CLIENT_EMAIL or ANALYTICS_PRIVATE_KEY not set");
+
+  const jwt = new JWT({
+    email,
+    key,
     scopes: ["https://www.googleapis.com/auth/analytics.readonly"],
-    ...(clientEmail && privateKey
-      ? { credentials: { client_email: clientEmail, private_key: privateKey } }
-      : {}),
   });
 
-  const token = await withTimeout(googleAuth.getAccessToken(), TIMEOUT_MS, "getAccessToken");
-  if (!token) throw new Error("Failed to obtain Analytics token");
-  return token;
+  const tokenResponse = await withTimeout(jwt.getAccessToken(), TIMEOUT_MS, "getAccessToken");
+  if (!tokenResponse.token) throw new Error("Failed to obtain Analytics token");
+  return tokenResponse.token;
 }
 
 async function runReport(token: string, body: object) {
