@@ -1,7 +1,3 @@
-"use client";
-
-import { usePathname } from "next/navigation";
-
 const FOOTER_BG = "#45443F";
 const FOOTER_TEXT = "#ffffff";
 
@@ -17,10 +13,7 @@ const content = (year: number) => (
   </>
 );
 
-export default function Footer({ year }: { year: number }) {
-  const pathname = usePathname();
-  const isAdmin = pathname.startsWith("/admin");
-
+export default function Footer({ year, isAdmin }: { year: number; isAdmin: boolean }) {
   if (isAdmin) {
     return (
       <footer

@@ -5,6 +5,7 @@ import {
 } from "firebase-admin/firestore";
 
 import { db } from "./firebase-admin";
+import { resolveImageUrl } from "./media-storage";
 
 // ============= TYPE DEFINITIONS =============
 
@@ -535,11 +536,12 @@ export async function addPrinter(
     const now = new Date();
 
     const newPrinterId = generateId();
+    const resolvedThumbnail = await resolveImageUrl(thumbnailDataUrl, `printers/${newPrinterId}/thumbnail`);
     await printersCollection().doc(newPrinterId).set({
       name: normalizedName,
       slug: generateSlug(normalizedName),
       description: normalizedDescription,
-      thumbnailDataUrl: thumbnailDataUrl || "",
+      thumbnailDataUrl: resolvedThumbnail,
       published: true,
       lastModified: now,
       createdAt: FieldValue.serverTimestamp(),
@@ -569,7 +571,7 @@ export async function updatePrinter(
       updates.slug = generateSlug(updates.name as string);
     }
     if (description !== undefined) updates.description = normalizeDescription(description);
-    if (thumbnailDataUrl !== undefined) updates.thumbnailDataUrl = thumbnailDataUrl;
+    if (thumbnailDataUrl !== undefined) updates.thumbnailDataUrl = await resolveImageUrl(thumbnailDataUrl, `printers/${printerId}/thumbnail`);
     if (published !== undefined) updates.published = published;
 
     if (Object.keys(updates).length === 0) {
@@ -608,10 +610,11 @@ export async function addPaper(
     const newPaperId = generateId();
     const now = new Date();
 
+    const resolvedThumbnail = await resolveImageUrl(thumbnailDataUrl, `papers/${newPaperId}/thumbnail`);
     await papersCollection().doc(newPaperId).set({
       name: normalizedName,
       description: normalizedDescription,
-      thumbnailDataUrl: thumbnailDataUrl || "",
+      thumbnailDataUrl: resolvedThumbnail,
       lastModified: now,
       createdAt: FieldValue.serverTimestamp(),
       modifiedBy: modifiedBy || "system",
@@ -647,7 +650,7 @@ export async function updatePaper(
     const updates: Record<string, unknown> = {};
     if (name) updates.name = normalizeName(name, "Paper name");
     if (description !== undefined) updates.description = normalizeDescription(description);
-    if (thumbnailDataUrl !== undefined) updates.thumbnailDataUrl = thumbnailDataUrl;
+    if (thumbnailDataUrl !== undefined) updates.thumbnailDataUrl = await resolveImageUrl(thumbnailDataUrl, `papers/${paperId}/thumbnail`);
 
     updates.lastModified = new Date();
     updates.modifiedBy = modifiedBy || "system";
@@ -821,12 +824,14 @@ export async function addColour(
     const globalColourOrder = (nextGlobalOrder || 0) + 1;
     const printerColourOrder = (nextPrinterOrder || 0) + 1;
 
+    const resolvedThumbnail = await resolveImageUrl(thumbnailDataUrl, `papers/${paperId}/colours/${newColourId}/thumbnail`);
+
     // Create colour in global paper collection (contains metadata)
     await globalPaperRef.collection("colours").doc(newColourId).set({
       id: newColourId,
       name: normalizedName,
       description: normalizedDescription,
-      thumbnailDataUrl: thumbnailDataUrl || "",
+      thumbnailDataUrl: resolvedThumbnail,
       lastModified: now,
       createdAt: FieldValue.serverTimestamp(),
       order: globalColourOrder,
@@ -872,7 +877,7 @@ export async function updateColour(
     if (globalColourSnapshot.exists) {
       const globalUpdates: Record<string, unknown> = {};
       if (name) globalUpdates.name = normalizeName(name, "Colour name");
-      if (thumbnailDataUrl !== undefined) globalUpdates.thumbnailDataUrl = thumbnailDataUrl;
+      if (thumbnailDataUrl !== undefined) globalUpdates.thumbnailDataUrl = await resolveImageUrl(thumbnailDataUrl, `papers/${paperId}/colours/${colourId}/thumbnail`);
       if (description !== undefined) globalUpdates.description = normalizeDescription(description);
       globalUpdates.lastModified = new Date();
       globalUpdates.modifiedBy = modifiedBy || "system";
@@ -1040,11 +1045,12 @@ export async function addStep(
     const stepsRef = globalColourRef.collection("steps");
     const nextOrder = await getNextOrder(stepsRef);
 
+    const resolvedImage = await resolveImageUrl(imageDataUrl, `papers/${paperId}/colours/${colourId}/steps/${newStepId}/image`);
     await stepsRef.doc(newStepId).set({
       name: `Step ${nextOrder + 1}`,
       title: normalizedTitle,
       contentHtml: contentHtml.trim(),
-      imageDataUrl: imageDataUrl || "",
+      imageDataUrl: resolvedImage,
       videoUrl: videoUrl || "",
       order: nextOrder + 1,
       lastModified: new Date(),
@@ -1120,7 +1126,7 @@ export async function updateStep(
       }
       updates.contentHtml = trimmedContent;
     }
-    if (imageDataUrl !== undefined) updates.imageDataUrl = imageDataUrl;
+    if (imageDataUrl !== undefined) updates.imageDataUrl = await resolveImageUrl(imageDataUrl, `papers/${paperId}/colours/${colourId}/steps/${stepId}/image`);
     if (videoUrl !== undefined) updates.videoUrl = videoUrl;
     updates.lastModified = new Date();
     updates.modifiedBy = modifiedBy || "system";

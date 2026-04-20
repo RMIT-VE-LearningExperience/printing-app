@@ -2271,9 +2271,11 @@ export default function AdminPage() {
   // Render
   if (loadingState) {
     return (
-      <Container maxWidth="lg" sx={{ py: 4 }}>
-        <Typography>Loading...</Typography>
-      </Container>
+      <Box sx={{ minHeight: "100vh", bgcolor: "#FFFFFF" }}>
+        <Container maxWidth="lg" sx={{ py: 4 }}>
+          <Typography>Loading...</Typography>
+        </Container>
+      </Box>
     );
   }
 
