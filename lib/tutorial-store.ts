@@ -7,6 +7,20 @@ import {
 import { db } from "./firebase-admin";
 import { resolveImageUrl } from "./media-storage";
 
+// ============= ORPHAN TRACKING =============
+
+async function markOrphan(storageUrl: string, reason: string): Promise<void> {
+  if (!storageUrl || !storageUrl.startsWith("https://firebasestorage")) return;
+  const pathMatch = storageUrl.match(/\/o\/(.+?)\?/);
+  if (!pathMatch) return;
+  const decodedPath = decodeURIComponent(pathMatch[1]);
+  await db.collection("orphanedStorageFiles").add({
+    storagePath: decodedPath,
+    orphanedAt: FieldValue.serverTimestamp(),
+    reason,
+  });
+}
+
 // ============= TYPE DEFINITIONS =============
 
 export type Step = {
@@ -921,6 +935,17 @@ export async function deleteColour(
     const globalColourSnapshot = await globalColourRef.get();
     const colourData = globalColourSnapshot.exists ? globalColourSnapshot.data() : null;
 
+    // Mark colour thumbnail and all its step images as orphaned in Storage
+    if (colourData?.thumbnailDataUrl) {
+      await markOrphan(colourData.thumbnailDataUrl, "colour deleted");
+    }
+    const globalStepsSnapshot = await globalColourRef.collection("steps").get();
+    for (const stepDoc of globalStepsSnapshot.docs) {
+      const stepImageUrl = stepDoc.data().imageDataUrl;
+      if (stepImageUrl) await markOrphan(stepImageUrl, "colour deleted (step image)");
+      await stepDoc.ref.delete();
+    }
+
     // Store deleted colour in deletedItems collection
     if (colourData) {
       const deletedItemId = generateId();
@@ -1190,6 +1215,11 @@ export async function deleteStep(
     const stepDoc = await stepRef.get();
     const stepData = stepDoc.data();
 
+    // Mark step image as orphaned in Storage
+    if (stepData?.imageDataUrl) {
+      await markOrphan(stepData.imageDataUrl, "step deleted");
+    }
+
     // Store deleted step in deletedItems collection
     if (stepData) {
       const deletedItemId = generateId();
@@ -1314,6 +1344,11 @@ export async function deletePrinter(printerId: string): Promise<TutorialState> {
     const printerDoc = await printerRef.get();
     const printerData = printerDoc.data();
 
+    // Mark printer thumbnail as orphaned in Storage
+    if (printerData?.thumbnailDataUrl) {
+      await markOrphan(printerData.thumbnailDataUrl, "printer deleted");
+    }
+
     // Store deleted printer in deletedItems collection
     const deletedItemId = generateId();
     await deletedItemsCollection().doc(deletedItemId).set({
@@ -1370,6 +1405,11 @@ export async function deletePaper(paperId: string): Promise<TutorialState> {
       if (paperInPrinter.exists) {
         printerIds.push(printerDoc.id);
       }
+    }
+
+    // Mark paper thumbnail as orphaned in Storage
+    if (paperData?.thumbnailDataUrl) {
+      await markOrphan(paperData.thumbnailDataUrl, "paper deleted");
     }
 
     // Store deleted paper in deletedItems collection with printer assignments

@@ -1,3 +1,9 @@
 {
-  "apphosting": {}
+  "apphosting": {},
+  "functions": {
+    "source": "functions"
+  },
+  "storage": {
+    "rules": "storage.rules"
+  }
 }
