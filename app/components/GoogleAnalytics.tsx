@@ -1,6 +1,18 @@
 import Script from "next/script";
 
+declare global {
+  interface Window {
+    gtag?: (...args: unknown[]) => void;
+  }
+}
+
 const GA_ID = process.env.NEXT_PUBLIC_GA_MEASUREMENT_ID;
+
+export function trackEvent(name: string, params?: Record<string, string | number>) {
+  if (typeof window !== "undefined" && typeof window.gtag === "function") {
+    window.gtag("event", name, params);
+  }
+}
 
 export default function GoogleAnalytics() {
   if (!GA_ID) return null;

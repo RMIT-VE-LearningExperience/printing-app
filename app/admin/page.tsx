@@ -81,6 +81,7 @@ import { DragDropContext, Droppable, Draggable, type DropResult } from "@hello-p
 import { type ChangeEvent, useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import { useAuth } from "../auth-provider";
+import { trackEvent } from "../components/GoogleAnalytics";
 import { getAuthInstance } from "../../lib/firebase-client";
 
 type Step = {
@@ -1270,6 +1271,7 @@ export default function AdminPage() {
         thumbnailDataUrl: newPrinterThumbnail,
       });
 
+      trackEvent("cms_printer_created", { printer_name: newPrinterName });
       setNewPrinterName("");
       setNewPrinterThumbnail("");
       setNewPrinterThumbnailName("");
@@ -1302,6 +1304,7 @@ export default function AdminPage() {
         thumbnailDataUrl: editPrinterThumbnail,
       });
 
+      trackEvent("cms_printer_updated", { printer_name: editPrinterName });
       if (oldSlug && newSlug !== oldSlug) {
         setSlugUpdatedIds((prev) => new Set([...prev, editPrinterId]));
       }
@@ -1354,6 +1357,7 @@ export default function AdminPage() {
         printerIds: newPaperSelectedPrinters,
       });
 
+      trackEvent("cms_paper_created", { paper_name: newPaperName });
       setNewPaperName("");
       setNewPaperDescription("");
       setNewPaperThumbnail("");
@@ -1440,6 +1444,7 @@ export default function AdminPage() {
         }
       }
 
+      trackEvent("cms_paper_updated", { paper_name: editPaperName });
       setShowEditPaperModal(false);
       setEditPaperId(null);
       setEditPaperName("");
@@ -1482,6 +1487,8 @@ export default function AdminPage() {
         paperId,
         published: newStatus,
       });
+
+      trackEvent("cms_paper_publish_toggled", { published: newStatus ? 1 : 0 });
     } catch {
       // Error already set in runAction
     }
@@ -1495,6 +1502,8 @@ export default function AdminPage() {
         printerId,
         published: newStatus,
       });
+
+      trackEvent("cms_printer_publish_toggled", { published: newStatus ? 1 : 0 });
     } catch {
       // Error already set in runAction
     }
@@ -1511,6 +1520,8 @@ export default function AdminPage() {
         colourId,
         published: newStatus,
       });
+
+      trackEvent("cms_colour_publish_toggled", { published: newStatus ? 1 : 0 });
     } catch {
       // Error already set in runAction
     }
@@ -1536,6 +1547,7 @@ export default function AdminPage() {
         thumbnailDataUrl: newColourThumbnail,
       });
 
+      trackEvent("cms_colour_created", { colour_name: newColourName });
       setNewColourName("");
       setNewColourDescription("");
       setNewColourThumbnail("");
@@ -1567,6 +1579,7 @@ export default function AdminPage() {
         thumbnailDataUrl: editColourThumbnail,
       });
 
+      trackEvent("cms_colour_updated", { colour_name: editColourName });
       setShowEditColourModal(false);
       setEditColourId(null);
       setEditColourName("");
@@ -1621,6 +1634,7 @@ export default function AdminPage() {
         videoUrl: newStepMediaType === "video" ? newStepVideoUrl : "",
       });
 
+      trackEvent("cms_step_created", { step_title: newStepTitle });
       setNewStepTitle("");
       setNewStepContent("");
       setNewStepImage("");
@@ -1655,6 +1669,7 @@ export default function AdminPage() {
         videoUrl: editStepMediaType === "video" ? editStepVideoUrl : "",
       });
 
+      trackEvent("cms_step_updated", { step_title: editStepTitle });
       setShowEditStepModal(false);
       setEditStepId(null);
       setEditStepTitle("");

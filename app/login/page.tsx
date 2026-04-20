@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import { trackEvent } from "../components/GoogleAnalytics";
 import { signInWithCustomToken } from "firebase/auth";
 import {
   Box,
@@ -76,6 +77,7 @@ export default function LoginPage() {
       window.localStorage.setItem("adminRole", verifyData.role || "admin");
       window.localStorage.setItem("adminLoginTime", Date.now().toString());
 
+      trackEvent("admin_login", { role: verifyData.role ?? "admin" });
       window.location.href = "/admin";
     } catch (err) {
       setLoginError(err instanceof Error ? err.message : "Login failed");

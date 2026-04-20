@@ -2,6 +2,7 @@
 
 import Image from "next/image";
 import { useEffect, useMemo, useRef, useState } from "react";
+import { trackEvent } from "./components/GoogleAnalytics";
 import {
   Box,
   Container,
@@ -146,6 +147,7 @@ export default function HomePage() {
   const [showBackToTop, setShowBackToTop] = useState(false);
   const stepCardRefs = useRef<(HTMLDivElement | null)[]>([]);
   const visibleStepsRef = useRef(new Set<number>());
+  const lastTrackedStepRef = useRef<number>(-1);
 
   useEffect(() => {
     const stored = window.localStorage.getItem(PROGRESS_KEY);
@@ -383,17 +385,22 @@ export default function HomePage() {
     if (printer?.slug) {
       window.history.replaceState(null, "", `?printer=${printer.slug}`);
     }
+    trackEvent("select_printer", { printer_name: printer?.name ?? "", printer_id: printerId });
   }
 
   function selectPaper(paperId: string) {
     setSelectedPaperId(paperId);
     setSelectedColourId(null);
     setActiveStepIndex(0);
+    const paper = selectedPrinter?.papers.find((p) => p.id === paperId);
+    trackEvent("select_paper", { paper_name: paper?.name ?? "", printer_name: selectedPrinter?.name ?? "" });
   }
 
   function selectColour(colourId: string) {
     setSelectedColourId(colourId);
     setActiveStepIndex(0);
+    const colour = selectedPaper?.colours.find((c) => c.id === colourId);
+    trackEvent("select_colour", { colour_name: colour?.name ?? "", paper_name: selectedPaper?.name ?? "", printer_name: selectedPrinter?.name ?? "" });
   }
 
   const showingPrinterSelection = !selectedPrinter;
@@ -434,6 +441,27 @@ export default function HomePage() {
     window.addEventListener("scroll", onScroll, { passive: true });
     return () => window.removeEventListener("scroll", onScroll);
   }, [showingSteps]);
+
+  useEffect(() => {
+    if (!showingSteps) { lastTrackedStepRef.current = -1; return; }
+    if (activeStepIndex === lastTrackedStepRef.current) return;
+    lastTrackedStepRef.current = activeStepIndex;
+    trackEvent("view_step", {
+      step_number: activeStepIndex + 1,
+      step_title: steps[activeStepIndex]?.title ?? "",
+      colour_name: selectedColour?.name ?? "",
+      paper_name: selectedPaper?.name ?? "",
+      printer_name: selectedPrinter?.name ?? "",
+    });
+    if (steps.length > 0 && activeStepIndex === steps.length - 1) {
+      trackEvent("complete_guide", {
+        printer_name: selectedPrinter?.name ?? "",
+        paper_name: selectedPaper?.name ?? "",
+        colour_name: selectedColour?.name ?? "",
+        total_steps: steps.length,
+      });
+    }
+  }, [activeStepIndex, showingSteps, steps, selectedColour, selectedPaper, selectedPrinter]);
 
   const previewBanner = isPreviewMode ? (
     <Box
@@ -1031,6 +1059,7 @@ export default function HomePage() {
                               fontSize: { xs: "0.85rem", sm: "0.9rem" },
                               color: colors.lightText,
                               lineHeight: 1.4,
+                              wordBreak: "break-word",
                             }}
                           >
                             {colour.description.split("\n").filter(Boolean).map((line, i) => (

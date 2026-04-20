@@ -25,31 +25,18 @@ export default function Footer({ year }: { year: number }) {
     return (
       <footer
         style={{
-          position: "fixed",
-          bottom: 0,
           width: "100%",
+          backgroundColor: "#3D8078",
+          padding: "10px 24px",
           textAlign: "right",
-          zIndex: 10,
-          pointerEvents: "none",
+          fontSize: "14px",
+          color: FOOTER_TEXT,
+          fontWeight: 500,
+          letterSpacing: "0.3px",
           boxSizing: "border-box",
         }}
       >
-        <span
-          style={{
-            display: "inline-block",
-            pointerEvents: "auto",
-            backgroundColor: FOOTER_BG,
-            padding: "10px 24px 10px 52px",
-            clipPath: "polygon(32px 0, 100% 0, 100% 100%, 0 100%)",
-            filter: "drop-shadow(-3px 0 6px rgba(0,0,0,0.10))",
-            fontSize: "14px",
-            color: FOOTER_TEXT,
-            fontWeight: 500,
-            letterSpacing: "0.3px",
-          }}
-        >
-          {content(year)}
-        </span>
+        {content(year)}
       </footer>
     );
   }
