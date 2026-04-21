@@ -1816,6 +1816,7 @@ export default function AdminPage() {
       setCropBoxY(0);
       setCropBoxWidth(img.width);
       setCropBoxHeight(img.height);
+      setCropImgReady(true);
     };
     img.onerror = () => {
       console.error("Failed to load image in openCropModal. Image may not be accessible.");
@@ -1836,7 +1837,6 @@ export default function AdminPage() {
     console.log("resetCropBox: originalCropImage length:", originalCropImage.length);
     console.log("resetCropBox: originalCropImage starts with:", originalCropImage.substring(0, 100));
 
-    setCropImgReady(false);
     setCropImage(originalCropImage);
 
     const img = new Image();
@@ -1847,11 +1847,12 @@ export default function AdminPage() {
       setCropImageWidth(img.width);
       setCropImageHeight(img.height);
 
-      // Initialize crop box to full image size
+      // Reset crop box to full image size
       setCropBoxX(0);
       setCropBoxY(0);
       setCropBoxWidth(img.width);
       setCropBoxHeight(img.height);
+      setCropImgReady(true);
     };
     img.onerror = () => {
       console.error("Failed to load original image in resetCropBox.");
