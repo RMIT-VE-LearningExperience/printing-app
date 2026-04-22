@@ -90,8 +90,9 @@ export type Printer = {
 
 export type DeletedItem = {
   id: string;
-  type: "printer" | "paper" | "colour" | "step";
+  type: "printer" | "paper" | "colour" | "step" | "paperFromPrinter";
   name: string;
+  location?: string;
   deletedAt: Date;
   deletedBy: string;
   data: unknown; // Stores the full item data for restoration
@@ -431,6 +432,7 @@ export async function getTutorialState(): Promise<TutorialState> {
         id: doc.id,
         type: data.type,
         name: data.name,
+        location: data.location,
         deletedAt: data.deletedAt?.toDate() || new Date(),
         deletedBy: data.deletedBy || "system",
         data: data.data,
@@ -703,11 +705,21 @@ export async function addPaperToPrinter(
     }
 
     // Add the paper link with published: true by default
-    await printerRef.collection("papers").doc(paperId).set({
+    const printerPaperRef = printerRef.collection("papers").doc(paperId);
+    await printerPaperRef.set({
       paperId,
       published: true,
       colours: [],
     });
+
+    // Repopulate printer-specific colour docs from global colours so existing colours are restored
+    const globalColoursSnapshot = await papersCollection().doc(paperId).collection("colours").get();
+    for (const colourDoc of globalColoursSnapshot.docs) {
+      await printerPaperRef.collection("colours").doc(colourDoc.id).set({
+        colourId: colourDoc.id,
+        published: true,
+      });
+    }
 
     await updatePrinterLastModified(printerId);
     return getTutorialState();
@@ -723,6 +735,23 @@ export async function removePaperFromPrinter(
   try {
     const printerRef = await assertDocExists(printersCollection(), printerId, "Printer");
     const paperRef = printerRef.collection("papers").doc(paperId);
+
+    // Fetch names for location display before deletion
+    const printerDoc = await printerRef.get();
+    const globalPaperDoc = await papersCollection().doc(paperId).get();
+    const printerName = printerDoc.data()?.name || printerId;
+    const paperName = globalPaperDoc.exists ? globalPaperDoc.data()?.name || paperId : paperId;
+
+    // Save to deletedItems so it appears in the Deleted Items UI and can be restored
+    const deletedItemId = generateId();
+    await deletedItemsCollection().doc(deletedItemId).set({
+      type: "paperFromPrinter",
+      name: paperName,
+      location: printerName,
+      deletedAt: FieldValue.serverTimestamp(),
+      deletedBy: "admin",
+      data: { paperId, printerId },
+    });
 
     // Delete all colours and steps for this paper in this printer
     const coloursRef = paperRef.collection("colours");
@@ -948,10 +977,15 @@ export async function deleteColour(
 
     // Store deleted colour in deletedItems collection
     if (colourData) {
+      const printerDoc = await printerRef.get();
+      const paperDoc = await globalPaperRef.get();
+      const printerName = printerDoc.data()?.name || printerId;
+      const paperName = paperDoc.data()?.name || paperId;
       const deletedItemId = generateId();
       await deletedItemsCollection().doc(deletedItemId).set({
         type: "colour",
         name: colourData.name || "Unknown",
+        location: `${printerName} ${paperName}`,
         deletedAt: FieldValue.serverTimestamp(),
         deletedBy: "admin",
         data: {
@@ -1222,10 +1256,17 @@ export async function deleteStep(
 
     // Store deleted step in deletedItems collection
     if (stepData) {
+      const printerDoc = await printerRef.get();
+      const paperDoc = await globalPaperRef.get();
+      const colourDoc = await globalColourRef.get();
+      const printerName = printerDoc.data()?.name || printerId;
+      const paperName = paperDoc.data()?.name || paperId;
+      const colourName = colourDoc.data()?.name || colourId;
       const deletedItemId = generateId();
       await deletedItemsCollection().doc(deletedItemId).set({
         type: "step",
         name: stepData.title || `Step ${stepData.order}` || "Unknown",
+        location: `${printerName} → ${paperName} → ${colourName}`,
         deletedAt: FieldValue.serverTimestamp(),
         deletedBy: "admin",
         data: {
@@ -1417,6 +1458,7 @@ export async function deletePaper(paperId: string): Promise<TutorialState> {
     await deletedItemsCollection().doc(deletedItemId).set({
       type: "paper",
       name: paperData?.name || "Unknown",
+      location: "Full Paper List",
       deletedAt: FieldValue.serverTimestamp(),
       deletedBy: "admin",
       data: {
@@ -1478,7 +1520,7 @@ export async function restoreDeletedItem(deletedItemId: string): Promise<Tutoria
       // Create the paper in global collection
       await papersCollection().doc(paperId).set(paperData);
 
-      // Restore paper to original printers
+      // Restore paper to original printers (colours not available for globally deleted papers)
       if (Array.isArray(printerIds) && printerIds.length > 0) {
         for (const printerId of printerIds) {
           try {
@@ -1492,6 +1534,23 @@ export async function restoreDeletedItem(deletedItemId: string): Promise<Tutoria
             console.warn(`Could not restore paper to printer ${printerId}:`, error);
           }
         }
+      }
+    } else if (deletedData.type === "paperFromPrinter") {
+      // Restore paper-printer link and repopulate colours from global paper
+      const { paperId, printerId } = deletedData.data as { paperId: string; printerId: string };
+      const printerPaperRef = printersCollection().doc(printerId).collection("papers").doc(paperId);
+      const existing = await printerPaperRef.get();
+      if (!existing.exists) {
+        await printerPaperRef.set({ paperId, published: true, colours: [] });
+        // Repopulate printer-specific colour docs from global colours
+        const globalColoursSnapshot = await papersCollection().doc(paperId).collection("colours").get();
+        for (const colourDoc of globalColoursSnapshot.docs) {
+          await printerPaperRef.collection("colours").doc(colourDoc.id).set({
+            colourId: colourDoc.id,
+            published: true,
+          });
+        }
+        await updatePrinterLastModified(printerId);
       }
     }
 

@@ -129,8 +129,9 @@ type Printer = {
 
 type DeletedItem = {
   id: string;
-  type: "printer" | "paper" | "colour" | "step";
+  type: "printer" | "paper" | "colour" | "step" | "paperFromPrinter";
   name: string;
+  location?: string;
   deletedAt: Date;
   deletedBy: string;
   data: unknown;
@@ -307,6 +308,11 @@ function RichHtmlEditor({ label, value, onChange }: RichHtmlEditorProps) {
         contentEditable
         suppressContentEditableWarning
         onInput={(event) => onChange((event.target as HTMLDivElement).innerHTML)}
+        onPaste={(event) => {
+          event.preventDefault();
+          const text = event.clipboardData.getData("text/plain");
+          document.execCommand("insertText", false, text);
+        }}
         sx={{
           border: "1px solid",
           borderColor: "divider",
@@ -1603,8 +1609,15 @@ export default function AdminPage() {
   };
 
   const handlePaperMenuDelete = () => {
-    if (!selectedPaperForMenu || !selectedPrinterId) return;
-    void handleDeletePaper(selectedPaperForMenu);
+    if (!selectedPaperForMenu) return;
+    if (paperMenuSource === "fulllist") {
+      // Global delete: remove paper from all printers
+      if (!confirm("Are you sure you want to delete this paper from all printers? This cannot be undone.")) return;
+      void runAction("deletePaper", { paperId: selectedPaperForMenu });
+    } else {
+      if (!selectedPrinterId) return;
+      void handleDeletePaper(selectedPaperForMenu);
+    }
     handlePaperMenuClose();
   };
 
@@ -1757,7 +1770,11 @@ export default function AdminPage() {
   // Alternate preview handler
   const generateAltPreview = async () => {
     try {
-      const res = await fetch("/api/preview-token", { method: "POST" });
+      const token = await getAuthToken();
+      const res = await fetch("/api/preview-token", {
+        method: "POST",
+        headers: { Authorization: `Bearer ${token}` },
+      });
       const json = (await res.json()) as { token?: string; error?: string };
       if (!res.ok || !json.token) {
         setError("Failed to generate preview link.");
@@ -2918,27 +2935,29 @@ export default function AdminPage() {
                             </Typography>
                           </TableCell>
                           <TableCell align="center" onClick={(e) => e.stopPropagation()}>
-                            <Switch
-                              checked={printer.published}
-                              onChange={(e) => {
-                                e.stopPropagation();
-                                void handleUnpublishPrinter(printer.id, printer.published);
-                              }}
-                              sx={{
-                                "& .MuiSwitch-switchBase.Mui-checked": {
-                                  color: "#135b22",
-                                },
-                                "& .MuiSwitch-switchBase.Mui-checked + .MuiSwitch-track": {
-                                  backgroundColor: "#b3d3b9",
-                                },
-                                "& .MuiSwitch-switchBase": {
-                                  color: "#C4321A",
-                                },
-                                "& .MuiSwitch-track": {
-                                  backgroundColor: "#efc9c2",
-                                },
-                              }}
-                            />
+                            <Tooltip title={printer.published ? "Deactivate" : "Activate"}>
+                              <Switch
+                                checked={printer.published}
+                                onChange={(e) => {
+                                  e.stopPropagation();
+                                  void handleUnpublishPrinter(printer.id, printer.published);
+                                }}
+                                sx={{
+                                  "& .MuiSwitch-switchBase.Mui-checked": {
+                                    color: "#135b22",
+                                  },
+                                  "& .MuiSwitch-switchBase.Mui-checked + .MuiSwitch-track": {
+                                    backgroundColor: "#b3d3b9",
+                                  },
+                                  "& .MuiSwitch-switchBase": {
+                                    color: "#C4321A",
+                                  },
+                                  "& .MuiSwitch-track": {
+                                    backgroundColor: "#efc9c2",
+                                  },
+                                }}
+                              />
+                            </Tooltip>
                           </TableCell>
                         </TableRow>
                       ))}
@@ -3080,27 +3099,29 @@ export default function AdminPage() {
                           </Typography>
                         </TableCell>
                         <TableCell align="center" onClick={(e) => e.stopPropagation()}>
-                          <Switch
-                            checked={paper.published ?? true}
-                            onChange={(e) => {
-                              e.stopPropagation();
-                              void handleUnpublishPaper(paper.id, paper.published ?? true);
-                            }}
-                            sx={{
-                              "& .MuiSwitch-switchBase.Mui-checked": {
-                                color: "#135b22",
-                              },
-                              "& .MuiSwitch-switchBase.Mui-checked + .MuiSwitch-track": {
-                                backgroundColor: "#b3d3b9",
-                              },
-                              "& .MuiSwitch-switchBase": {
-                                color: "#C4321A",
-                              },
-                              "& .MuiSwitch-track": {
-                                backgroundColor: "#efc9c2",
-                              },
-                            }}
-                          />
+                          <Tooltip title={(paper.published ?? true) ? "Deactivate" : "Activate"}>
+                            <Switch
+                              checked={paper.published ?? true}
+                              onChange={(e) => {
+                                e.stopPropagation();
+                                void handleUnpublishPaper(paper.id, paper.published ?? true);
+                              }}
+                              sx={{
+                                "& .MuiSwitch-switchBase.Mui-checked": {
+                                  color: "#135b22",
+                                },
+                                "& .MuiSwitch-switchBase.Mui-checked + .MuiSwitch-track": {
+                                  backgroundColor: "#b3d3b9",
+                                },
+                                "& .MuiSwitch-switchBase": {
+                                  color: "#C4321A",
+                                },
+                                "& .MuiSwitch-track": {
+                                  backgroundColor: "#efc9c2",
+                                },
+                              }}
+                            />
+                          </Tooltip>
                         </TableCell>
                       </TableRow>
                     ))}
@@ -3266,27 +3287,29 @@ export default function AdminPage() {
                             </Typography>
                           </TableCell>
                           <TableCell align="center" onClick={(e) => e.stopPropagation()}>
-                            <Switch
-                              checked={colour.published ?? true}
-                              onChange={(e) => {
-                                e.stopPropagation();
-                                void handleUnpublishColour(colour.id, colour.published ?? true);
-                              }}
-                              sx={{
-                                "& .MuiSwitch-switchBase.Mui-checked": {
-                                  color: "#135b22",
-                                },
-                                "& .MuiSwitch-switchBase.Mui-checked + .MuiSwitch-track": {
-                                  backgroundColor: "#b3d3b9",
-                                },
-                                "& .MuiSwitch-switchBase": {
-                                  color: "#C4321A",
-                                },
-                                "& .MuiSwitch-track": {
-                                  backgroundColor: "#efc9c2",
-                                },
-                              }}
-                            />
+                            <Tooltip title={(colour.published ?? true) ? "Deactivate" : "Activate"}>
+                              <Switch
+                                checked={colour.published ?? true}
+                                onChange={(e) => {
+                                  e.stopPropagation();
+                                  void handleUnpublishColour(colour.id, colour.published ?? true);
+                                }}
+                                sx={{
+                                  "& .MuiSwitch-switchBase.Mui-checked": {
+                                    color: "#135b22",
+                                  },
+                                  "& .MuiSwitch-switchBase.Mui-checked + .MuiSwitch-track": {
+                                    backgroundColor: "#b3d3b9",
+                                  },
+                                  "& .MuiSwitch-switchBase": {
+                                    color: "#C4321A",
+                                  },
+                                  "& .MuiSwitch-track": {
+                                    backgroundColor: "#efc9c2",
+                                  },
+                                }}
+                              />
+                            </Tooltip>
                           </TableCell>
                         </TableRow>
                     ))}
@@ -3718,8 +3741,13 @@ export default function AdminPage() {
                         </Typography>
                         <Stack direction="row" spacing={2} sx={{ mt: 0.5 }}>
                           <Typography variant="caption" color="text.secondary">
-                            Type: {item.type}
+                            Type: {item.type === "paperFromPrinter" ? "paper (from printer)" : item.type}
                           </Typography>
+                          {item.location && (
+                            <Typography variant="caption" color="text.secondary">
+                              Location: {item.location}
+                            </Typography>
+                          )}
                           <Typography variant="caption" color="text.secondary">
                             Deleted: {item.deletedAt ? new Date(item.deletedAt).toLocaleDateString() : "N/A"}
                           </Typography>
