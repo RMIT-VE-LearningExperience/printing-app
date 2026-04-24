@@ -76,6 +76,7 @@ import { type ChangeEvent, useCallback, useEffect, useMemo, useRef, useState } f
 import { useRouter } from "next/navigation";
 import { useAuth } from "../auth-provider";
 import { trackEvent } from "../components/GoogleAnalytics";
+import Footer from "../components/Footer";
 import { getAuthInstance } from "../../lib/firebase-client";
 
 type Step = {
@@ -145,9 +146,6 @@ type SectionSettings = {
 };
 
 type AppSettings = {
-  copyLink: boolean;
-  qrCode: boolean;
-  canvasEmbed: boolean;
   printerList: boolean;
   fullPaperList: boolean;
   colourManagementList: boolean;
@@ -166,9 +164,6 @@ type AnalyticsData = {
 };
 
 const defaultAppSettings: AppSettings = {
-  copyLink: true,
-  qrCode: true,
-  canvasEmbed: true,
   printerList: true,
   fullPaperList: true,
   colourManagementList: true,
@@ -523,18 +518,18 @@ export default function AdminPage() {
   const cropCanvasRef = useRef<HTMLCanvasElement | null>(null);
   const cropContainerRef = useRef<HTMLDivElement | null>(null);
 
-  // Embed dialog state
-  const [embedPrinter, setEmbedPrinter] = useState<Printer | null>(null);
+  // Embed dialog state (generic — works for printers, papers, colours)
+  const [embedItem, setEmbedItem] = useState<{ name: string; url: string } | null>(null);
   const [embedWidth, setEmbedWidth] = useState("100%");
   const [embedHeight, setEmbedHeight] = useState("600");
   const [embedCopied, setEmbedCopied] = useState(false);
 
-  // Copy link dialog state
-  const [copyLinkPrinter, setCopyLinkPrinter] = useState<Printer | null>(null);
+  // Copy link dialog state (generic)
+  const [copyLinkItem, setCopyLinkItem] = useState<{ name: string; url: string } | null>(null);
   const [copyLinkCopied, setCopyLinkCopied] = useState(false);
 
-  // QR preview dialog state
-  const [qrPrinter, setQrPrinter] = useState<Printer | null>(null);
+  // QR preview dialog state (generic)
+  const [qrItem, setQrItem] = useState<{ name: string; downloadSlug: string; printerId?: string } | null>(null);
   const [qrCanvasDataUrl, setQrCanvasDataUrl] = useState<string | null>(null);
 
   // Context menu states
@@ -1489,12 +1484,11 @@ export default function AdminPage() {
   };
 
   const copyPrinterLink = (printer: Printer) => {
-    setCopyLinkPrinter(printer);
+    setCopyLinkItem({ name: printer.name, url: `${window.location.origin}/?printer=${printer.slug}` });
     setCopyLinkCopied(false);
   };
 
-  const openQrDialog = async (printer: Printer) => {
-    const url = `${window.location.origin}/?printer=${printer.slug}`;
+  const openQrDialog = async (name: string, url: string, downloadSlug: string, printerId?: string) => {
     const qrDataUrl = await QRCode.toDataURL(url, { width: 300, margin: 2, color: { dark: "#000000", light: "#ffffff" } });
 
     const padding = 20;
@@ -1513,26 +1507,28 @@ export default function AdminPage() {
       ctx.fillStyle = "#000000";
       ctx.font = "bold 16px Arial, sans-serif";
       ctx.textAlign = "center";
-      ctx.fillText(printer.name, canvas.width / 2, qrSize + padding + textHeight / 2 + 6);
+      ctx.fillText(name, canvas.width / 2, qrSize + padding + textHeight / 2 + 6);
 
       setQrCanvasDataUrl(canvas.toDataURL("image/png"));
-      setQrPrinter(printer);
+      setQrItem({ name, downloadSlug, printerId });
     };
     img.src = qrDataUrl;
   };
 
   const downloadQR = () => {
-    if (!qrPrinter || !qrCanvasDataUrl) return;
+    if (!qrItem || !qrCanvasDataUrl) return;
     const link = document.createElement("a");
-    link.download = `${qrPrinter.slug}-qr.png`;
+    link.download = `${qrItem.downloadSlug}-qr.png`;
     link.href = qrCanvasDataUrl;
     link.click();
 
-    setSlugUpdatedIds((prev) => {
-      const next = new Set(prev);
-      next.delete(qrPrinter.id);
-      return next;
-    });
+    if (qrItem.printerId) {
+      setSlugUpdatedIds((prev) => {
+        const next = new Set(prev);
+        next.delete(qrItem.printerId!);
+        return next;
+      });
+    }
   };
 
   const handlePrinterMenuEdit = () => {
@@ -2688,6 +2684,11 @@ export default function AdminPage() {
             </Stack>
             )}
 
+        {!sidebarCollapsed && (
+          <Box sx={{ mt: "auto" }}>
+            <Footer year={new Date().getFullYear()} isAdmin={true} />
+          </Box>
+        )}
       </Box>
 
       {/* MAIN CONTENT */}
@@ -2906,27 +2907,21 @@ export default function AdminPage() {
                               <IconButton size="small" onClick={(e) => { e.stopPropagation(); handlePrinterMenuOpen(e, printer.id); }}>
                                 <MoreVertIcon fontSize="small" />
                               </IconButton>
-                              {appSettings.copyLink && (
-                                <Tooltip title="Copy link">
-                                  <IconButton size="small" onClick={(e) => { e.stopPropagation(); copyPrinterLink(printer); }}>
-                                    <ContentCopyIcon fontSize="small" />
-                                  </IconButton>
-                                </Tooltip>
-                              )}
-                              {appSettings.qrCode && (
-                                <Tooltip title={slugUpdatedIds.has(printer.id) ? "Link updated — download new QR code" : "Download QR code"}>
-                                  <IconButton size="small" onClick={(e) => { e.stopPropagation(); void openQrDialog(printer); }} sx={slugUpdatedIds.has(printer.id) ? { color: "#f59e0b" } : {}}>
-                                    <QrCodeIcon fontSize="small" />
-                                  </IconButton>
-                                </Tooltip>
-                              )}
-                              {appSettings.canvasEmbed && (
-                                <Tooltip title="Embed in Canvas LMS">
-                                  <IconButton size="small" onClick={(e) => { e.stopPropagation(); setEmbedPrinter(printer); setEmbedWidth("100%"); setEmbedHeight("600"); setEmbedCopied(false); }}>
-                                    <SettingsEthernetIcon fontSize="small" />
-                                  </IconButton>
-                                </Tooltip>
-                              )}
+                              <Tooltip title="Copy link">
+                                <IconButton size="small" onClick={(e) => { e.stopPropagation(); copyPrinterLink(printer); }}>
+                                  <ContentCopyIcon fontSize="small" />
+                                </IconButton>
+                              </Tooltip>
+                              <Tooltip title={slugUpdatedIds.has(printer.id) ? "Link updated — download new QR code" : "Download QR code"}>
+                                <IconButton size="small" onClick={(e) => { e.stopPropagation(); void openQrDialog(printer.name, `${window.location.origin}/?printer=${printer.slug}`, printer.slug, printer.id); }} sx={slugUpdatedIds.has(printer.id) ? { color: "#f59e0b" } : {}}>
+                                  <QrCodeIcon fontSize="small" />
+                                </IconButton>
+                              </Tooltip>
+                              <Tooltip title="Embed in Canvas LMS">
+                                <IconButton size="small" onClick={(e) => { e.stopPropagation(); setEmbedItem({ name: printer.name, url: `${window.location.origin}/?printer=${printer.slug}` }); setEmbedWidth("100%"); setEmbedHeight("600"); setEmbedCopied(false); }}>
+                                  <SettingsEthernetIcon fontSize="small" />
+                                </IconButton>
+                              </Tooltip>
                             </Stack>
                           </TableCell>
                           <TableCell align="center">
@@ -3083,15 +3078,32 @@ export default function AdminPage() {
                           </Stack>
                         </TableCell>
                         <TableCell align="center">
-                          <IconButton
-                            size="small"
-                            onClick={(e) => {
-                              e.stopPropagation();
-                              handlePaperMenuOpen(e, paper.id, "papers");
-                            }}
-                          >
-                            <MoreVertIcon fontSize="small" />
-                          </IconButton>
+                          <Stack direction="row" alignItems="center" justifyContent="center">
+                            <IconButton
+                              size="small"
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                handlePaperMenuOpen(e, paper.id, "papers");
+                              }}
+                            >
+                              <MoreVertIcon fontSize="small" />
+                            </IconButton>
+                            <Tooltip title="Copy link">
+                              <IconButton size="small" onClick={(e) => { e.stopPropagation(); setCopyLinkItem({ name: paper.name, url: `${window.location.origin}/?paper=${paper.id}` }); setCopyLinkCopied(false); }}>
+                                <ContentCopyIcon fontSize="small" />
+                              </IconButton>
+                            </Tooltip>
+                            <Tooltip title="Download QR code">
+                              <IconButton size="small" onClick={(e) => { e.stopPropagation(); void openQrDialog(paper.name, `${window.location.origin}/?paper=${paper.id}`, `paper-${paper.id}`); }}>
+                                <QrCodeIcon fontSize="small" />
+                              </IconButton>
+                            </Tooltip>
+                            <Tooltip title="Embed in Canvas LMS">
+                              <IconButton size="small" onClick={(e) => { e.stopPropagation(); setEmbedItem({ name: paper.name, url: `${window.location.origin}/?paper=${paper.id}` }); setEmbedWidth("100%"); setEmbedHeight("600"); setEmbedCopied(false); }}>
+                                <SettingsEthernetIcon fontSize="small" />
+                              </IconButton>
+                            </Tooltip>
+                          </Stack>
                         </TableCell>
                         <TableCell align="center">
                           <Typography variant="body2" color="text.secondary">
@@ -3271,15 +3283,32 @@ export default function AdminPage() {
                             </Stack>
                           </TableCell>
                           <TableCell align="center">
-                            <IconButton
-                              size="small"
-                              onClick={(e) => {
-                                e.stopPropagation();
-                                handleColourMenuOpen(e, colour.id);
-                              }}
-                            >
-                              <MoreVertIcon fontSize="small" />
-                            </IconButton>
+                            <Stack direction="row" alignItems="center" justifyContent="center">
+                              <IconButton
+                                size="small"
+                                onClick={(e) => {
+                                  e.stopPropagation();
+                                  handleColourMenuOpen(e, colour.id);
+                                }}
+                              >
+                                <MoreVertIcon fontSize="small" />
+                              </IconButton>
+                              <Tooltip title="Copy link">
+                                <IconButton size="small" onClick={(e) => { e.stopPropagation(); setCopyLinkItem({ name: colour.name, url: `${window.location.origin}/?colour=${colour.id}` }); setCopyLinkCopied(false); }}>
+                                  <ContentCopyIcon fontSize="small" />
+                                </IconButton>
+                              </Tooltip>
+                              <Tooltip title="Download QR code">
+                                <IconButton size="small" onClick={(e) => { e.stopPropagation(); void openQrDialog(colour.name, `${window.location.origin}/?colour=${colour.id}`, `colour-${colour.id}`); }}>
+                                  <QrCodeIcon fontSize="small" />
+                                </IconButton>
+                              </Tooltip>
+                              <Tooltip title="Embed in Canvas LMS">
+                                <IconButton size="small" onClick={(e) => { e.stopPropagation(); setEmbedItem({ name: colour.name, url: `${window.location.origin}/?colour=${colour.id}` }); setEmbedWidth("100%"); setEmbedHeight("600"); setEmbedCopied(false); }}>
+                                  <SettingsEthernetIcon fontSize="small" />
+                                </IconButton>
+                              </Tooltip>
+                            </Stack>
                           </TableCell>
                           <TableCell align="center">
                             <Typography variant="body2" color="text.secondary">
@@ -3327,6 +3356,21 @@ export default function AdminPage() {
               <Box>
                 <Box sx={{ display: "flex", alignItems: "center", gap: 1, mb: 0.5 }}>
                   <Typography variant="h5" sx={{ color: "#45443F", fontWeight: 700 }}>Steps: {selectedColor.name}</Typography>
+                  <Tooltip title="Copy link">
+                    <IconButton size="small" onClick={() => { setCopyLinkItem({ name: selectedColor.name, url: `${window.location.origin}/?colour=${selectedColor.id}` }); setCopyLinkCopied(false); }}>
+                      <ContentCopyIcon fontSize="small" />
+                    </IconButton>
+                  </Tooltip>
+                  <Tooltip title="Download QR code">
+                    <IconButton size="small" onClick={() => { void openQrDialog(selectedColor.name, `${window.location.origin}/?colour=${selectedColor.id}`, `colour-${selectedColor.id}`); }}>
+                      <QrCodeIcon fontSize="small" />
+                    </IconButton>
+                  </Tooltip>
+                  <Tooltip title="Embed in Canvas LMS">
+                    <IconButton size="small" onClick={() => { setEmbedItem({ name: selectedColor.name, url: `${window.location.origin}/?colour=${selectedColor.id}` }); setEmbedWidth("100%"); setEmbedHeight("600"); setEmbedCopied(false); }}>
+                      <SettingsEthernetIcon fontSize="small" />
+                    </IconButton>
+                  </Tooltip>
                 </Box>
               </Box>
               <Button
@@ -3818,7 +3862,7 @@ export default function AdminPage() {
         maxWidth="md"
         fullWidth
       >
-        <DialogTitle sx={{ fontWeight: 700, backgroundColor: "#FDF9F1", borderBottom: "2px solid #E5E1D7", py: 2.5 }}>
+        <DialogTitle component="div" sx={{ fontWeight: 700, backgroundColor: "#FDF9F1", borderBottom: "2px solid #E5E1D7", py: 2.5 }}>
           <Typography variant="h6" fontWeight={700} color="#3D8078" fontSize="1.1rem">Statistics</Typography>
         </DialogTitle>
 
@@ -4956,8 +5000,8 @@ export default function AdminPage() {
 
       {/* Embed in Canvas LMS Dialog */}
       <Dialog
-        open={Boolean(embedPrinter)}
-        onClose={() => setEmbedPrinter(null)}
+        open={Boolean(embedItem)}
+        onClose={() => setEmbedItem(null)}
         maxWidth="sm"
         fullWidth
         PaperProps={{ sx: { borderRadius: 2, boxShadow: "0 8px 32px rgba(0,0,0,0.12)" } }}
@@ -4968,15 +5012,15 @@ export default function AdminPage() {
               <Typography variant="h6" sx={{ fontWeight: 700, color: "#3D8078", fontSize: "1.1rem" }}>
                 Embed in Canvas LMS
               </Typography>
-              {embedPrinter && (
-                <Typography variant="body2" color="text.secondary">{embedPrinter.name}</Typography>
+              {embedItem && (
+                <Typography variant="body2" color="text.secondary">{embedItem.name}</Typography>
               )}
             </Box>
           </Box>
         </DialogTitle>
         <DialogContent sx={{ paddingTop: "24px !important", backgroundColor: "#ffffff" }}>
-          {embedPrinter && (() => {
-            const embedUrl = `${typeof window !== "undefined" ? window.location.origin : ""}/?printer=${embedPrinter.slug}`;
+          {embedItem && (() => {
+            const embedUrl = embedItem.url;
             const iframeCode = `<iframe src="${embedUrl}" width="${embedWidth}" height="${embedHeight}px" frameborder="0" allowfullscreen allow="fullscreen; accelerometer; gyroscope; vr" style="border:none;"></iframe>`;
             const handlePreset = (value: string) => {
               const [w, h] = value.split("x");
@@ -5031,9 +5075,8 @@ export default function AdminPage() {
           })()}
         </DialogContent>
         <DialogActions sx={{ borderTop: "1px solid #E5E1D7", pt: 2, pb: 2, px: 3, backgroundColor: "#FDF9F1", gap: 1 }}>
-          {embedPrinter && (() => {
-            const embedUrl = `${typeof window !== "undefined" ? window.location.origin : ""}/?printer=${embedPrinter.slug}`;
-            const iframeCode = `<iframe src="${embedUrl}" width="${embedWidth}" height="${embedHeight}px" frameborder="0" allowfullscreen allow="fullscreen; accelerometer; gyroscope; vr" style="border:none;"></iframe>`;
+          {embedItem && (() => {
+            const iframeCode = `<iframe src="${embedItem.url}" width="${embedWidth}" height="${embedHeight}px" frameborder="0" allowfullscreen allow="fullscreen; accelerometer; gyroscope; vr" style="border:none;"></iframe>`;
             return (
               <>
                 <Button
@@ -5047,7 +5090,7 @@ export default function AdminPage() {
                 >
                   {embedCopied ? "Copied!" : "Copy Embed Code"}
                 </Button>
-                <Button onClick={() => setEmbedPrinter(null)} sx={{ color: "#3D8078", fontWeight: 600, textTransform: "none" }}>
+                <Button onClick={() => setEmbedItem(null)} sx={{ color: "#3D8078", fontWeight: 600, textTransform: "none" }}>
                   Close
                 </Button>
               </>
@@ -5058,8 +5101,8 @@ export default function AdminPage() {
 
       {/* QR Code Preview Dialog */}
       <Dialog
-        open={Boolean(qrPrinter)}
-        onClose={() => { setQrPrinter(null); setQrCanvasDataUrl(null); }}
+        open={Boolean(qrItem)}
+        onClose={() => { setQrItem(null); setQrCanvasDataUrl(null); }}
         maxWidth="xs"
         fullWidth
         PaperProps={{ sx: { borderRadius: 2, boxShadow: "0 8px 32px rgba(0,0,0,0.12)" } }}
@@ -5070,8 +5113,8 @@ export default function AdminPage() {
               <Typography variant="h6" sx={{ fontWeight: 700, color: "#3D8078", fontSize: "1.1rem" }}>
                 QR Code
               </Typography>
-              {qrPrinter && (
-                <Typography variant="body2" color="text.secondary">{qrPrinter.name}</Typography>
+              {qrItem && (
+                <Typography variant="body2" color="text.secondary">{qrItem.name}</Typography>
               )}
             </Box>
           </Box>
@@ -5085,11 +5128,11 @@ export default function AdminPage() {
           <Button
             variant="contained"
             sx={{ flex: 1, backgroundColor: "#3D8078", "&:hover": { backgroundColor: "#2e6159" }, textTransform: "none", fontWeight: 600 }}
-            onClick={() => { downloadQR(); setQrPrinter(null); setQrCanvasDataUrl(null); }}
+            onClick={() => { downloadQR(); setQrItem(null); setQrCanvasDataUrl(null); }}
           >
             Download
           </Button>
-          <Button onClick={() => { setQrPrinter(null); setQrCanvasDataUrl(null); }} sx={{ color: "#3D8078", fontWeight: 600, textTransform: "none" }}>
+          <Button onClick={() => { setQrItem(null); setQrCanvasDataUrl(null); }} sx={{ color: "#3D8078", fontWeight: 600, textTransform: "none" }}>
             Close
           </Button>
         </DialogActions>
@@ -5097,8 +5140,8 @@ export default function AdminPage() {
 
       {/* Copy Link Dialog */}
       <Dialog
-        open={Boolean(copyLinkPrinter)}
-        onClose={() => setCopyLinkPrinter(null)}
+        open={Boolean(copyLinkItem)}
+        onClose={() => setCopyLinkItem(null)}
         maxWidth="sm"
         fullWidth
         PaperProps={{ sx: { borderRadius: 2, boxShadow: "0 8px 32px rgba(0,0,0,0.12)" } }}
@@ -5109,37 +5152,36 @@ export default function AdminPage() {
               <Typography variant="h6" sx={{ fontWeight: 700, color: "#3D8078", fontSize: "1.1rem" }}>
                 Copy Link
               </Typography>
-              {copyLinkPrinter && (
-                <Typography variant="body2" color="text.secondary">{copyLinkPrinter.name}</Typography>
+              {copyLinkItem && (
+                <Typography variant="body2" color="text.secondary">{copyLinkItem.name}</Typography>
               )}
             </Box>
           </Box>
         </DialogTitle>
         <DialogContent sx={{ paddingTop: "24px !important", backgroundColor: "#ffffff" }}>
-          {copyLinkPrinter && (
+          {copyLinkItem && (
             <Box sx={{ backgroundColor: "#f9f9f9", borderRadius: 2, border: "1px solid #E5E1D7", p: 2 }}>
               <Typography variant="body2" sx={{ fontFamily: "monospace", fontSize: "0.75rem", wordBreak: "break-all", color: "#45443F" }}>
-                {`${typeof window !== "undefined" ? window.location.origin : ""}/?printer=${copyLinkPrinter.slug}`}
+                {copyLinkItem.url}
               </Typography>
             </Box>
           )}
         </DialogContent>
         <DialogActions sx={{ borderTop: "1px solid #E5E1D7", pt: 2, pb: 2, px: 3, backgroundColor: "#FDF9F1", gap: 1 }}>
-          {copyLinkPrinter && (
+          {copyLinkItem && (
             <>
               <Button
                 variant="contained"
                 sx={{ flex: 1, backgroundColor: "#3D8078", "&:hover": { backgroundColor: "#2e6159" }, textTransform: "none", fontWeight: 600 }}
                 onClick={() => {
-                  const url = `${window.location.origin}/?printer=${copyLinkPrinter.slug}`;
-                  void navigator.clipboard.writeText(url);
+                  void navigator.clipboard.writeText(copyLinkItem.url);
                   setCopyLinkCopied(true);
                   setTimeout(() => setCopyLinkCopied(false), 2000);
                 }}
               >
                 {copyLinkCopied ? "Copied!" : "Copy Link"}
               </Button>
-              <Button onClick={() => setCopyLinkPrinter(null)} sx={{ color: "#3D8078", fontWeight: 600, textTransform: "none" }}>
+              <Button onClick={() => setCopyLinkItem(null)} sx={{ color: "#3D8078", fontWeight: 600, textTransform: "none" }}>
                 Close
               </Button>
             </>

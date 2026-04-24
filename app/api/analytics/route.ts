@@ -69,6 +69,15 @@ export async function GET(req: NextRequest) {
 
     const token = await getToken();
 
+    const userFacingFilter = {
+      notExpression: {
+        filter: {
+          fieldName: "pagePath",
+          stringFilter: { matchType: "BEGINS_WITH", value: "/admin" },
+        },
+      },
+    };
+
     const [summaryReport, topPagesReport, dailyReport] = await Promise.all([
       runReport(token, {
         dateRanges: [{ startDate: "30daysAgo", endDate: "today" }],
@@ -79,12 +88,14 @@ export async function GET(req: NextRequest) {
           { name: "bounceRate" },
           { name: "averageSessionDuration" },
         ],
+        dimensionFilter: userFacingFilter,
       }),
       runReport(token, {
         dateRanges: [{ startDate: "30daysAgo", endDate: "today" }],
         dimensions: [{ name: "pagePath" }],
         metrics: [{ name: "screenPageViews" }],
         orderBys: [{ metric: { metricName: "screenPageViews" }, desc: true }],
+        dimensionFilter: userFacingFilter,
         limit: 10,
       }),
       runReport(token, {
@@ -92,6 +103,7 @@ export async function GET(req: NextRequest) {
         dimensions: [{ name: "date" }],
         metrics: [{ name: "screenPageViews" }],
         orderBys: [{ dimension: { dimensionName: "date" } }],
+        dimensionFilter: userFacingFilter,
       }),
     ]);
 

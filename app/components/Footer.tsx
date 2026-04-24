@@ -16,26 +16,26 @@ const content = (year: number) => (
 export default function Footer({ year, isAdmin }: { year: number; isAdmin: boolean }) {
   if (isAdmin) {
     return (
-      <footer
+      <div
         style={{
           width: "100%",
-          backgroundColor: "#3D8078",
-          padding: "10px 24px",
-          textAlign: "right",
-          fontSize: "14px",
+          padding: 0,
+          textAlign: "left",
+          fontSize: "11px",
           color: FOOTER_TEXT,
-          fontWeight: 500,
+          fontWeight: 400,
           letterSpacing: "0.3px",
           boxSizing: "border-box",
+          opacity: 0.5,
         }}
       >
         {content(year)}
-      </footer>
+      </div>
     );
   }
 
   return (
-    <footer
+    <div
       style={{
         width: "100%",
         backgroundColor: FOOTER_BG,
@@ -49,6 +49,6 @@ export default function Footer({ year, isAdmin }: { year: number; isAdmin: boole
       }}
     >
       {content(year)}
-    </footer>
+    </div>
   );
 }

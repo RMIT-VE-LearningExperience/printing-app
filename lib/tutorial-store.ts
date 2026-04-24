@@ -110,18 +110,12 @@ export type SectionSettings = {
 };
 
 export type AppSettings = {
-  copyLink: boolean;
-  qrCode: boolean;
-  canvasEmbed: boolean;
   printerList: boolean;
   fullPaperList: boolean;
   colourManagementList: boolean;
 };
 
 const defaultAppSettings: AppSettings = {
-  copyLink: true,
-  qrCode: true,
-  canvasEmbed: true,
   printerList: true,
   fullPaperList: true,
   colourManagementList: true,

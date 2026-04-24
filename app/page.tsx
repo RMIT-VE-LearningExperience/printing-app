@@ -3,6 +3,7 @@
 import Image from "next/image";
 import { useEffect, useMemo, useRef, useState } from "react";
 import { trackEvent } from "./components/GoogleAnalytics";
+import Footer from "./components/Footer";
 import {
   Box,
   Container,
@@ -183,6 +184,8 @@ export default function HomePage() {
         const urlPrinterId = params.get("printerId");
         const urlPaperId = params.get("paperId");
         const urlColourId = params.get("colourId");
+        const urlPaperDirectId = params.get("paper");
+        const urlColourDirectId = params.get("colour");
 
         // Read localStorage to determine initial view for image preloading
         let localPrinterId: string | null = null;
@@ -264,6 +267,29 @@ export default function HomePage() {
             setSelectedPrinterId(matched.id);
           } else {
             setPrinterNotFound(true);
+          }
+        } else if (urlPaperDirectId && !isPreview) {
+          // Permalink: /?paper=id — find first published printer containing that paper
+          for (const printer of state.printers.filter((p) => p.published !== false)) {
+            const paper = printer.papers.find((p) => p.id === urlPaperDirectId && (p.published ?? true));
+            if (paper) {
+              setSelectedPrinterId(printer.id);
+              setSelectedPaperId(paper.id);
+              break;
+            }
+          }
+        } else if (urlColourDirectId && !isPreview) {
+          // Permalink: /?colour=id — find first published printer+paper containing that colour
+          outer: for (const printer of state.printers.filter((p) => p.published !== false)) {
+            for (const paper of printer.papers.filter((p) => p.published ?? true)) {
+              const colour = paper.colours.find((c) => c.id === urlColourDirectId && (c.published ?? true));
+              if (colour) {
+                setSelectedPrinterId(printer.id);
+                setSelectedPaperId(paper.id);
+                setSelectedColourId(colour.id);
+                break outer;
+              }
+            }
           }
         } else if (isPreview) {
           setIsPreviewMode(true);
@@ -549,7 +575,7 @@ export default function HomePage() {
   // RENDER HOME PAGE (PRINTER SELECTION)
   if (showingPrinterSelection) {
     return (
-      <Box sx={{ minHeight: "100vh", bgcolor: colors.lightBg, py: { xs: 4, sm: 5, md: 7 }, pt: isPreviewMode ? { xs: "calc(2rem + 36px)", sm: "calc(2.5rem + 36px)", md: "calc(3.5rem + 36px)" } : undefined }}>
+      <Box sx={{ minHeight: "100vh", bgcolor: colors.lightBg, pt: isPreviewMode ? { xs: "calc(2rem + 36px)", sm: "calc(2.5rem + 36px)", md: "calc(3.5rem + 36px)" } : { xs: 4, sm: 5, md: 7 }, pb: 0, display: "flex", flexDirection: "column" }}>
         {previewBanner}
         <Container maxWidth="md">
           {/* Header */}
@@ -704,6 +730,9 @@ export default function HomePage() {
             </Box>
           )}
         </Container>
+        <Box sx={{ mt: "auto" }}>
+          <Footer year={new Date().getFullYear()} isAdmin={false} />
+        </Box>
       </Box>
     );
   }
