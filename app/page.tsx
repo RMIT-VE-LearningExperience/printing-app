@@ -636,6 +636,7 @@ export default function HomePage() {
               <Grid container spacing={{ xs: 2, sm: 2.5, md: 3 }}>
                 {data.printers
                   .filter((printer) => isPreviewMode || printer.published !== false)
+                  .sort((a, b) => a.name.localeCompare(b.name, undefined, { sensitivity: "base" }))
                   .map((printer) => (
                   <Grid item xs={12} sm={6} md={4} key={printer.id}>
                     <Card
@@ -818,6 +819,7 @@ export default function HomePage() {
             <Grid container spacing={{ xs: 2, sm: 2.5, md: 3 }}>
               {selectedPrinter?.papers
                 .filter((paper) => isPreviewMode || paper.published !== false)
+                .sort((a, b) => a.name.localeCompare(b.name, undefined, { sensitivity: "base" }))
                 .map((paper) => (
                 <Grid item xs={12} sm={6} md={4} key={paper.id}>
                   <Card
@@ -1010,6 +1012,7 @@ export default function HomePage() {
             <Grid container spacing={{ xs: 2, sm: 2.5, md: 3 }}>
               {selectedPaper?.colours
                 .filter((colour) => isPreviewMode || colour.published !== false)
+                .sort((a, b) => a.name.localeCompare(b.name, undefined, { sensitivity: "base" }))
                 .map((colour) => (
                 <Grid item xs={12} sm={6} md={4} key={colour.id}>
                   <Card
@@ -1319,10 +1322,60 @@ export default function HomePage() {
     );
   }
 
-  // PLACEHOLDER FOR EMPTY STATE
+  // EMPTY STEPS STATE
   return (
-    <Box sx={{ minHeight: "100vh", bgcolor: colors.lightBg, display: "flex", alignItems: "center", justifyContent: "center" }}>
-      <Typography>No content to display</Typography>
+    <Box sx={{ minHeight: "100vh", bgcolor: colors.lightBg, py: { xs: 4, sm: 5, md: 7 }, pt: isPreviewMode ? { xs: "calc(2rem + 36px)", sm: "calc(2.5rem + 36px)", md: "calc(3.5rem + 36px)" } : undefined }}>
+      {previewBanner}
+      <Container maxWidth="md">
+        {/* Top Navigation */}
+        <Stack direction="row" spacing={1.5} sx={{ mb: { xs: 4, sm: 5 }, alignItems: "center" }}>
+          <IconButton
+            onClick={backOneLevel}
+            sx={{
+              color: colors.text,
+              border: `1px solid ${colors.lightBorder}`,
+              borderRadius: "6px",
+              transition: "all 0.2s ease",
+              "&:hover": { bgcolor: colors.lightBorder },
+            }}
+          >
+            <ArrowBackIcon />
+          </IconButton>
+          <Stack spacing={0.25} sx={{ flex: 1, textAlign: "center" }}>
+            <Typography
+              variant="body2"
+              sx={{ fontSize: { xs: "0.85rem", sm: "0.95rem" }, fontWeight: 500, color: colors.lightText }}
+            >
+              {selectedPrinter?.name}
+            </Typography>
+            {selectedPaper && (
+              <Typography
+                variant="caption"
+                sx={{ fontSize: { xs: "0.75rem", sm: "0.8rem" }, fontWeight: 600, color: colors.primary, letterSpacing: "0.05em", textTransform: "uppercase" }}
+              >
+                {selectedPaper.name}
+              </Typography>
+            )}
+          </Stack>
+          <IconButton
+            onClick={resetToHome}
+            sx={{
+              color: colors.text,
+              border: `1px solid ${colors.lightBorder}`,
+              borderRadius: "6px",
+              transition: "all 0.2s ease",
+              "&:hover": { bgcolor: colors.lightBorder },
+            }}
+          >
+            <HomeIcon />
+          </IconButton>
+        </Stack>
+
+        {/* Message */}
+        <Stack alignItems="center" sx={{ mt: { xs: 6, sm: 8 }, textAlign: "center" }}>
+          <Alert severity="info">Content unavailable, check with staff</Alert>
+        </Stack>
+      </Container>
     </Box>
   );
 }
