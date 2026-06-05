@@ -3,7 +3,6 @@ import { auth, adminDb } from "../../../lib/firebase-admin";
 
 export async function POST(req: NextRequest) {
   try {
-    // Verify superadmin caller
     const authHeader = req.headers.get("Authorization");
     const idToken = authHeader?.replace("Bearer ", "");
     if (!idToken) {
@@ -13,25 +12,24 @@ export async function POST(req: NextRequest) {
     const decoded = await auth.verifyIdToken(idToken);
     const callerDoc = await adminDb.collection("admins").doc(decoded.uid).get();
     const callerData = callerDoc.data() as { role?: string; active?: boolean } | undefined;
-    if (!callerDoc.exists || !callerData?.active || callerData.role !== "superadmin") {
+    if (!callerDoc.exists || !callerData?.active) {
       return NextResponse.json({ error: "Forbidden" }, { status: 403 });
     }
 
     const body = await req.json() as {
-      action: "addDirect" | "deactivate" | "reactivate" | "changeRole";
+      action: "addDirect" | "deactivate" | "reactivate";
       uid?: string;
       name?: string;
       email?: string;
       staffNumber?: string;
-      role?: "admin" | "superadmin";
-      newRole?: "admin" | "superadmin";
+      role?: "admin";
     };
 
     const { action } = body;
 
     switch (action) {
       case "addDirect": {
-        const { name, email, staffNumber, role } = body;
+        const { name, email, staffNumber } = body;
         if (!name || !email || !staffNumber) {
           return NextResponse.json(
             { error: "name, email, and staffNumber are required" },
@@ -67,7 +65,7 @@ export async function POST(req: NextRequest) {
           name,
           email,
           staffNumber,
-          role: role === "superadmin" ? "superadmin" : "admin",
+          role: "admin",
           active: true,
           addedAt: new Date(),
         });
@@ -93,27 +91,6 @@ export async function POST(req: NextRequest) {
         if (!uid) return NextResponse.json({ error: "uid is required" }, { status: 400 });
         await adminDb.collection("admins").doc(uid).update({ active: true });
         return NextResponse.json({ message: "Admin reactivated" }, { status: 200 });
-      }
-
-      case "changeRole": {
-        const { uid, newRole } = body;
-        if (!uid || !newRole) {
-          return NextResponse.json({ error: "uid and newRole are required" }, { status: 400 });
-        }
-        if (newRole !== "admin" && newRole !== "superadmin") {
-          return NextResponse.json(
-            { error: "newRole must be 'admin' or 'superadmin'" },
-            { status: 400 },
-          );
-        }
-        if (uid === decoded.uid) {
-          return NextResponse.json(
-            { error: "Cannot change your own role" },
-            { status: 400 },
-          );
-        }
-        await adminDb.collection("admins").doc(uid).update({ role: newRole });
-        return NextResponse.json({ message: "Role updated" }, { status: 200 });
       }
 
       default:

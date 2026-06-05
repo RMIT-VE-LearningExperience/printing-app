@@ -1,1652 +1,732 @@
-import {
-  FieldValue,
-  type CollectionReference,
-  type DocumentReference,
-} from "firebase-admin/firestore";
+import { FieldValue } from "firebase-admin/firestore";
 
-import { db } from "./firebase-admin";
+import { db, adminDb } from "./firebase-admin";
 import { resolveImageUrl } from "./media-storage";
 
-// ============= ORPHAN TRACKING =============
+// ============= TYPES =============
 
-async function markOrphan(storageUrl: string, reason: string): Promise<void> {
-  if (!storageUrl || !storageUrl.startsWith("https://firebasestorage")) return;
-  const pathMatch = storageUrl.match(/\/o\/(.+?)\?/);
-  if (!pathMatch) return;
-  const decodedPath = decodeURIComponent(pathMatch[1]);
-  await db.collection("orphanedStorageFiles").add({
-    storagePath: decodedPath,
-    orphanedAt: FieldValue.serverTimestamp(),
-    reason,
-  });
-}
+export type Level = {
+  id: string;
+  name: string;
+  singularName: string;
+  type: "type1" | "type2" | null;
+  enabled: boolean;
+  order: number;
+  sectionTitle?: string;
+  sectionSubtitle?: string;
+};
 
-// ============= TYPE DEFINITIONS =============
+export type HierarchyConfig = {
+  levels: Level[];
+};
+
+export type AppSettings = {
+  features: {
+    copyLink: boolean;
+    qrCode: boolean;
+    canvasEmbed: boolean;
+    fullItemListView: boolean;
+  };
+};
+
+export type Item = {
+  id: string;
+  name: string;
+  description?: string;
+  thumbnailUrl: string;
+  slug: string;
+  published: boolean;
+  createdAt: Date;
+  lastModified: Date;
+  modifiedBy: string;
+};
+
+export type RelationshipEntry = {
+  childItemId: string;
+  childLevelId: string;
+  published: boolean;
+  order: number;
+};
 
 export type Step = {
   id: string;
-  name: string;
   title: string;
   contentHtml: string;
-  imageDataUrl: string;
+  imageUrl: string;
   videoUrl?: string;
   order: number;
-  lastModified?: Date;
-  modifiedBy?: string;
-};
-
-export type Colour = {
-  id: string;
-  name: string;
-  description?: string;
-  thumbnailDataUrl: string;
+  createdAt: Date;
   lastModified: Date;
-  createdAt?: Date;
-  modifiedBy?: string;
-  steps: Step[];
-  published?: boolean; // Per-printer publish status (when part of printer.paper.colours)
-};
-
-export type PrinterPaperColour = {
-  colourId: string;
-  published: boolean;
-  steps: Step[];
-};
-
-export type Paper = {
-  id: string;
-  name: string;
-  description?: string;
-  thumbnailDataUrl: string;
-  lastModified: Date;
-  createdAt?: Date;
   modifiedBy: string;
-  colours: Colour[];
-  published?: boolean; // Per-printer publish status
-};
-
-export type PrinterPaper = {
-  paperId: string;
-  published: boolean;
-  colours: PrinterPaperColour[];
-};
-
-export type PrinterPaperWithPublished = Paper & {
-  published: boolean;
-};
-
-export type Printer = {
-  id: string;
-  name: string;
-  slug: string;
-  description?: string;
-  thumbnailDataUrl: string;
-  published: boolean;
-  lastModified: Date;
-  createdAt?: Date;
-  modifiedBy?: string;
-  papers: Paper[];
 };
 
 export type DeletedItem = {
   id: string;
-  type: "printer" | "paper" | "colour" | "step" | "paperFromPrinter";
+  originalId: string;
+  type: string;        // levelId or "step"
+  parentId?: string;   // for steps: the parent item ID
   name: string;
-  location?: string;
+  location?: string;   // human-readable origin path, e.g. "Printer → Paper"
   deletedAt: Date;
   deletedBy: string;
-  data: unknown; // Stores the full item data for restoration
-};
-
-export type SectionSetting = {
-  title: string;
-  subtitle: string;
-};
-
-export type SectionSettings = {
-  printers: SectionSetting;
-  papers: SectionSetting;
-  colours: SectionSetting;
-};
-
-export type AppSettings = {
-  printerList: boolean;
-  fullPaperList: boolean;
-  colourManagementList: boolean;
-};
-
-const defaultAppSettings: AppSettings = {
-  printerList: true,
-  fullPaperList: true,
-  colourManagementList: true,
+  data: Record<string, unknown>;
 };
 
 export type TutorialState = {
-  papers: Paper[];
-  printers: Printer[];
-  deletedItems?: DeletedItem[];
-  homepageTitle?: string;
-  homepageDescription?: string;
-  sectionSettings?: SectionSettings;
-  appSettings?: AppSettings;
+  hierarchyConfigured: boolean;
+  hierarchy: HierarchyConfig;
+  appSettings: AppSettings;
+  homepageTitle: string;
+  homepageDescription: string;
+  // levelId → items
+  items: Record<string, Item[]>;
+  // parentLevelId → parentItemId → children
+  relationships: Record<string, Record<string, RelationshipEntry[]>>;
+  // parentItemId → steps
+  steps: Record<string, Step[]>;
+  deletedItems: DeletedItem[];
 };
 
-// ============= UTILITY FUNCTIONS =============
+// ============= HELPERS =============
 
-export function generateSlug(name: string): string {
+function generateSlug(name: string): string {
   return name
     .toLowerCase()
-    .trim()
     .replace(/[^a-z0-9\s-]/g, "")
     .replace(/\s+/g, "-")
     .replace(/-+/g, "-")
-    .replace(/^-|-$/g, "");
+    .trim();
 }
 
-function normalizeName(value: string, label: string): string {
-  const result = value.trim();
+function defaultAppSettings(): AppSettings {
+  return {
+    features: {
+      copyLink: true,
+      qrCode: true,
+      canvasEmbed: true,
+      fullItemListView: true,
+    },
+  };
+}
 
-  if (result.length < 2) {
-    throw new Error(`${label} must be at least 2 characters long.`);
+function emptyTutorialState(): TutorialState {
+  return {
+    hierarchyConfigured: false,
+    hierarchy: { levels: [] },
+    appSettings: defaultAppSettings(),
+    homepageTitle: "",
+    homepageDescription: "",
+    items: {},
+    relationships: {},
+    steps: {},
+    deletedItems: [],
+  };
+}
+
+function toDate(value: unknown): Date {
+  if (!value) return new Date();
+  if (value instanceof Date) return value;
+  if (typeof (value as { toDate?: () => Date }).toDate === "function") {
+    return (value as { toDate: () => Date }).toDate();
+  }
+  return new Date();
+}
+
+// Resolves a human-readable location path for a deleted item by walking down
+// from level 0 and building composite ancestor paths (e.g. "parentId:childId").
+// Works at any hierarchy depth. For a step, pass the last-level item name as `selfName`.
+async function resolveDeleteLocation(
+  levelId: string,
+  itemId: string,
+  selfName?: string,
+): Promise<string | undefined> {
+  try {
+    const hierSnap = await db.collection("settings").doc("hierarchy").get();
+    if (!hierSnap.exists) return selfName;
+    const allLevels = ((hierSnap.data() as { levels: Level[] }).levels ?? [])
+      .filter((l) => l.enabled)
+      .sort((a, b) => a.order - b.order);
+
+    const levelIndex = allLevels.findIndex((l) => l.id === levelId);
+    if (levelIndex <= 0) return selfName;
+
+    type AncPath = { compositeKey: string; names: string[] };
+
+    // Seed paths from all level-0 items
+    const level0Snap = await itemsCol(allLevels[0].id).get();
+    let paths: AncPath[] = level0Snap.docs.map((doc) => ({
+      compositeKey: doc.id,
+      names: [(doc.data() as { name?: string }).name ?? doc.id],
+    }));
+
+    // Expand each path one level at a time down to levelIndex-1
+    for (let i = 0; i < levelIndex - 1; i++) {
+      const childLevelSnap = await itemsCol(allLevels[i + 1].id).get();
+      const childNames = new Map(
+        childLevelSnap.docs.map((d) => [d.id, (d.data() as { name?: string }).name ?? d.id]),
+      );
+      const nextPaths: AncPath[] = [];
+      await Promise.all(
+        paths.map(async (path) => {
+          const snap = await childrenCol(path.compositeKey).get();
+          for (const doc of snap.docs) {
+            nextPaths.push({
+              compositeKey: `${path.compositeKey}:${doc.id}`,
+              names: [...path.names, childNames.get(doc.id) ?? doc.id],
+            });
+          }
+        }),
+      );
+      paths = nextPaths;
+    }
+
+    // Find which paths directly contain our item
+    const foundNames: string[][] = [];
+    await Promise.all(
+      paths.map(async (path) => {
+        const snap = await childrenCol(path.compositeKey).doc(itemId).get();
+        if (snap.exists) foundNames.push(path.names);
+      }),
+    );
+
+    if (foundNames.length === 0) return selfName;
+    const locationStr = foundNames.map((names) => names.join(" → ")).join(", ");
+    if (selfName) return `${locationStr} → ${selfName}`;
+    return locationStr;
+  } catch {
+    return selfName;
+  }
+}
+
+// Firestore path helpers
+// items/{levelId}/items/{itemId}
+const itemsCol = (levelId: string) =>
+  db.collection("items").doc(levelId).collection("items");
+
+// links/{parentItemId}/children/{childItemId}
+const childrenCol = (parentItemId: string) =>
+  db.collection("links").doc(parentItemId).collection("children");
+
+// steps/{parentItemId}/items/{stepId}
+const stepsCol = (parentItemId: string) =>
+  db.collection("steps").doc(parentItemId).collection("items");
+
+// ============= READ =============
+
+export async function getTutorialState(publishedOnly = false): Promise<TutorialState> {
+  const [hierarchySnap, appSettingsSnap, homepageSnap, deletedSnap] = await Promise.all([
+    db.collection("settings").doc("hierarchy").get(),
+    db.collection("settings").doc("appSettings").get(),
+    db.collection("settings").doc("homepage").get(),
+    db.collection("deletedItems").get(),
+  ]);
+
+  if (!hierarchySnap.exists) {
+    return emptyTutorialState();
   }
 
-  if (result.length > 100) {
-    throw new Error(`${label} must be 100 characters or less.`);
+  const hierarchyData = hierarchySnap.data() as { levels: Level[] };
+  const hierarchy: HierarchyConfig = { levels: hierarchyData.levels ?? [] };
+
+  const appSettings: AppSettings = appSettingsSnap.exists
+    ? (appSettingsSnap.data() as AppSettings)
+    : defaultAppSettings();
+
+  const homepageData = homepageSnap.data();
+  const homepageTitle = (homepageData?.title as string) ?? "";
+  const homepageDescription = (homepageData?.description as string) ?? "";
+
+  const deletedItems: DeletedItem[] = deletedSnap.docs.map((doc) => ({
+    ...(doc.data() as Omit<DeletedItem, "id" | "deletedAt">),
+    id: doc.id,
+    deletedAt: toDate(doc.data().deletedAt),
+  }));
+
+  const activeLevels = hierarchy.levels
+    .filter((l) => l.enabled)
+    .sort((a, b) => a.order - b.order);
+
+  // Load all items for all active levels in parallel
+  const itemsEntries = await Promise.all(
+    activeLevels.map(async (level) => {
+      const snap = await itemsCol(level.id).get();
+      let items: Item[] = snap.docs.map((doc) => ({
+        ...(doc.data() as Omit<Item, "id" | "createdAt" | "lastModified">),
+        id: doc.id,
+        createdAt: toDate(doc.data().createdAt),
+        lastModified: toDate(doc.data().lastModified),
+      }));
+      // Only filter top-level items by item.published.
+      // Deeper items are controlled by relationship.published,
+      // since the CMS toggle only sets relationship.published for non-top items.
+      if (publishedOnly && level.id === activeLevels[0]?.id) {
+        items = items.filter((i) => i.published);
+      }
+      items.sort((a, b) => a.name.localeCompare(b.name));
+      return [level.id, items] as [string, Item[]];
+    }),
+  );
+
+  const items: Record<string, Item[]> = Object.fromEntries(itemsEntries);
+
+  // Load relationships for all non-last levels (levels that have children).
+  // Uses composite keys (e.g. "parentId:childId") at depth > 0 so each
+  // ancestor path has its own independent set of children.
+  const relationships: Record<string, Record<string, RelationshipEntry[]>> = {};
+
+  if (activeLevels.length > 1) {
+    // Sequential by level so each level can build on the parent's composite keys
+    for (let li = 0; li < activeLevels.length - 1; li++) {
+      const level = activeLevels[li];
+      const relsByKey: Record<string, RelationshipEntry[]> = {};
+
+      if (li === 0) {
+        // Top level: key = item.id (no composite needed)
+        await Promise.all(
+          (items[level.id] ?? []).map(async (item) => {
+            const snap = await childrenCol(item.id).get();
+            let children: RelationshipEntry[] = snap.docs.map((doc) => ({
+              childItemId: doc.id,
+              ...(doc.data() as Omit<RelationshipEntry, "childItemId">),
+            }));
+            if (publishedOnly) children = children.filter((c) => c.published);
+            children.sort((a, b) => a.order - b.order);
+            relsByKey[item.id] = children;
+          }),
+        );
+      } else {
+        // Deeper levels: composite key = ancestorKey:childItemId
+        const parentLevelRels = relationships[activeLevels[li - 1].id] ?? {};
+        await Promise.all(
+          Object.entries(parentLevelRels).flatMap(([ancestorKey, children]) =>
+            children.map(async (rel) => {
+              const compositeKey = `${ancestorKey}:${rel.childItemId}`;
+              const snap = await childrenCol(compositeKey).get();
+              let kids: RelationshipEntry[] = snap.docs.map((doc) => ({
+                childItemId: doc.id,
+                ...(doc.data() as Omit<RelationshipEntry, "childItemId">),
+              }));
+              if (publishedOnly) kids = kids.filter((c) => c.published);
+              kids.sort((a, b) => a.order - b.order);
+              relsByKey[compositeKey] = kids;
+            }),
+          ),
+        );
+      }
+
+      relationships[level.id] = relsByKey;
+    }
   }
 
-  return result;
-}
+  // Load steps for items at the last active level
+  const steps: Record<string, Step[]> = {};
 
-function normalizeDescription(value: string | undefined): string {
-  if (!value) return "";
-  const trimmed = value.trim();
-  if (trimmed.length > 300) {
-    throw new Error("Description must be 300 characters or less.");
+  if (activeLevels.length > 0) {
+    const lastLevel = activeLevels[activeLevels.length - 1];
+
+    await Promise.all(
+      (items[lastLevel.id] ?? []).map(async (item) => {
+        const snap = await stepsCol(item.id).get();
+        steps[item.id] = snap.docs
+          .map((doc) => ({
+            ...(doc.data() as Omit<Step, "id" | "createdAt" | "lastModified">),
+            id: doc.id,
+            createdAt: toDate(doc.data().createdAt),
+            lastModified: toDate(doc.data().lastModified),
+          }))
+          .sort((a, b) => a.order - b.order);
+      }),
+    );
   }
-  return trimmed;
+
+  return {
+    hierarchyConfigured: true,
+    hierarchy,
+    appSettings,
+    homepageTitle,
+    homepageDescription,
+    items,
+    relationships,
+    steps,
+    deletedItems,
+  };
 }
 
-function generateId(): string {
-  return db.collection("_tmp").doc().id;
+export async function getHierarchyConfig(): Promise<HierarchyConfig> {
+  const snap = await db.collection("settings").doc("hierarchy").get();
+  if (!snap.exists) return { levels: [] };
+  return (snap.data() as { levels: Level[] }) ?? { levels: [] };
 }
 
-// ============= COLLECTION REFERENCES =============
-
-function papersCollection() {
-  return db.collection("papers");
-}
-
-function printersCollection() {
-  return db.collection("printers");
-}
-
-function deletedItemsCollection() {
-  return db.collection("deletedItems");
-}
-
-function previewTokensCollection() {
-  return db.collection("previewTokens");
-}
-
-// ============= PREVIEW TOKEN OPERATIONS =============
-
-export async function createPreviewToken(): Promise<string> {
-  // Delete all existing tokens so only one is valid at a time
-  const existing = await previewTokensCollection().get();
-  const batch = db.batch();
-  existing.docs.forEach((doc) => batch.delete(doc.ref));
-
-  // Generate a new token using a Firestore auto-ID as a random string
-  const token = db.collection("_tmp").doc().id;
-  const expiresAt = new Date(Date.now() + 3 * 60 * 60 * 1000); // 3 hours
-
-  batch.set(previewTokensCollection().doc(token), {
-    token,
-    createdAt: new Date(),
-    expiresAt,
-  });
-
-  await batch.commit();
-  return token;
-}
+// ============= PREVIEW TOKENS =============
 
 export async function validatePreviewToken(token: string): Promise<boolean> {
-  const doc = await previewTokensCollection().doc(token).get();
-  if (!doc.exists) return false;
-  const data = doc.data();
-  if (!data) return false;
-  const expiresAt: Date | null = data.expiresAt?.toDate?.() ?? null;
-  if (!expiresAt || expiresAt < new Date()) return false;
-  return true;
+  const snap = await db.collection("previewTokens").doc(token).get();
+  if (!snap.exists) return false;
+  const data = snap.data() as { expiresAt?: { toMillis?: () => number } | Date };
+  if (!data?.expiresAt) return false;
+  const expiresMs =
+    typeof (data.expiresAt as { toMillis?: () => number }).toMillis === "function"
+      ? (data.expiresAt as { toMillis: () => number }).toMillis()
+      : (data.expiresAt as Date).getTime?.() ?? 0;
+  return Date.now() < expiresMs;
 }
 
-// ============= FIRESTORE HELPERS =============
+export async function createPreviewToken(): Promise<string> {
+  const existing = await db.collection("previewTokens").get();
+  const batch = db.batch();
+  existing.docs.forEach((doc) => batch.delete(doc.ref));
+  await batch.commit();
 
-async function assertDocExists(
-  collection: CollectionReference,
-  id: string,
-  label: string,
-): Promise<DocumentReference> {
-  const ref = collection.doc(id);
-  const doc = await ref.get();
-
-  if (!doc.exists) {
-    throw new Error(`${label} with ID "${id}" not found.`);
-  }
-
-  return ref;
-}
-
-async function updatePrinterLastModified(printerId: string): Promise<void> {
-  const printerRef = await assertDocExists(printersCollection(), printerId, "Printer");
-  await printerRef.update({
-    lastModified: new Date(),
+  const ref = db.collection("previewTokens").doc();
+  await ref.set({
+    createdAt: FieldValue.serverTimestamp(),
+    expiresAt: new Date(Date.now() + 3 * 60 * 60 * 1000),
   });
+  return ref.id;
 }
 
-// ============= STATE RETRIEVAL =============
+// ============= ITEMS =============
 
-export async function getTutorialState(): Promise<TutorialState> {
-  try {
-    // Get all papers (global definitions) with their colours
-    console.log("[getTutorialState] Starting to fetch papers...");
-    const papersSnapshot = await papersCollection().get();
-    console.log(`[getTutorialState] Found ${papersSnapshot.size} global papers`);
-
-    const papers: Paper[] = await Promise.all(
-      papersSnapshot.docs.map(async (doc) => {
-        const data = doc.data();
-
-        // Get all colours for this paper (without orderBy to avoid composite index requirement)
-        const coloursRef = doc.ref.collection("colours");
-        const colourDocsSnapshot = await coloursRef.get();
-        console.log(`[getTutorialState] Paper "${data.name}" (${doc.id}): Found ${colourDocsSnapshot.size} colours`);
-
-        const colours: Colour[] = await Promise.all(
-          colourDocsSnapshot.docs.map(async (colourDoc) => {
-            const colourData = colourDoc.data();
-
-            // Get steps for this colour (without orderBy - sort client-side)
-            const stepsRef = colourDoc.ref.collection("steps");
-            const stepsSnapshot = await stepsRef.get();
-
-            const steps: Step[] = stepsSnapshot.docs
-              .map((stepDoc) => {
-                const stepData = stepDoc.data();
-                return {
-                  id: stepDoc.id,
-                  name: stepData.name || `Step ${stepDoc.id}`,
-                  title: stepData.title,
-                  contentHtml: stepData.contentHtml,
-                  imageDataUrl: stepData.imageDataUrl,
-                  videoUrl: stepData.videoUrl || "",
-                  order: stepData.order ?? 0,
-                  lastModified: stepData.lastModified?.toDate?.() || undefined,
-                  modifiedBy: stepData.modifiedBy || undefined,
-                };
-              })
-              .sort((a, b) => a.order - b.order);
-
-            return {
-              id: colourDoc.id,
-              name: colourData.name,
-              description: colourData.description || "",
-              thumbnailDataUrl: colourData.thumbnailDataUrl || "",
-              lastModified: colourData.lastModified?.toDate() || new Date(),
-              createdAt: colourData.createdAt?.toDate() || new Date(),
-              modifiedBy: colourData.modifiedBy || undefined,
-              steps,
-            };
-          }),
-        );
-
-        return {
-          id: doc.id,
-          name: data.name,
-          description: data.description || "",
-          thumbnailDataUrl: data.thumbnailDataUrl || "",
-          lastModified: data.lastModified?.toDate() || new Date(),
-          createdAt: data.createdAt?.toDate() || data.lastModified?.toDate() || new Date(),
-          modifiedBy: data.modifiedBy || "system",
-          colours,
-        };
-      }),
-    );
-
-    // Get all printers with their papers
-    console.log("[getTutorialState] Starting to fetch printers...");
-    const printersSnapshot = await printersCollection().get();
-    console.log(`[getTutorialState] Found ${printersSnapshot.size} printers`);
-
-    const printers: Printer[] = await Promise.all(
-      printersSnapshot.docs.map(async (doc) => {
-        const data = doc.data();
-        const papersRef = doc.ref.collection("papers");
-        const paperDocsSnapshot = await papersRef.get();
-        console.log(`[getTutorialState] Printer "${data.name}" (${doc.id}): Found ${paperDocsSnapshot.size} printer-specific papers`);
-
-        const papersWithDetails: Paper[] = await Promise.all(
-          paperDocsSnapshot.docs.map(async (paperDoc) => {
-            const paperData = paperDoc.data();
-            const paperId = paperData.paperId;
-
-            // Fetch the global paper details
-            const globalPaperDoc = await papersCollection().doc(paperId).get();
-            const globalPaperData = globalPaperDoc.exists ? globalPaperDoc.data() : null;
-
-            const coloursRef = paperDoc.ref.collection("colours");
-            // Fetch WITHOUT orderBy to avoid composite index requirement - sort client-side instead
-            const colourDocsSnapshot = await coloursRef.get();
-            console.log(`[getTutorialState] Printer "${data.name}" > Paper "${globalPaperData?.name || 'Unknown'}" (${paperId}): Found ${colourDocsSnapshot.size} colours`);
-
-            const colours: Colour[] = await Promise.all(
-              colourDocsSnapshot.docs.map(async (colourDoc) => {
-                const colourId = colourDoc.id;
-                const printerColourData = colourDoc.data();
-
-                // Fetch colour metadata from the GLOBAL colour (not printer-specific colour)
-                // Printer-specific colours only have colourId and published status
-                // Global colours have name, description, thumbnail, and steps
-                const globalColourRef = globalPaperDoc.ref.collection("colours").doc(colourId);
-                const globalColourSnapshot = await globalColourRef.get();
-                const globalColourData = globalColourSnapshot.exists ? globalColourSnapshot.data() : null;
-
-                // Fetch steps from the GLOBAL colour
-                const stepsRef = globalColourRef.collection("steps");
-                // Fetch steps without orderBy - sort client-side
-                const stepDocsSnapshot = await stepsRef.get();
-
-                const steps: Step[] = stepDocsSnapshot.docs
-                  .map((stepDoc) => {
-                    const stepData = stepDoc.data();
-                    return {
-                      id: stepDoc.id,
-                      name: stepData.name || `Step ${stepDoc.id}`,
-                      title: stepData.title,
-                      contentHtml: stepData.contentHtml,
-                      imageDataUrl: stepData.imageDataUrl,
-                      videoUrl: stepData.videoUrl || "",
-                      order: stepData.order ?? 0,
-                      lastModified: stepData.lastModified?.toDate?.() || undefined,
-                      modifiedBy: stepData.modifiedBy || undefined,
-                    };
-                  })
-                  .sort((a, b) => a.order - b.order);
-
-                return {
-                  id: colourId,
-                  name: globalColourData?.name || printerColourData?.name || "Unknown Colour",
-                  description: globalColourData?.description || printerColourData?.description || "",
-                  thumbnailDataUrl: globalColourData?.thumbnailDataUrl ?? printerColourData?.thumbnailDataUrl ?? "",
-                  lastModified: globalColourData?.lastModified?.toDate() || printerColourData?.lastModified?.toDate?.() || new Date(),
-                  createdAt: globalColourData?.createdAt?.toDate() || printerColourData?.createdAt?.toDate?.() || new Date(),
-                  modifiedBy: globalColourData?.modifiedBy || undefined,
-                  steps,
-                  published: printerColourData.published ?? true,
-                };
-              }),
-            );
-
-            return {
-              id: paperId,
-              name: globalPaperData?.name || paperData.name || "Unknown Paper",
-              description: globalPaperData?.description || paperData.description || "",
-              thumbnailDataUrl: globalPaperData?.thumbnailDataUrl ?? paperData.thumbnailDataUrl ?? "",
-              lastModified: globalPaperData?.lastModified?.toDate() || new Date(),
-              createdAt: globalPaperData?.createdAt?.toDate() || new Date(),
-              modifiedBy: globalPaperData?.modifiedBy || "system",
-              colours,
-              published: paperData.published ?? true,
-            };
-          }),
-        );
-
-        const papers: Paper[] = papersWithDetails;
-
-        return {
-          id: doc.id,
-          name: data.name,
-          slug: (data.slug as string) || generateSlug(data.name as string),
-          description: data.description || "",
-          thumbnailDataUrl: data.thumbnailDataUrl || "",
-          published: data.published ?? true,
-          lastModified: data.lastModified?.toDate() || new Date(),
-          createdAt: data.createdAt?.toDate() || data.lastModified?.toDate() || new Date(),
-          modifiedBy: data.modifiedBy || undefined,
-          papers,
-        };
-      }),
-    );
-
-    // Get deleted items
-    const deletedSnapshot = await deletedItemsCollection().get();
-    const deletedItems: DeletedItem[] = deletedSnapshot.docs.map((doc) => {
-      const data = doc.data();
-      return {
-        id: doc.id,
-        type: data.type,
-        name: data.name,
-        location: data.location,
-        deletedAt: data.deletedAt?.toDate() || new Date(),
-        deletedBy: data.deletedBy || "system",
-        data: data.data,
-      };
-    });
-
-    // Get homepage settings
-    let homepageTitle = "";
-    let homepageDescription = "";
-    try {
-      const settingsRef = db.collection("settings").doc("homepage");
-      const settingsSnapshot = await settingsRef.get();
-      if (settingsSnapshot.exists) {
-        const settingsData = settingsSnapshot.data();
-        homepageTitle = settingsData?.title || "";
-        homepageDescription = settingsData?.description || "";
-      }
-    } catch (error) {
-      console.warn("Failed to fetch homepage settings:", error);
-    }
-
-    // Get section settings
-    let sectionSettings: SectionSettings | undefined;
-    try {
-      const sectionsRef = db.collection("settings").doc("sections");
-      const sectionsSnapshot = await sectionsRef.get();
-      if (sectionsSnapshot.exists) {
-        const d = sectionsSnapshot.data();
-        sectionSettings = {
-          printers: { title: d?.printers?.title || "", subtitle: d?.printers?.subtitle || "" },
-          papers:   { title: d?.papers?.title   || "", subtitle: d?.papers?.subtitle   || "" },
-          colours:  { title: d?.colours?.title  || "", subtitle: d?.colours?.subtitle  || "" },
-        };
-      }
-    } catch (error) {
-      console.warn("Failed to fetch section settings:", error);
-    }
-
-    // Get app settings
-    let appSettings: AppSettings = defaultAppSettings;
-    try {
-      const appSettingsSnapshot = await db.collection("settings").doc("appSettings").get();
-      if (appSettingsSnapshot.exists) {
-        appSettings = { ...defaultAppSettings, ...(appSettingsSnapshot.data() as Partial<AppSettings>) };
-      }
-    } catch (error) {
-      console.warn("Failed to fetch app settings:", error);
-    }
-
-    console.log("[getTutorialState] Successfully fetched all data");
-    return { papers, printers, deletedItems, homepageTitle, homepageDescription, sectionSettings, appSettings };
-  } catch (error) {
-    console.error("Error getting tutorial state:", error);
-    throw new Error(`Failed to load tutorial state: ${error instanceof Error ? error.message : "Unknown error"}`);
-  }
-}
-
-// ============= HOMEPAGE SETTINGS =============
-
-export async function updateHomepageSettings(title: string, description: string): Promise<void> {
-  if (!title.trim()) {
-    throw new Error("Homepage title is required");
-  }
-  if (!description.trim()) {
-    throw new Error("Homepage description is required");
-  }
-
-  try {
-    const settingsRef = db.collection("settings").doc("homepage");
-    await settingsRef.set({
-      title: title.trim(),
-      description: description.trim(),
-      updatedAt: new Date(),
-    });
-    console.log("[updateHomepageSettings] Successfully saved homepage settings");
-  } catch (error) {
-    console.error("Error updating homepage settings:", error);
-    throw new Error(`Failed to save homepage settings: ${error instanceof Error ? error.message : "Unknown error"}`);
-  }
-}
-
-// ============= SECTION SETTINGS =============
-
-export async function updateSectionSettings(
-  section: "printers" | "papers" | "colours",
-  title: string,
-  subtitle: string
-): Promise<void> {
-  try {
-    const sectionsRef = db.collection("settings").doc("sections");
-    await sectionsRef.set(
-      { [section]: { title: title.trim(), subtitle: subtitle.trim(), updatedAt: new Date() } },
-      { merge: true }
-    );
-    console.log(`[updateSectionSettings] Saved ${section} settings`);
-  } catch (error) {
-    console.error("Error updating section settings:", error);
-    throw new Error(`Failed to save section settings: ${error instanceof Error ? error.message : "Unknown error"}`);
-  }
-}
-
-export async function updateAppSettings(settings: Partial<AppSettings>): Promise<void> {
-  await db.collection("settings").doc("appSettings").set(settings, { merge: true });
-}
-
-// ============= PRINTER OPERATIONS =============
-
-export async function addPrinter(
+export async function addItem(
+  levelId: string,
   name: string,
   description?: string,
   thumbnailDataUrl?: string,
   modifiedBy?: string,
 ): Promise<TutorialState> {
-  try {
-    const normalizedName = normalizeName(name, "Printer name");
-    const normalizedDescription = normalizeDescription(description);
-    const now = new Date();
+  const ref = itemsCol(levelId).doc();
+  const thumbnailUrl = await resolveImageUrl(thumbnailDataUrl, `${levelId}/${ref.id}/thumbnail`);
 
-    const newPrinterId = generateId();
-    const resolvedThumbnail = await resolveImageUrl(thumbnailDataUrl, `printers/${newPrinterId}/thumbnail`);
-    await printersCollection().doc(newPrinterId).set({
-      name: normalizedName,
-      slug: generateSlug(normalizedName),
-      description: normalizedDescription,
-      thumbnailDataUrl: resolvedThumbnail,
-      published: true,
-      lastModified: now,
-      createdAt: FieldValue.serverTimestamp(),
-      modifiedBy: modifiedBy || "system",
-    });
+  await ref.set({
+    name,
+    description: description ?? "",
+    thumbnailUrl,
+    slug: generateSlug(name),
+    published: false,
+    createdAt: FieldValue.serverTimestamp(),
+    lastModified: FieldValue.serverTimestamp(),
+    modifiedBy: modifiedBy ?? "system",
+  });
 
-    return getTutorialState();
-  } catch (error) {
-    throw new Error(`Failed to add printer: ${error instanceof Error ? error.message : "Unknown error"}`);
-  }
+  return getTutorialState();
 }
 
-export async function updatePrinter(
-  printerId: string,
-  name?: string,
-  description?: string,
-  thumbnailDataUrl?: string,
-  published?: boolean,
+export async function updateItem(
+  levelId: string,
+  itemId: string,
+  updates: { name?: string; description?: string; thumbnailDataUrl?: string; published?: boolean },
   modifiedBy?: string,
 ): Promise<TutorialState> {
-  try {
-    const printerRef = await assertDocExists(printersCollection(), printerId, "Printer");
+  const fields: Record<string, unknown> = {
+    lastModified: FieldValue.serverTimestamp(),
+    modifiedBy: modifiedBy ?? "system",
+  };
 
-    const updates: Record<string, unknown> = {};
-    if (name) {
-      updates.name = normalizeName(name, "Printer name");
-      updates.slug = generateSlug(updates.name as string);
-    }
-    if (description !== undefined) updates.description = normalizeDescription(description);
-    if (thumbnailDataUrl !== undefined) updates.thumbnailDataUrl = await resolveImageUrl(thumbnailDataUrl, `printers/${printerId}/thumbnail`);
-    if (published !== undefined) updates.published = published;
-
-    if (Object.keys(updates).length === 0) {
-      throw new Error("No updates provided");
-    }
-
-    updates.lastModified = new Date();
-    updates.modifiedBy = modifiedBy || "system";
-
-    await printerRef.update(updates);
-    return getTutorialState();
-  } catch (error) {
-    throw new Error(`Failed to update printer: ${error instanceof Error ? error.message : "Unknown error"}`);
+  if (updates.name !== undefined) {
+    fields.name = updates.name;
+    fields.slug = generateSlug(updates.name);
   }
+  if (updates.description !== undefined) fields.description = updates.description;
+  if (updates.published !== undefined) fields.published = updates.published;
+  if (updates.thumbnailDataUrl !== undefined) {
+    fields.thumbnailUrl = await resolveImageUrl(
+      updates.thumbnailDataUrl,
+      `${levelId}/${itemId}/thumbnail`,
+    );
+  }
+
+  await itemsCol(levelId).doc(itemId).update(fields);
+  return getTutorialState();
 }
 
-// ============= PAPER OPERATIONS (GLOBAL SHARED) =============
-
-export async function addPaper(
-  name: string,
-  description?: string,
-  thumbnailDataUrl?: string,
-  printerIds?: string[],
+export async function deleteItem(
+  levelId: string,
+  itemId: string,
   modifiedBy?: string,
 ): Promise<TutorialState> {
-  try {
-    const normalizedName = normalizeName(name, "Paper name");
-    const normalizedDescription = normalizeDescription(description);
+  const snap = await itemsCol(levelId).doc(itemId).get();
+  if (!snap.exists) return getTutorialState();
 
-    // Check if paper with same name already exists
-    const existingPaper = await papersCollection().where("name", "==", normalizedName).limit(1).get();
-    if (!existingPaper.empty) {
-      throw new Error(`Paper with name "${normalizedName}" already exists.`);
-    }
+  const location = await resolveDeleteLocation(levelId, itemId);
 
-    const newPaperId = generateId();
-    const now = new Date();
+  await db.collection("deletedItems").doc().set({
+    originalId: itemId,
+    type: levelId,
+    name: (snap.data() as { name?: string }).name ?? "",
+    ...(location ? { location } : {}),
+    deletedAt: FieldValue.serverTimestamp(),
+    deletedBy: modifiedBy ?? "system",
+    data: snap.data() ?? {},
+  });
 
-    const resolvedThumbnail = await resolveImageUrl(thumbnailDataUrl, `papers/${newPaperId}/thumbnail`);
-    await papersCollection().doc(newPaperId).set({
-      name: normalizedName,
-      description: normalizedDescription,
-      thumbnailDataUrl: resolvedThumbnail,
-      lastModified: now,
-      createdAt: FieldValue.serverTimestamp(),
-      modifiedBy: modifiedBy || "system",
-    });
-
-    // Add paper to selected printers
-    if (printerIds && printerIds.length > 0) {
-      for (const printerId of printerIds) {
-        const printerRef = await assertDocExists(printersCollection(), printerId, "Printer");
-        await printerRef.collection("papers").doc(newPaperId).set({
-          paperId: newPaperId,
-        });
-        await updatePrinterLastModified(printerId);
-      }
-    }
-
-    return getTutorialState();
-  } catch (error) {
-    throw new Error(`Failed to add paper: ${error instanceof Error ? error.message : "Unknown error"}`);
-  }
+  await itemsCol(levelId).doc(itemId).delete();
+  return getTutorialState();
 }
 
-export async function updatePaper(
-  paperId: string,
-  name?: string,
-  description?: string,
-  thumbnailDataUrl?: string,
-  modifiedBy?: string,
+// ============= RELATIONSHIPS =============
+
+export async function linkItem(
+  _parentLevelId: string,
+  parentItemId: string,
+  childLevelId: string,
+  childItemId: string,
 ): Promise<TutorialState> {
-  try {
-    const paperRef = await assertDocExists(papersCollection(), paperId, "Paper");
+  const snap = await childrenCol(parentItemId).get();
+  const maxOrder = snap.docs.reduce(
+    (max, doc) => Math.max(max, (doc.data().order as number) ?? 0),
+    -1,
+  );
 
-    const updates: Record<string, unknown> = {};
-    if (name) updates.name = normalizeName(name, "Paper name");
-    if (description !== undefined) updates.description = normalizeDescription(description);
-    if (thumbnailDataUrl !== undefined) updates.thumbnailDataUrl = await resolveImageUrl(thumbnailDataUrl, `papers/${paperId}/thumbnail`);
+  await childrenCol(parentItemId).doc(childItemId).set({
+    childLevelId,
+    published: false,
+    order: maxOrder + 1,
+  });
 
-    updates.lastModified = new Date();
-    updates.modifiedBy = modifiedBy || "system";
-
-    await paperRef.update(updates);
-
-    // Update lastModified for all printers that have this paper
-    const printersSnapshot = await printersCollection().get();
-    for (const printerDoc of printersSnapshot.docs) {
-      const paperLink = await printerDoc.ref.collection("papers").doc(paperId).get();
-      if (paperLink.exists) {
-        await updatePrinterLastModified(printerDoc.id);
-      }
-    }
-
-    return getTutorialState();
-  } catch (error) {
-    throw new Error(`Failed to update paper: ${error instanceof Error ? error.message : "Unknown error"}`);
-  }
+  return getTutorialState();
 }
 
-// ============= PRINTER PAPER LINKING =============
-
-export async function addPaperToPrinter(
-  printerId: string,
-  paperId: string,
+export async function unlinkItem(
+  _parentLevelId: string,
+  parentItemId: string,
+  childItemId: string,
 ): Promise<TutorialState> {
-  try {
-    const printerRef = await assertDocExists(printersCollection(), printerId, "Printer");
-    await assertDocExists(papersCollection(), paperId, "Paper");
-
-    // Check if paper already linked to printer
-    const existingLink = await printerRef.collection("papers").doc(paperId).get();
-    if (existingLink.exists) {
-      throw new Error("This paper is already linked to this printer.");
-    }
-
-    // Add the paper link with published: true by default
-    const printerPaperRef = printerRef.collection("papers").doc(paperId);
-    await printerPaperRef.set({
-      paperId,
-      published: true,
-      colours: [],
-    });
-
-    // Repopulate printer-specific colour docs from global colours so existing colours are restored
-    const globalColoursSnapshot = await papersCollection().doc(paperId).collection("colours").get();
-    for (const colourDoc of globalColoursSnapshot.docs) {
-      await printerPaperRef.collection("colours").doc(colourDoc.id).set({
-        colourId: colourDoc.id,
-        published: true,
-      });
-    }
-
-    await updatePrinterLastModified(printerId);
-    return getTutorialState();
-  } catch (error) {
-    throw new Error(`Failed to add paper to printer: ${error instanceof Error ? error.message : "Unknown error"}`);
-  }
+  await childrenCol(parentItemId).doc(childItemId).delete();
+  return getTutorialState();
 }
 
-export async function removePaperFromPrinter(
-  printerId: string,
-  paperId: string,
-): Promise<TutorialState> {
-  try {
-    const printerRef = await assertDocExists(printersCollection(), printerId, "Printer");
-    const paperRef = printerRef.collection("papers").doc(paperId);
-
-    // Fetch names for location display before deletion
-    const printerDoc = await printerRef.get();
-    const globalPaperDoc = await papersCollection().doc(paperId).get();
-    const printerName = printerDoc.data()?.name || printerId;
-    const paperName = globalPaperDoc.exists ? globalPaperDoc.data()?.name || paperId : paperId;
-
-    // Save to deletedItems so it appears in the Deleted Items UI and can be restored
-    const deletedItemId = generateId();
-    await deletedItemsCollection().doc(deletedItemId).set({
-      type: "paperFromPrinter",
-      name: paperName,
-      location: printerName,
-      deletedAt: FieldValue.serverTimestamp(),
-      deletedBy: "admin",
-      data: { paperId, printerId },
-    });
-
-    // Delete all colours and steps for this paper in this printer
-    const coloursRef = paperRef.collection("colours");
-    const colourDocs = await coloursRef.get();
-
-    for (const colourDoc of colourDocs.docs) {
-      const stepsRef = colourDoc.ref.collection("steps");
-      const stepDocs = await stepsRef.get();
-
-      for (const stepDoc of stepDocs.docs) {
-        await stepDoc.ref.delete();
-      }
-      await colourDoc.ref.delete();
-    }
-
-    // Delete the paper link
-    await paperRef.delete();
-    await updatePrinterLastModified(printerId);
-    return getTutorialState();
-  } catch (error) {
-    throw new Error(`Failed to remove paper from printer: ${error instanceof Error ? error.message : "Unknown error"}`);
-  }
-}
-
-export async function removeInvalidPapersFromPrinter(
-  printerId: string,
-): Promise<TutorialState> {
-  try {
-    const printerRef = await assertDocExists(printersCollection(), printerId, "Printer");
-    const papersRef = printerRef.collection("papers");
-    const paperDocs = await papersRef.get();
-
-    let removedCount = 0;
-
-    for (const paperDoc of paperDocs.docs) {
-      const data = paperDoc.data();
-      // Remove papers with undefined or missing paperId
-      if (!data.paperId || data.paperId === "undefined") {
-        // Delete all colours and steps for this invalid paper
-        const coloursRef = paperDoc.ref.collection("colours");
-        const colourDocs = await coloursRef.get();
-
-        for (const colourDoc of colourDocs.docs) {
-          const stepsRef = colourDoc.ref.collection("steps");
-          const stepDocs = await stepsRef.get();
-
-          for (const stepDoc of stepDocs.docs) {
-            await stepDoc.ref.delete();
-          }
-          await colourDoc.ref.delete();
-        }
-
-        // Delete the invalid paper entry
-        await paperDoc.ref.delete();
-        removedCount++;
-      }
-    }
-
-    console.log(`Removed ${removedCount} invalid papers from printer ${printerId}`);
-    return getTutorialState();
-  } catch (error) {
-    throw new Error(`Failed to remove invalid papers: ${error instanceof Error ? error.message : "Unknown error"}`);
-  }
-}
-
-export async function updatePaperInPrinter(
-  printerId: string,
-  paperId: string,
+export async function updateRelationship(
+  _parentLevelId: string,
+  parentItemId: string,
+  childItemId: string,
   published: boolean,
 ): Promise<TutorialState> {
-  try {
-    const printerRef = await assertDocExists(printersCollection(), printerId, "Printer");
-    const paperRef = await assertDocExists(
-      printerRef.collection("papers"),
-      paperId,
-      "Paper",
-    );
-
-    await paperRef.update({ published });
-    await updatePrinterLastModified(printerId);
-    return getTutorialState();
-  } catch (error) {
-    throw new Error(`Failed to update paper in printer: ${error instanceof Error ? error.message : "Unknown error"}`);
-  }
+  await childrenCol(parentItemId).doc(childItemId).update({ published });
+  return getTutorialState();
 }
 
-// ============= COLOUR OPERATIONS (PRINTER-SPECIFIC) =============
-
-export async function addColour(
-  printerId: string,
-  paperId: string,
-  name: string,
-  thumbnailDataUrl?: string,
-  description?: string,
-  modifiedBy?: string,
+export async function removeInvalidChildren(
+  _parentLevelId: string,
+  parentItemId: string,
 ): Promise<TutorialState> {
-  try {
-    const printerRef = await assertDocExists(printersCollection(), printerId, "Printer");
-    const globalPaperRef = await assertDocExists(papersCollection(), paperId, "Paper");
-    const normalizedName = normalizeName(name, "Colour name");
-    const normalizedDescription = normalizeDescription(description);
-    const now = new Date();
+  const snap = await childrenCol(parentItemId).get();
+  const batch = db.batch();
 
-    const printerPaperRef = await assertDocExists(
-      printerRef.collection("papers"),
-      paperId,
-      "Paper",
-    );
+  await Promise.all(
+    snap.docs.map(async (doc) => {
+      const { childLevelId } = doc.data() as { childLevelId: string };
+      const childSnap = await itemsCol(childLevelId).doc(doc.id).get();
+      if (!childSnap.exists) batch.delete(doc.ref);
+    }),
+  );
 
-    const newColourId = generateId();
-    const nextGlobalOrder = await getNextOrder(globalPaperRef.collection("colours"));
-    const nextPrinterOrder = await getNextOrder(printerPaperRef.collection("colours"));
-    const globalColourOrder = (nextGlobalOrder || 0) + 1;
-    const printerColourOrder = (nextPrinterOrder || 0) + 1;
-
-    const resolvedThumbnail = await resolveImageUrl(thumbnailDataUrl, `papers/${paperId}/colours/${newColourId}/thumbnail`);
-
-    // Create colour in global paper collection (contains metadata)
-    await globalPaperRef.collection("colours").doc(newColourId).set({
-      id: newColourId,
-      name: normalizedName,
-      description: normalizedDescription,
-      thumbnailDataUrl: resolvedThumbnail,
-      lastModified: now,
-      createdAt: FieldValue.serverTimestamp(),
-      order: globalColourOrder,
-      modifiedBy: modifiedBy || "system",
-    });
-
-    // Create colour reference in printer's paper (contains publish status)
-    await printerPaperRef.collection("colours").doc(newColourId).set({
-      colourId: newColourId,
-      published: true,
-      order: printerColourOrder,
-    });
-
-    await updatePrinterLastModified(printerId);
-    return getTutorialState();
-  } catch (error) {
-    throw new Error(`Failed to add colour: ${error instanceof Error ? error.message : "Unknown error"}`);
-  }
+  await batch.commit();
+  return getTutorialState();
 }
 
-export async function updateColour(
-  printerId: string,
-  paperId: string,
-  colourId: string,
-  name?: string,
-  thumbnailDataUrl?: string,
-  published?: boolean,
-  description?: string,
-  modifiedBy?: string,
-): Promise<TutorialState> {
-  try {
-    const printerRef = await assertDocExists(printersCollection(), printerId, "Printer");
-    const globalPaperRef = await assertDocExists(papersCollection(), paperId, "Paper");
-    const printerPaperRef = await assertDocExists(
-      printerRef.collection("papers"),
-      paperId,
-      "Paper",
-    );
-
-    // Update colour metadata in global paper (name, description, thumbnail)
-    const globalColourRef = globalPaperRef.collection("colours").doc(colourId);
-    const globalColourSnapshot = await globalColourRef.get();
-    if (globalColourSnapshot.exists) {
-      const globalUpdates: Record<string, unknown> = {};
-      if (name) globalUpdates.name = normalizeName(name, "Colour name");
-      if (thumbnailDataUrl !== undefined) globalUpdates.thumbnailDataUrl = await resolveImageUrl(thumbnailDataUrl, `papers/${paperId}/colours/${colourId}/thumbnail`);
-      if (description !== undefined) globalUpdates.description = normalizeDescription(description);
-      globalUpdates.lastModified = new Date();
-      globalUpdates.modifiedBy = modifiedBy || "system";
-
-      await globalColourRef.update(globalUpdates);
-    }
-
-    // Update publish status in printer's paper collection
-    if (published !== undefined) {
-      const printerColourRef = await assertDocExists(
-        printerPaperRef.collection("colours"),
-        colourId,
-        "Colour",
-      );
-      await printerColourRef.update({ published });
-    }
-
-    await updatePrinterLastModified(printerId);
-    return getTutorialState();
-  } catch (error) {
-    throw new Error(`Failed to update colour: ${error instanceof Error ? error.message : "Unknown error"}`);
-  }
-}
-
-export async function deleteColour(
-  printerId: string,
-  paperId: string,
-  colourId: string,
-): Promise<TutorialState> {
-  try {
-    const printerRef = await assertDocExists(printersCollection(), printerId, "Printer");
-    const globalPaperRef = await assertDocExists(papersCollection(), paperId, "Paper");
-    const printerPaperRef = await assertDocExists(
-      printerRef.collection("papers"),
-      paperId,
-      "Paper",
-    );
-
-    // Get the global colour data before deletion for recording
-    const globalColourRef = globalPaperRef.collection("colours").doc(colourId);
-    const globalColourSnapshot = await globalColourRef.get();
-    const colourData = globalColourSnapshot.exists ? globalColourSnapshot.data() : null;
-
-    // Mark colour thumbnail and all its step images as orphaned in Storage
-    if (colourData?.thumbnailDataUrl) {
-      await markOrphan(colourData.thumbnailDataUrl, "colour deleted");
-    }
-    const globalStepsSnapshot = await globalColourRef.collection("steps").get();
-    for (const stepDoc of globalStepsSnapshot.docs) {
-      const stepImageUrl = stepDoc.data().imageDataUrl;
-      if (stepImageUrl) await markOrphan(stepImageUrl, "colour deleted (step image)");
-      await stepDoc.ref.delete();
-    }
-
-    // Store deleted colour in deletedItems collection
-    if (colourData) {
-      const printerDoc = await printerRef.get();
-      const paperDoc = await globalPaperRef.get();
-      const printerName = printerDoc.data()?.name || printerId;
-      const paperName = paperDoc.data()?.name || paperId;
-      const deletedItemId = generateId();
-      await deletedItemsCollection().doc(deletedItemId).set({
-        type: "colour",
-        name: colourData.name || "Unknown",
-        location: `${printerName} ${paperName}`,
-        deletedAt: FieldValue.serverTimestamp(),
-        deletedBy: "admin",
-        data: {
-          ...colourData,
-          printerId,
-          paperId,
-        },
-      });
-    }
-
-    // Delete all steps from printer's colour
-    const printerColourRef = printerPaperRef.collection("colours").doc(colourId);
-    const printerColourSnapshot = await printerColourRef.get();
-    if (printerColourSnapshot.exists) {
-      const stepsRef = printerColourRef.collection("steps");
-      const stepDocs = await stepsRef.get();
-      for (const stepDoc of stepDocs.docs) {
-        await stepDoc.ref.delete();
-      }
-      await printerColourRef.delete();
-    }
-
-    // Delete colour metadata from global paper
-    if (globalColourSnapshot.exists) {
-      await globalColourRef.delete();
-    }
-
-    await updatePrinterLastModified(printerId);
-    return getTutorialState();
-  } catch (error) {
-    throw new Error(`Failed to delete colour: ${error instanceof Error ? error.message : "Unknown error"}`);
-  }
-}
-
-export async function updateColourInPrinterPaper(
-  printerId: string,
-  paperId: string,
-  colourId: string,
-  published: boolean,
-): Promise<TutorialState> {
-  try {
-    const printerRef = await assertDocExists(printersCollection(), printerId, "Printer");
-    const printerPaperRef = await assertDocExists(
-      printerRef.collection("papers"),
-      paperId,
-      "Paper",
-    );
-    const colourRef = await assertDocExists(
-      printerPaperRef.collection("colours"),
-      colourId,
-      "Colour",
-    );
-
-    await colourRef.update({ published });
-    await updatePrinterLastModified(printerId);
-    return getTutorialState();
-  } catch (error) {
-    throw new Error(`Failed to update colour in printer paper: ${error instanceof Error ? error.message : "Unknown error"}`);
-  }
-}
-
-// ============= STEP OPERATIONS (COLOUR-SPECIFIC) =============
+// ============= STEPS =============
 
 export async function addStep(
-  printerId: string,
-  paperId: string,
-  colourId: string,
+  parentItemId: string,
   title: string,
   contentHtml: string,
   imageDataUrl: string,
   videoUrl?: string,
   modifiedBy?: string,
 ): Promise<TutorialState> {
-  try {
-    const printerRef = await assertDocExists(printersCollection(), printerId, "Printer");
-    const globalPaperRef = await assertDocExists(papersCollection(), paperId, "Paper");
-    const printerPaperRef = await assertDocExists(
-      printerRef.collection("papers"),
-      paperId,
-      "Paper",
-    );
+  const snap = await stepsCol(parentItemId).get();
+  const maxOrder = snap.docs.reduce(
+    (max, doc) => Math.max(max, (doc.data().order as number) ?? 0),
+    -1,
+  );
 
-    // Check if colour exists in global paper
-    const globalColourRef = globalPaperRef.collection("colours").doc(colourId);
-    const globalColourSnapshot = await globalColourRef.get();
+  const ref = stepsCol(parentItemId).doc();
+  const imageUrl = await resolveImageUrl(imageDataUrl, `steps/${parentItemId}/${ref.id}/image`);
 
-    // If colour doesn't exist in global paper, try to get it from printer's paper
-    if (!globalColourSnapshot.exists) {
-      const printerColourRef = await assertDocExists(
-        printerPaperRef.collection("colours"),
-        colourId,
-        "Colour",
-      );
-      const printerColourSnapshot = await printerColourRef.get();
-      const printerColourData = printerColourSnapshot.data();
+  await ref.set({
+    title,
+    contentHtml,
+    imageUrl,
+    videoUrl: videoUrl ?? "",
+    order: maxOrder + 1,
+    createdAt: FieldValue.serverTimestamp(),
+    lastModified: FieldValue.serverTimestamp(),
+    modifiedBy: modifiedBy ?? "system",
+  });
 
-      // Create the colour in the global paper if it doesn't exist
-      const now = new Date();
-      await globalColourRef.set({
-        id: colourId,
-        name: printerColourData?.name || "Unknown Colour",
-        description: printerColourData?.description || "",
-        thumbnailDataUrl: printerColourData?.thumbnailDataUrl || "",
-        lastModified: now,
-        createdAt: FieldValue.serverTimestamp(),
-        order: printerColourData?.order || 0,
-      });
-    }
-
-    const normalizedTitle = normalizeName(title, "Step title");
-    if (!contentHtml.trim()) {
-      throw new Error("Step content is required.");
-    }
-
-    const newStepId = generateId();
-    const stepsRef = globalColourRef.collection("steps");
-    const nextOrder = await getNextOrder(stepsRef);
-
-    const resolvedImage = await resolveImageUrl(imageDataUrl, `papers/${paperId}/colours/${colourId}/steps/${newStepId}/image`);
-    await stepsRef.doc(newStepId).set({
-      name: `Step ${nextOrder + 1}`,
-      title: normalizedTitle,
-      contentHtml: contentHtml.trim(),
-      imageDataUrl: resolvedImage,
-      videoUrl: videoUrl || "",
-      order: nextOrder + 1,
-      lastModified: new Date(),
-      modifiedBy: modifiedBy || "system",
-    });
-
-    await updatePrinterLastModified(printerId);
-    return getTutorialState();
-  } catch (error) {
-    throw new Error(`Failed to add step: ${error instanceof Error ? error.message : "Unknown error"}`);
-  }
+  return getTutorialState();
 }
 
 export async function updateStep(
-  printerId: string,
-  paperId: string,
-  colourId: string,
+  parentItemId: string,
   stepId: string,
-  title?: string,
-  contentHtml?: string,
-  imageDataUrl?: string,
-  videoUrl?: string,
+  updates: { title?: string; contentHtml?: string; imageDataUrl?: string; videoUrl?: string },
   modifiedBy?: string,
 ): Promise<TutorialState> {
-  try {
-    const printerRef = await assertDocExists(printersCollection(), printerId, "Printer");
-    const globalPaperRef = await assertDocExists(papersCollection(), paperId, "Paper");
-    const printerPaperRef = await assertDocExists(
-      printerRef.collection("papers"),
-      paperId,
-      "Paper",
+  const fields: Record<string, unknown> = {
+    lastModified: FieldValue.serverTimestamp(),
+    modifiedBy: modifiedBy ?? "system",
+  };
+
+  if (updates.title !== undefined) fields.title = updates.title;
+  if (updates.contentHtml !== undefined) fields.contentHtml = updates.contentHtml;
+  if (updates.videoUrl !== undefined) fields.videoUrl = updates.videoUrl;
+  if (updates.imageDataUrl !== undefined) {
+    fields.imageUrl = await resolveImageUrl(
+      updates.imageDataUrl,
+      `steps/${parentItemId}/${stepId}/image`,
     );
-
-    // Check if colour exists in global paper
-    const globalColourRef = globalPaperRef.collection("colours").doc(colourId);
-    const globalColourSnapshot = await globalColourRef.get();
-
-    // If colour doesn't exist in global paper, try to get it from printer's paper
-    if (!globalColourSnapshot.exists) {
-      const printerColourRef = await assertDocExists(
-        printerPaperRef.collection("colours"),
-        colourId,
-        "Colour",
-      );
-      const printerColourSnapshot = await printerColourRef.get();
-      const printerColourData = printerColourSnapshot.data();
-
-      // Create the colour in the global paper if it doesn't exist
-      const now = new Date();
-      await globalColourRef.set({
-        id: colourId,
-        name: printerColourData?.name || "Unknown Colour",
-        description: printerColourData?.description || "",
-        thumbnailDataUrl: printerColourData?.thumbnailDataUrl || "",
-        lastModified: now,
-        createdAt: FieldValue.serverTimestamp(),
-        order: printerColourData?.order || 0,
-      });
-    }
-
-    const stepRef = await assertDocExists(
-      globalColourRef.collection("steps"),
-      stepId,
-      "Step",
-    );
-
-    const updates: Record<string, unknown> = {};
-    if (title) updates.title = normalizeName(title, "Step title");
-    if (contentHtml !== undefined) {
-      const trimmedContent = contentHtml.trim();
-      if (!trimmedContent) {
-        throw new Error("Step content is required.");
-      }
-      updates.contentHtml = trimmedContent;
-    }
-    if (imageDataUrl !== undefined) updates.imageDataUrl = await resolveImageUrl(imageDataUrl, `papers/${paperId}/colours/${colourId}/steps/${stepId}/image`);
-    if (videoUrl !== undefined) updates.videoUrl = videoUrl;
-    updates.lastModified = new Date();
-    updates.modifiedBy = modifiedBy || "system";
-
-    await stepRef.update(updates);
-    await updatePrinterLastModified(printerId);
-    return getTutorialState();
-  } catch (error) {
-    throw new Error(`Failed to update step: ${error instanceof Error ? error.message : "Unknown error"}`);
   }
+
+  await stepsCol(parentItemId).doc(stepId).update(fields);
+  return getTutorialState();
 }
 
 export async function deleteStep(
-  printerId: string,
-  paperId: string,
-  colourId: string,
+  parentItemId: string,
   stepId: string,
+  modifiedBy?: string,
 ): Promise<TutorialState> {
-  try {
-    const printerRef = await assertDocExists(printersCollection(), printerId, "Printer");
-    const globalPaperRef = await assertDocExists(papersCollection(), paperId, "Paper");
-    const printerPaperRef = await assertDocExists(
-      printerRef.collection("papers"),
-      paperId,
-      "Paper",
-    );
+  const snap = await stepsCol(parentItemId).doc(stepId).get();
+  if (!snap.exists) return getTutorialState();
 
-    // Check if colour exists in global paper
-    const globalColourRef = globalPaperRef.collection("colours").doc(colourId);
-    const globalColourSnapshot = await globalColourRef.get();
+  // Resolve the parent item (last-level) name then walk up the hierarchy
+  const hierSnap = await db.collection("settings").doc("hierarchy").get();
+  const allLevels = hierSnap.exists
+    ? ((hierSnap.data() as { levels: Level[] }).levels ?? []).filter((l) => l.enabled).sort((a, b) => a.order - b.order)
+    : [];
+  const lastLevel = allLevels.length > 0 ? allLevels[allLevels.length - 1] : null;
+  const parentDoc = lastLevel ? await itemsCol(lastLevel.id).doc(parentItemId).get() : null;
+  const parentName = (parentDoc?.data() as { name?: string } | undefined)?.name ?? parentItemId;
+  const location = lastLevel
+    ? await resolveDeleteLocation(lastLevel.id, parentItemId, parentName)
+    : parentName;
 
-    // If colour doesn't exist in global paper, try to get it from printer's paper
-    if (!globalColourSnapshot.exists) {
-      const printerColourRef = await assertDocExists(
-        printerPaperRef.collection("colours"),
-        colourId,
-        "Colour",
-      );
-      const printerColourSnapshot = await printerColourRef.get();
-      const printerColourData = printerColourSnapshot.data();
+  await db.collection("deletedItems").doc().set({
+    originalId: stepId,
+    type: "step",
+    parentId: parentItemId,
+    name: (snap.data() as { title?: string }).title ?? "",
+    ...(location ? { location } : {}),
+    deletedAt: FieldValue.serverTimestamp(),
+    deletedBy: modifiedBy ?? "system",
+    data: snap.data() ?? {},
+  });
 
-      // Create the colour in the global paper if it doesn't exist
-      const now = new Date();
-      await globalColourRef.set({
-        id: colourId,
-        name: printerColourData?.name || "Unknown Colour",
-        description: printerColourData?.description || "",
-        thumbnailDataUrl: printerColourData?.thumbnailDataUrl || "",
-        lastModified: now,
-        createdAt: FieldValue.serverTimestamp(),
-        order: printerColourData?.order || 0,
-      });
-    }
-    const stepRef = await assertDocExists(
-      globalColourRef.collection("steps"),
-      stepId,
-      "Step",
-    );
-
-    // Get the step data before deletion for recording
-    const stepDoc = await stepRef.get();
-    const stepData = stepDoc.data();
-
-    // Mark step image as orphaned in Storage
-    if (stepData?.imageDataUrl) {
-      await markOrphan(stepData.imageDataUrl, "step deleted");
-    }
-
-    // Store deleted step in deletedItems collection
-    if (stepData) {
-      const printerDoc = await printerRef.get();
-      const paperDoc = await globalPaperRef.get();
-      const colourDoc = await globalColourRef.get();
-      const printerName = printerDoc.data()?.name || printerId;
-      const paperName = paperDoc.data()?.name || paperId;
-      const colourName = colourDoc.data()?.name || colourId;
-      const deletedItemId = generateId();
-      await deletedItemsCollection().doc(deletedItemId).set({
-        type: "step",
-        name: stepData.title || `Step ${stepData.order}` || "Unknown",
-        location: `${printerName} → ${paperName} → ${colourName}`,
-        deletedAt: FieldValue.serverTimestamp(),
-        deletedBy: "admin",
-        data: {
-          ...stepData,
-          printerId,
-          paperId,
-          colourId,
-        },
-      });
-    }
-
-    await stepRef.delete();
-    await updatePrinterLastModified(printerId);
-    return getTutorialState();
-  } catch (error) {
-    throw new Error(`Failed to delete step: ${error instanceof Error ? error.message : "Unknown error"}`);
-  }
+  await stepsCol(parentItemId).doc(stepId).delete();
+  return getTutorialState();
 }
 
-// ============= STEP REORDERING =============
-
 export async function reorderStep(
-  printerId: string,
-  paperId: string,
-  colourId: string,
+  parentItemId: string,
   stepId: string,
   direction: "up" | "down",
 ): Promise<TutorialState> {
-  try {
-    const globalPaperRef = await assertDocExists(papersCollection(), paperId, "Paper");
-    const globalColourRef = await assertDocExists(
-      globalPaperRef.collection("colours"),
-      colourId,
-      "Colour",
-    );
-    const stepRef = await assertDocExists(
-      globalColourRef.collection("steps"),
-      stepId,
-      "Step",
-    );
+  const snap = await stepsCol(parentItemId).get();
+  const steps = snap.docs
+    .map((doc) => ({ id: doc.id, order: (doc.data().order as number) ?? 0 }))
+    .sort((a, b) => a.order - b.order);
 
-    const currentStepDoc = await stepRef.get();
-    const currentOrder = currentStepDoc.data()?.order ?? 0;
+  const idx = steps.findIndex((s) => s.id === stepId);
+  if (idx < 0) return getTutorialState();
 
-    const stepsRef = globalColourRef.collection("steps");
-    let query;
+  const swapIdx = direction === "up" ? idx - 1 : idx + 1;
+  if (swapIdx < 0 || swapIdx >= steps.length) return getTutorialState();
 
-    if (direction === "up") {
-      query = stepsRef.where("order", "<", currentOrder).orderBy("order", "desc").limit(1);
-    } else {
-      query = stepsRef.where("order", ">", currentOrder).orderBy("order", "asc").limit(1);
-    }
+  const batch = db.batch();
+  batch.update(stepsCol(parentItemId).doc(steps[idx].id), { order: steps[swapIdx].order });
+  batch.update(stepsCol(parentItemId).doc(steps[swapIdx].id), { order: steps[idx].order });
+  await batch.commit();
 
-    const swapDocs = await query.get();
-
-    if (!swapDocs.empty) {
-      const swapDoc = swapDocs.docs[0];
-      const swapOrder = swapDoc.data()?.order ?? 0;
-
-      await stepRef.update({ order: swapOrder });
-      await swapDoc.ref.update({ order: currentOrder });
-    }
-
-    await updatePrinterLastModified(printerId);
-    return getTutorialState();
-  } catch (error) {
-    throw new Error(`Failed to reorder step: ${error instanceof Error ? error.message : "Unknown error"}`);
-  }
+  return getTutorialState();
 }
 
 export async function setStepOrder(
-  printerId: string,
-  paperId: string,
-  colourId: string,
+  parentItemId: string,
   stepId: string,
   newIndex: number,
 ): Promise<TutorialState> {
-  try {
-    const globalPaperRef = await assertDocExists(papersCollection(), paperId, "Paper");
-    const globalColourRef = await assertDocExists(
-      globalPaperRef.collection("colours"),
-      colourId,
-      "Colour",
-    );
-    const stepsRef = globalColourRef.collection("steps");
-    const stepsSnapshot = await stepsRef.orderBy("order", "asc").get();
+  const snap = await stepsCol(parentItemId).get();
+  const steps = snap.docs
+    .map((doc) => ({ id: doc.id, order: (doc.data().order as number) ?? 0 }))
+    .sort((a, b) => a.order - b.order);
 
-    if (stepsSnapshot.empty) return getTutorialState();
+  const currentIdx = steps.findIndex((s) => s.id === stepId);
+  if (currentIdx < 0) return getTutorialState();
 
-    const steps = stepsSnapshot.docs.map((doc) => ({ id: doc.id, ref: doc.ref }));
-    const currentIndex = steps.findIndex((s) => s.id === stepId);
-    if (currentIndex === -1) throw new Error("Step not found");
+  const reordered = [...steps];
+  const [removed] = reordered.splice(currentIdx, 1);
+  reordered.splice(Math.max(0, Math.min(newIndex, reordered.length)), 0, removed);
 
-    const reordered = [...steps];
-    const [moved] = reordered.splice(currentIndex, 1);
-    reordered.splice(newIndex, 0, moved);
+  const batch = db.batch();
+  reordered.forEach((step, i) => {
+    batch.update(stepsCol(parentItemId).doc(step.id), { order: i });
+  });
+  await batch.commit();
 
-    const batch = db.batch();
-    reordered.forEach((step, index) => {
-      batch.update(step.ref, { order: index });
-    });
-    await batch.commit();
-
-    await updatePrinterLastModified(printerId);
-    return getTutorialState();
-  } catch (error) {
-    throw new Error(`Failed to set step order: ${error instanceof Error ? error.message : "Unknown error"}`);
-  }
+  return getTutorialState();
 }
 
-// ============= DELETED ITEMS OPERATIONS =============
-
-export async function deletePrinter(printerId: string): Promise<TutorialState> {
-  try {
-    const printerRef = await assertDocExists(printersCollection(), printerId, "Printer");
-    const printerDoc = await printerRef.get();
-    const printerData = printerDoc.data();
-
-    // Mark printer thumbnail as orphaned in Storage
-    if (printerData?.thumbnailDataUrl) {
-      await markOrphan(printerData.thumbnailDataUrl, "printer deleted");
-    }
-
-    // Store deleted printer in deletedItems collection
-    const deletedItemId = generateId();
-    await deletedItemsCollection().doc(deletedItemId).set({
-      type: "printer",
-      name: printerData?.name || "Unknown",
-      deletedAt: FieldValue.serverTimestamp(),
-      deletedBy: "admin",
-      data: printerData,
-    });
-
-    // Delete the printer and all its subcollections
-    const papersRef = printerRef.collection("papers");
-    const papersSnapshot = await papersRef.get();
-
-    for (const paperDoc of papersSnapshot.docs) {
-      const coloursRef = paperDoc.ref.collection("colours");
-      const coloursSnapshot = await coloursRef.get();
-
-      for (const colourDoc of coloursSnapshot.docs) {
-        const stepsRef = colourDoc.ref.collection("steps");
-        const stepsSnapshot = await stepsRef.get();
-
-        for (const stepDoc of stepsSnapshot.docs) {
-          await stepDoc.ref.delete();
-        }
-
-        await colourDoc.ref.delete();
-      }
-
-      await paperDoc.ref.delete();
-    }
-
-    await printerRef.delete();
-
-    return getTutorialState();
-  } catch (error) {
-    throw new Error(`Failed to delete printer: ${error instanceof Error ? error.message : "Unknown error"}`);
-  }
-}
-
-export async function deletePaper(paperId: string): Promise<TutorialState> {
-  try {
-    const paperRef = await assertDocExists(papersCollection(), paperId, "Paper");
-    const paperDoc = await paperRef.get();
-    const paperData = paperDoc.data();
-
-    // Collect printer IDs that had this paper before deletion
-    const printerIds: string[] = [];
-    const printersSnapshot = await printersCollection().get();
-    for (const printerDoc of printersSnapshot.docs) {
-      const paperInPrinterRef = printerDoc.ref.collection("papers").doc(paperId);
-      const paperInPrinter = await paperInPrinterRef.get();
-
-      if (paperInPrinter.exists) {
-        printerIds.push(printerDoc.id);
-      }
-    }
-
-    // Mark paper thumbnail as orphaned in Storage
-    if (paperData?.thumbnailDataUrl) {
-      await markOrphan(paperData.thumbnailDataUrl, "paper deleted");
-    }
-
-    // Store deleted paper in deletedItems collection with printer assignments
-    const deletedItemId = generateId();
-    await deletedItemsCollection().doc(deletedItemId).set({
-      type: "paper",
-      name: paperData?.name || "Unknown",
-      location: "Full Paper List",
-      deletedAt: FieldValue.serverTimestamp(),
-      deletedBy: "admin",
-      data: {
-        ...paperData,
-        printerIds, // Store which printers had this paper
-      },
-    });
-
-    // Remove from all printers
-    for (const printerDoc of printersSnapshot.docs) {
-      const paperInPrinterRef = printerDoc.ref.collection("papers").doc(paperId);
-      const paperInPrinter = await paperInPrinterRef.get();
-
-      if (paperInPrinter.exists) {
-        const coloursRef = paperInPrinterRef.collection("colours");
-        const coloursSnapshot = await coloursRef.get();
-
-        for (const colourDoc of coloursSnapshot.docs) {
-          const stepsRef = colourDoc.ref.collection("steps");
-          const stepsSnapshot = await stepsRef.get();
-
-          for (const stepDoc of stepsSnapshot.docs) {
-            await stepDoc.ref.delete();
-          }
-
-          await colourDoc.ref.delete();
-        }
-
-        await paperInPrinterRef.delete();
-        await updatePrinterLastModified(printerDoc.id);
-      }
-    }
-
-    // Delete the paper itself
-    await paperRef.delete();
-
-    return getTutorialState();
-  } catch (error) {
-    throw new Error(`Failed to delete paper: ${error instanceof Error ? error.message : "Unknown error"}`);
-  }
-}
+// ============= SOFT-DELETE BIN =============
 
 export async function restoreDeletedItem(deletedItemId: string): Promise<TutorialState> {
-  try {
-    const deletedRef = await assertDocExists(deletedItemsCollection(), deletedItemId, "Deleted item");
-    const deletedDoc = await deletedRef.get();
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    const deletedData = deletedDoc.data() as any;
+  const snap = await db.collection("deletedItems").doc(deletedItemId).get();
+  if (!snap.exists) return getTutorialState();
 
-    if (deletedData.type === "printer") {
-      // Restore printer
-      const printerId = generateId();
-      await printersCollection().doc(printerId).set(deletedData.data);
-    } else if (deletedData.type === "paper") {
-      // Restore paper with original printer assignments
-      const paperId = generateId();
-      const { printerIds = [], ...paperData } = deletedData.data;
+  const deleted = snap.data() as DeletedItem;
 
-      // Create the paper in global collection
-      await papersCollection().doc(paperId).set(paperData);
-
-      // Restore paper to original printers (colours not available for globally deleted papers)
-      if (Array.isArray(printerIds) && printerIds.length > 0) {
-        for (const printerId of printerIds) {
-          try {
-            await printersCollection().doc(printerId).collection("papers").doc(paperId).set({
-              paperId,
-              published: true,
-              colours: [],
-            });
-          } catch (error) {
-            // Printer may have been deleted, skip it
-            console.warn(`Could not restore paper to printer ${printerId}:`, error);
-          }
-        }
-      }
-    } else if (deletedData.type === "paperFromPrinter") {
-      // Restore paper-printer link and repopulate colours from global paper
-      const { paperId, printerId } = deletedData.data as { paperId: string; printerId: string };
-      const printerPaperRef = printersCollection().doc(printerId).collection("papers").doc(paperId);
-      const existing = await printerPaperRef.get();
-      if (!existing.exists) {
-        await printerPaperRef.set({ paperId, published: true, colours: [] });
-        // Repopulate printer-specific colour docs from global colours
-        const globalColoursSnapshot = await papersCollection().doc(paperId).collection("colours").get();
-        for (const colourDoc of globalColoursSnapshot.docs) {
-          await printerPaperRef.collection("colours").doc(colourDoc.id).set({
-            colourId: colourDoc.id,
-            published: true,
-          });
-        }
-        await updatePrinterLastModified(printerId);
-      }
-    }
-
-    // Remove from deletedItems
-    await deletedRef.delete();
-
-    return getTutorialState();
-  } catch (error) {
-    throw new Error(`Failed to restore item: ${error instanceof Error ? error.message : "Unknown error"}`);
+  if (deleted.type === "step") {
+    if (!deleted.parentId) return getTutorialState();
+    await stepsCol(deleted.parentId).doc(deleted.originalId).set(deleted.data);
+  } else {
+    await itemsCol(deleted.type).doc(deleted.originalId).set(deleted.data);
   }
+
+  await db.collection("deletedItems").doc(deletedItemId).delete();
+  return getTutorialState();
 }
 
 export async function permanentlyDeleteItem(deletedItemId: string): Promise<TutorialState> {
-  try {
-    const deletedRef = await assertDocExists(deletedItemsCollection(), deletedItemId, "Deleted item");
-    await deletedRef.delete();
-
-    return getTutorialState();
-  } catch (error) {
-    throw new Error(`Failed to permanently delete item: ${error instanceof Error ? error.message : "Unknown error"}`);
-  }
+  await db.collection("deletedItems").doc(deletedItemId).delete();
+  return getTutorialState();
 }
 
-// ============= DATA MIGRATION =============
+// ============= SETTINGS =============
 
-export async function migrateToPerPrinterPublishStatus(): Promise<void> {
-  try {
-    console.log("Starting migration to per-printer publish status...");
-
-    // Step 1: Migrate Paper.published → PrinterPaper.published
-    console.log("Step 1: Migrating paper published status to per-printer...");
-    const papersSnapshot = await papersCollection().get();
-    for (const paperDoc of papersSnapshot.docs) {
-      const paperData = paperDoc.data();
-      const paperPublished = paperData.published ?? true;
-
-      // Update all printers that have this paper
-      const printersSnapshot = await printersCollection().get();
-      for (const printerDoc of printersSnapshot.docs) {
-        const paperLink = printerDoc.ref.collection("papers").doc(paperDoc.id);
-        const linkSnapshot = await paperLink.get();
-
-        if (linkSnapshot.exists) {
-          // Add published to the printer-paper doc if not already present
-          const linkData = linkSnapshot.data();
-          if (linkData && linkData.published === undefined) {
-            await paperLink.update({ published: paperPublished });
-            console.log(`✓ Updated ${printerDoc.id}/papers/${paperDoc.id} - published: ${paperPublished}`);
-          }
-        }
-      }
-    }
-
-    // Step 2: Migrate Colour.published → PrinterPaperColour.published
-    console.log("Step 2: Migrating colour published status to per-paper-printer...");
-    const printersSnapshot = await printersCollection().get();
-    for (const printerDoc of printersSnapshot.docs) {
-      const papersRef = printerDoc.ref.collection("papers");
-      const paperDocsSnapshot = await papersRef.get();
-
-      for (const paperDoc of paperDocsSnapshot.docs) {
-        const coloursRef = paperDoc.ref.collection("colours");
-        const colourDocsSnapshot = await coloursRef.get();
-
-        for (const colourDoc of colourDocsSnapshot.docs) {
-          const colourData = colourDoc.data();
-          const colourPublished = colourData.published ?? true;
-
-          // Ensure colourId and published are set
-          if (!colourData.colourId || colourData.published === undefined) {
-            const updates: Record<string, unknown> = {};
-            if (!colourData.colourId) updates.colourId = colourDoc.id;
-            if (colourData.published === undefined) updates.published = colourPublished;
-
-            if (Object.keys(updates).length > 0) {
-              await colourDoc.ref.update(updates);
-              console.log(`✓ Updated ${printerDoc.id}/papers/${paperDoc.id}/colours/${colourDoc.id}`);
-            }
-          }
-        }
-      }
-    }
-
-    console.log("✅ Migration completed successfully!");
-  } catch (error) {
-    const errorMsg = error instanceof Error ? error.message : "Unknown error";
-    console.error("❌ Migration failed:", errorMsg);
-    throw new Error(`Migration to per-printer publish status failed: ${errorMsg}`);
-  }
+export async function updateHomepageSettings(title: string, description: string): Promise<void> {
+  await db.collection("settings").doc("homepage").set({ title, description }, { merge: true });
 }
 
-// ============= HELPER FUNCTION =============
+export async function updateLevelSettings(
+  levelId: string,
+  sectionTitle: string,
+  sectionSubtitle: string,
+): Promise<void> {
+  const snap = await db.collection("settings").doc("hierarchy").get();
+  if (!snap.exists) return;
 
-async function getNextOrder(collection: CollectionReference): Promise<number> {
-  const snapshot = await collection.orderBy("order", "desc").limit(1).get();
+  const data = snap.data() as { levels: Level[] };
+  const updatedLevels = data.levels.map((level) =>
+    level.id === levelId ? { ...level, sectionTitle, sectionSubtitle } : level,
+  );
 
-  if (snapshot.empty) {
-    return 0;
+  await db.collection("settings").doc("hierarchy").update({ levels: updatedLevels });
+}
+
+export async function updateAppSettings(settings: Partial<AppSettings>): Promise<void> {
+  await db.collection("settings").doc("appSettings").set(settings, { merge: true });
+}
+
+// Used by GET /api/tutorial to allow admins to see unpublished content
+export async function isActiveAdmin(idToken: string): Promise<boolean> {
+  try {
+    const { auth } = await import("./firebase-admin");
+    const decoded = await auth.verifyIdToken(idToken);
+    if ((decoded.role as string | undefined) !== "admin") return false;
+    const adminDoc = await adminDb.collection("admins").doc(decoded.uid).get();
+    return (adminDoc.data() as { active?: boolean } | undefined)?.active === true;
+  } catch {
+    return false;
   }
-
-  const lastDoc = snapshot.docs[0];
-  const lastOrder = lastDoc.data().order;
-
-  return typeof lastOrder === "number" ? lastOrder : 0;
 }

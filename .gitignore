@@ -4,6 +4,7 @@ node_modules
 .env.*.local
 firebase-credentials.json
 printer-app-531a8-firebase-adminsdk-*.json
+.claude/
 
 # Local planning & documentation (not for repo)
 *_LOG.md

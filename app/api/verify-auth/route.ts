@@ -69,10 +69,13 @@ export async function POST(req: NextRequest) {
     }
 
     const response = NextResponse.json({ role, email: userEmail }, { status: 200 });
-    response.headers.set(
-      "Set-Cookie",
-      `adminSession=1; HttpOnly; Secure; SameSite=Strict; Max-Age=28800; Path=/`,
-    );
+    response.cookies.set("adminSession", "1", {
+      httpOnly: true,
+      secure: process.env.NODE_ENV === "production",
+      sameSite: "strict",
+      maxAge: 28800,
+      path: "/",
+    });
     return response;
   } catch (error) {
     const errorMessage = error instanceof Error ? error.message : "Unknown error";

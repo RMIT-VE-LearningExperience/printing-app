@@ -3,7 +3,6 @@ import { auth, adminDb } from "../../../lib/firebase-admin";
 
 export async function POST(req: NextRequest) {
   try {
-    // Verify the caller is a superadmin
     const authHeader = req.headers.get("Authorization");
     const idToken = authHeader?.replace("Bearer ", "");
     if (!idToken) {
@@ -13,16 +12,15 @@ export async function POST(req: NextRequest) {
     const decoded = await auth.verifyIdToken(idToken);
     const callerDoc = await adminDb.collection("admins").doc(decoded.uid).get();
     const callerData = callerDoc.data() as { role?: string; active?: boolean } | undefined;
-    if (!callerDoc.exists || !callerData?.active || callerData.role !== "superadmin") {
+    if (!callerDoc.exists || !callerData?.active) {
       return NextResponse.json({ error: "Forbidden" }, { status: 403 });
     }
 
     const body = await req.json() as {
       requestId?: string;
       action?: "approve" | "reject";
-      role?: "admin" | "superadmin";
     };
-    const { requestId, action, role } = body;
+    const { requestId, action } = body;
     const reviewerUid = decoded.uid;
 
     if (!requestId || !action) {
@@ -85,7 +83,7 @@ export async function POST(req: NextRequest) {
         name: requestData.name,
         email: requestData.email,
         staffNumber: requestData.staffNumber,
-        role: role === "superadmin" ? "superadmin" : "admin",
+        role: "admin",
         active: true,
         addedAt: new Date(),
       },

@@ -11,7 +11,11 @@
     "start": "next start",
     "lint": "next lint",
     "dev:staging": "dotenv -e .env.staging.local -- next dev",
-    "seed-admins": "node --env-file=.env.local scripts/seed-admins.js"
+    "seed-admins": "node --env-file=.env.local scripts/seed-admins.js",
+    "seed-content": "node --env-file=.env.local scripts/seed-content.js",
+    "seed-content:staging": "dotenv -e .env.staging.local -- node scripts/seed-content.js",
+    "seed-items:staging": "dotenv -e .env.staging.local -- node scripts/seed-items.js",
+    "copy-steps:staging": "dotenv -e .env.staging.local -- node scripts/copy-steps.js"
   },
   "dependencies": {
     "@emotion/react": "^11.11.4",
@@ -24,7 +28,8 @@
     "next": "^14.2.0",
     "qrcode": "^1.5.4",
     "react": "^18.2.0",
-    "react-dom": "^18.2.0"
+    "react-dom": "^18.2.0",
+    "sharp": "^0.34.5"
   },
   "devDependencies": {
     "@types/node": "^20.11.0",

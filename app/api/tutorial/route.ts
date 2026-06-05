@@ -2,322 +2,103 @@ import { NextRequest, NextResponse } from "next/server";
 import { auth, adminDb } from "../../../lib/firebase-admin";
 
 import {
-  addColour,
-  addPaper,
-  addPrinter,
+  addItem,
+  updateItem,
+  deleteItem,
+  linkItem,
+  unlinkItem,
+  updateRelationship,
+  removeInvalidChildren,
   addStep,
-  deleteColour,
-  deletePaper,
-  deletePrinter,
+  updateStep,
   deleteStep,
-  getTutorialState,
   reorderStep,
   setStepOrder,
-  updateColour,
-  updatePaper,
-  updatePrinter,
-  updateStep,
-  addPaperToPrinter,
-  removePaperFromPrinter,
-  updatePaperInPrinter,
-  updateColourInPrinterPaper,
   restoreDeletedItem,
   permanentlyDeleteItem,
-  removeInvalidPapersFromPrinter,
   updateHomepageSettings,
-  updateSectionSettings,
+  updateLevelSettings,
   updateAppSettings,
+  getTutorialState,
   validatePreviewToken,
+  isActiveAdmin,
   type TutorialState,
   type AppSettings,
 } from "../../../lib/tutorial-store";
 
 type ActionPayload =
-  | {
-      action: "addPrinter";
-      name: string;
-      description?: string;
-      thumbnailDataUrl?: string;
-    }
-  | {
-      action: "updatePrinter";
-      printerId: string;
-      name?: string;
-      description?: string;
-      thumbnailDataUrl?: string;
-      published?: boolean;
-    }
-  | { action: "deletePrinter"; printerId: string }
-  | {
-      action: "addPaper";
-      name: string;
-      description?: string;
-      thumbnailDataUrl?: string;
-      printerIds?: string[];
-    }
-  | {
-      action: "updatePaper";
-      paperId: string;
-      name?: string;
-      description?: string;
-      thumbnailDataUrl?: string;
-      published?: boolean;
-    }
-  | { action: "deletePaper"; paperId: string }
-  | {
-      action: "addPaperToPrinter";
-      printerId: string;
-      paperId: string;
-    }
-  | {
-      action: "removePaperFromPrinter";
-      printerId: string;
-      paperId: string;
-    }
-  | {
-      action: "updatePaperInPrinter";
-      printerId: string;
-      paperId: string;
-      published: boolean;
-    }
-  | {
-      action: "addColour";
-      printerId: string;
-      paperId: string;
-      name: string;
-      thumbnailDataUrl?: string;
-      description?: string;
-    }
-  | {
-      action: "updateColour";
-      printerId: string;
-      paperId: string;
-      colourId: string;
-      name?: string;
-      thumbnailDataUrl?: string;
-      published?: boolean;
-      description?: string;
-    }
-  | {
-      action: "deleteColour";
-      printerId: string;
-      paperId: string;
-      colourId: string;
-    }
-  | {
-      action: "updateColourInPrinterPaper";
-      printerId: string;
-      paperId: string;
-      colourId: string;
-      published: boolean;
-    }
-  | {
-      action: "addStep";
-      printerId: string;
-      paperId: string;
-      colourId: string;
-      title: string;
-      contentHtml: string;
-      imageDataUrl: string;
-      videoUrl?: string;
-    }
-  | {
-      action: "updateStep";
-      printerId: string;
-      paperId: string;
-      colourId: string;
-      stepId: string;
-      title?: string;
-      contentHtml?: string;
-      imageDataUrl?: string;
-      videoUrl?: string;
-    }
-  | {
-      action: "deleteStep";
-      printerId: string;
-      paperId: string;
-      colourId: string;
-      stepId: string;
-    }
-  | {
-      action: "reorderStep";
-      printerId: string;
-      paperId: string;
-      colourId: string;
-      stepId: string;
-      direction: "up" | "down";
-    }
-  | {
-      action: "setStepOrder";
-      printerId: string;
-      paperId: string;
-      colourId: string;
-      stepId: string;
-      newIndex: number;
-    }
-  | {
-      action: "restoreDeletedItem";
-      deletedItemId: string;
-    }
-  | {
-      action: "permanentlyDeleteItem";
-      deletedItemId: string;
-    }
-  | {
-      action: "removeInvalidPapersFromPrinter";
-      printerId: string;
-    }
-  | {
-      action: "updateHomepageSettings";
-      title: string;
-      description: string;
-    }
-  | {
-      action: "updateSectionSettings";
-      section: "printers" | "papers" | "colours";
-      title: string;
-      subtitle: string;
-    }
-  | {
-      action: "updateAppSettings";
-      settings: Partial<AppSettings>;
-    };
+  | { action: "addItem"; levelId: string; name: string; description?: string; thumbnailDataUrl?: string }
+  | { action: "updateItem"; levelId: string; itemId: string; name?: string; description?: string; thumbnailDataUrl?: string; published?: boolean }
+  | { action: "deleteItem"; levelId: string; itemId: string }
+  | { action: "linkItem"; parentLevelId: string; parentItemId: string; childLevelId: string; childItemId: string }
+  | { action: "unlinkItem"; parentLevelId: string; parentItemId: string; childItemId: string }
+  | { action: "updateRelationship"; parentLevelId: string; parentItemId: string; childItemId: string; published: boolean }
+  | { action: "addStep"; parentItemId: string; title: string; contentHtml: string; imageDataUrl: string; videoUrl?: string }
+  | { action: "updateStep"; parentItemId: string; stepId: string; title?: string; contentHtml?: string; imageDataUrl?: string; videoUrl?: string }
+  | { action: "deleteStep"; parentItemId: string; stepId: string }
+  | { action: "reorderStep"; parentItemId: string; stepId: string; direction: "up" | "down" }
+  | { action: "setStepOrder"; parentItemId: string; stepId: string; newIndex: number }
+  | { action: "restoreDeletedItem"; deletedItemId: string }
+  | { action: "permanentlyDeleteItem"; deletedItemId: string }
+  | { action: "removeInvalidChildren"; parentLevelId: string; parentItemId: string }
+  | { action: "updateHomepageSettings"; title: string; description: string }
+  | { action: "updateLevelSettings"; levelId: string; sectionTitle: string; sectionSubtitle: string }
+  | { action: "updateAppSettings"; settings: Partial<AppSettings> };
 
-async function executeAction(payload: ActionPayload, modifiedBy?: string): Promise<TutorialState> {
+async function executeAction(payload: ActionPayload, modifiedBy: string): Promise<TutorialState> {
   switch (payload.action) {
-    case "addPrinter":
-      return addPrinter(payload.name, payload.description, payload.thumbnailDataUrl, modifiedBy);
+    case "addItem":
+      return addItem(payload.levelId, payload.name, payload.description, payload.thumbnailDataUrl, modifiedBy);
 
-    case "updatePrinter":
-      return updatePrinter(
-        payload.printerId,
-        payload.name,
-        payload.description,
-        payload.thumbnailDataUrl,
-        payload.published,
+    case "updateItem":
+      return updateItem(
+        payload.levelId,
+        payload.itemId,
+        {
+          name: payload.name,
+          description: payload.description,
+          thumbnailDataUrl: payload.thumbnailDataUrl,
+          published: payload.published,
+        },
         modifiedBy,
       );
 
-    case "deletePrinter":
-      return deletePrinter(payload.printerId);
+    case "deleteItem":
+      return deleteItem(payload.levelId, payload.itemId, modifiedBy);
 
-    case "addPaper":
-      return addPaper(
-        payload.name,
-        payload.description,
-        payload.thumbnailDataUrl,
-        payload.printerIds,
-        modifiedBy,
-      );
+    case "linkItem":
+      return linkItem(payload.parentLevelId, payload.parentItemId, payload.childLevelId, payload.childItemId);
 
-    case "updatePaper":
-      return updatePaper(
-        payload.paperId,
-        payload.name,
-        payload.description,
-        payload.thumbnailDataUrl,
-        modifiedBy,
-      );
+    case "unlinkItem":
+      return unlinkItem(payload.parentLevelId, payload.parentItemId, payload.childItemId);
 
-    case "deletePaper":
-      return deletePaper(payload.paperId);
-
-    case "addPaperToPrinter":
-      return addPaperToPrinter(payload.printerId, payload.paperId);
-
-    case "removePaperFromPrinter":
-      return removePaperFromPrinter(payload.printerId, payload.paperId);
-
-    case "updatePaperInPrinter":
-      return updatePaperInPrinter(
-        payload.printerId,
-        payload.paperId,
-        payload.published,
-      );
-
-    case "addColour":
-      return addColour(
-        payload.printerId,
-        payload.paperId,
-        payload.name,
-        payload.thumbnailDataUrl,
-        payload.description,
-        modifiedBy,
-      );
-
-    case "updateColour":
-      return updateColour(
-        payload.printerId,
-        payload.paperId,
-        payload.colourId,
-        payload.name,
-        payload.thumbnailDataUrl,
-        payload.published,
-        payload.description,
-        modifiedBy,
-      );
-
-    case "deleteColour":
-      return deleteColour(payload.printerId, payload.paperId, payload.colourId);
-
-    case "updateColourInPrinterPaper":
-      return updateColourInPrinterPaper(
-        payload.printerId,
-        payload.paperId,
-        payload.colourId,
-        payload.published,
-      );
+    case "updateRelationship":
+      return updateRelationship(payload.parentLevelId, payload.parentItemId, payload.childItemId, payload.published);
 
     case "addStep":
-      return addStep(
-        payload.printerId,
-        payload.paperId,
-        payload.colourId,
-        payload.title,
-        payload.contentHtml,
-        payload.imageDataUrl,
-        payload.videoUrl,
-        modifiedBy,
-      );
+      return addStep(payload.parentItemId, payload.title, payload.contentHtml, payload.imageDataUrl, payload.videoUrl, modifiedBy);
 
     case "updateStep":
       return updateStep(
-        payload.printerId,
-        payload.paperId,
-        payload.colourId,
+        payload.parentItemId,
         payload.stepId,
-        payload.title,
-        payload.contentHtml,
-        payload.imageDataUrl,
-        payload.videoUrl,
+        {
+          title: payload.title,
+          contentHtml: payload.contentHtml,
+          imageDataUrl: payload.imageDataUrl,
+          videoUrl: payload.videoUrl,
+        },
         modifiedBy,
       );
 
     case "deleteStep":
-      return deleteStep(
-        payload.printerId,
-        payload.paperId,
-        payload.colourId,
-        payload.stepId,
-      );
+      return deleteStep(payload.parentItemId, payload.stepId, modifiedBy);
 
     case "reorderStep":
-      return reorderStep(
-        payload.printerId,
-        payload.paperId,
-        payload.colourId,
-        payload.stepId,
-        payload.direction,
-      );
+      return reorderStep(payload.parentItemId, payload.stepId, payload.direction);
 
     case "setStepOrder":
-      return setStepOrder(
-        payload.printerId,
-        payload.paperId,
-        payload.colourId,
-        payload.stepId,
-        payload.newIndex,
-      );
+      return setStepOrder(payload.parentItemId, payload.stepId, payload.newIndex);
 
     case "restoreDeletedItem":
       return restoreDeletedItem(payload.deletedItemId);
@@ -325,15 +106,15 @@ async function executeAction(payload: ActionPayload, modifiedBy?: string): Promi
     case "permanentlyDeleteItem":
       return permanentlyDeleteItem(payload.deletedItemId);
 
-    case "removeInvalidPapersFromPrinter":
-      return removeInvalidPapersFromPrinter(payload.printerId);
+    case "removeInvalidChildren":
+      return removeInvalidChildren(payload.parentLevelId, payload.parentItemId);
 
     case "updateHomepageSettings":
       await updateHomepageSettings(payload.title, payload.description);
       return getTutorialState();
 
-    case "updateSectionSettings":
-      await updateSectionSettings(payload.section, payload.title, payload.subtitle);
+    case "updateLevelSettings":
+      await updateLevelSettings(payload.levelId, payload.sectionTitle, payload.sectionSubtitle);
       return getTutorialState();
 
     case "updateAppSettings":
@@ -347,21 +128,22 @@ async function executeAction(payload: ActionPayload, modifiedBy?: string): Promi
 
 export async function POST(req: NextRequest) {
   try {
-    // Verify admin auth token
     const authHeader = req.headers.get("Authorization");
     const token = authHeader?.startsWith("Bearer ") ? authHeader.slice(7) : null;
     if (!token) {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
-    let modifiedBy: string = "system";
-    let decodedRole: string = "";
+
+    let modifiedBy = "system";
     try {
       const decoded = await auth.verifyIdToken(token);
-      decodedRole = (decoded.role as string | undefined) ?? "";
-      if (decodedRole !== "admin" && decodedRole !== "superadmin") {
+      if ((decoded.role as string | undefined) !== "admin") {
         return NextResponse.json({ error: "Forbidden" }, { status: 403 });
       }
       const adminDoc = await adminDb.collection("admins").doc(decoded.uid).get();
+      if (!adminDoc.exists || !(adminDoc.data() as { active?: boolean })?.active) {
+        return NextResponse.json({ error: "Forbidden" }, { status: 403 });
+      }
       const adminName = (adminDoc.data() as { name?: string } | undefined)?.name;
       modifiedBy = adminName || decoded.email || decoded.uid || "system";
     } catch {
@@ -369,35 +151,21 @@ export async function POST(req: NextRequest) {
     }
 
     const body = (await req.json()) as { action: string; payload: unknown };
-
     if (!body.action || !body.payload) {
-      return NextResponse.json(
-        { error: "Missing action or payload" },
-        { status: 400 },
-      );
+      return NextResponse.json({ error: "Missing action or payload" }, { status: 400 });
     }
 
-    console.log(`[API] Processing action: ${body.action}`);
+    const actionPayload = {
+      ...(body.payload as Record<string, unknown>),
+      action: body.action,
+    } as ActionPayload;
 
-    // Superadmin-only actions
-    if (body.action === "updateAppSettings" && decodedRole !== "superadmin") {
-      return NextResponse.json({ error: "Forbidden — superadmin only" }, { status: 403 });
-    }
-
-    // Merge action into payload for executeAction
-    const actionPayload = { ...(body.payload as Record<string, unknown>), action: body.action } as ActionPayload;
     const state = await executeAction(actionPayload, modifiedBy);
-
     return NextResponse.json({ state });
   } catch (error) {
-    const errorMessage = error instanceof Error ? error.message : "Unknown error";
-
+    const message = error instanceof Error ? error.message : "Unknown error";
     console.error("API Error:", error);
-
-    return NextResponse.json(
-      { error: errorMessage },
-      { status: 500 },
-    );
+    return NextResponse.json({ error: message }, { status: 500 });
   }
 }
 
@@ -406,12 +174,22 @@ export async function GET(req: NextRequest) {
     const { searchParams } = new URL(req.url);
     const previewToken = searchParams.get("previewToken");
 
+    // Authenticated admins receive all items including unpublished
+    const authHeader = req.headers.get("Authorization");
+    const bearerToken = authHeader?.startsWith("Bearer ") ? authHeader.slice(7) : null;
+
+    if (bearerToken && (await isActiveAdmin(bearerToken))) {
+      const state = await getTutorialState(false);
+      return NextResponse.json({ state, isPreviewMode: false });
+    }
+
+    // Preview token bypasses published filters for unauthenticated visitors
     let isPreviewMode = false;
     if (previewToken) {
       isPreviewMode = await validatePreviewToken(previewToken);
     }
 
-    const state = await getTutorialState();
+    const state = await getTutorialState(!isPreviewMode);
     return NextResponse.json({ state, isPreviewMode });
   } catch (error) {
     console.error("API Error:", error);

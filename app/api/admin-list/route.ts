@@ -12,7 +12,7 @@ export async function GET(req: NextRequest) {
     const decoded = await auth.verifyIdToken(idToken);
     const callerDoc = await adminDb.collection("admins").doc(decoded.uid).get();
     const callerData = callerDoc.data() as { role?: string; active?: boolean } | undefined;
-    if (!callerDoc.exists || !callerData?.active || callerData.role !== "superadmin") {
+    if (!callerDoc.exists || !callerData?.active) {
       return NextResponse.json({ error: "Forbidden" }, { status: 403 });
     }
 

@@ -3,7 +3,6 @@ import { auth, adminDb } from "../../../lib/firebase-admin";
 
 export async function GET(req: NextRequest) {
   try {
-    // Verify the caller is a superadmin
     const authHeader = req.headers.get("Authorization");
     const idToken = authHeader?.replace("Bearer ", "");
 
@@ -15,7 +14,7 @@ export async function GET(req: NextRequest) {
     const adminDoc = await adminDb.collection("admins").doc(decoded.uid).get();
     const adminData = adminDoc.data() as { role?: string; active?: boolean } | undefined;
 
-    if (!adminDoc.exists || !adminData?.active || adminData.role !== "superadmin") {
+    if (!adminDoc.exists || !adminData?.active) {
       return NextResponse.json({ error: "Forbidden" }, { status: 403 });
     }
 
