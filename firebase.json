@@ -1,7 +1,8 @@
 {
   "apphosting": {},
   "functions": {
-    "source": "functions"
+    "source": "functions",
+    "codebase": "legacy-printing-app"
   },
   "storage": {
     "rules": "storage.rules"
